@@ -476,7 +476,7 @@ if __name__ == '__main__':
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-html', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
-    parser.add_argument('--default-style-css', default = 'defaultstyle.css')
+    parser.add_argument('--default-style-css')
     args = parser.parse_args()
     print(args)
     main(args)
