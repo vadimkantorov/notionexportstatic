@@ -5,6 +5,7 @@
 # TODO: support column_list / column
 # TODO: delete nested mode? delete nested + extract_files ?
 # TODO: allow multiple page_ids
+# TODO: delete dashes from default slug
 
 import os
 import json
