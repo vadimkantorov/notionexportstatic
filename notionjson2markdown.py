@@ -34,6 +34,8 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
             kwargs['caption'] = richtext2markdown(payload['caption'])
         if 'text' in payload:
             kwargs['text'] = richtext2markdown(payload['text'])
+        if 'rich_text' in payload:
+            kwargs['text'] = richtext2markdown(payload['rich_text'])
         if 'page_id' in payload:
             kwargs['url'] = prepared['pages'][payload['page_id']]['url']
             kwargs['caption'] = prepared['pages'][payload['page_id']]['title']
@@ -66,7 +68,7 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
     blank = lambda *args, **kwargs: "<br/>"
     table = lambda kwargs: ''
     pdf = lambda kwargs: "![{caption}]({url})".format(caption = kwargs['caption'] or os.path.basename(kwargs['url']), url = kwargs['url'])
-    table_row = lambda kwargs: [richtext_convertor(column) for column in kwargs['cells']]
+    table_row = lambda kwargs: [richtext2markdown(column) for column in kwargs['cells']]
     video = lambda kwargs: ('<p><video playsinline autoplay muted loop controls src="{url}"></video></p>' if urllib.parse.urljoin(kwargs["url"], urllib.parse.urlparse(kwargs["url"]).path).endswith(".webm") else '<p><div class="res_emb_block"><iframe width="640" height="480" src="{url}" frameborder="0" allowfullscreen></iframe></div></p>').format(url = kwargs["url"].replace("http://", "https://").replace('/watch?v=', '/embed/').split('&')[0])
     column_list = lambda kwargs: '' # '\n\n> [!IMPORTANT]\n> **column_list** will be added here\n\n'
     column = lambda kwargs: '' # '\n\n> [!NOTE]\n> **column** starts here\n\n'
@@ -92,7 +94,7 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
 
 
     #Special Case: Block is blank
-    if block_type == "paragraph" and not block['has_children'] and not block[block_type]['text']:
+    if block_type == "paragraph" and not block['has_children'] and not (block[block_type].get('text') or block[block_type].get('rich_text')):
         return blank() + "\n\n"
 
     if block_type in render_block:
@@ -309,8 +311,9 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
     else:
         slug = {}
     
+    raw_notion = raw_notion['pages']
     raw_notion = raw_notion.copy()
-    child_pages = {block['id'] : block for page in raw_notion.values() for block in extract_and_replace_child_pages(page)}
+    child_pages = {block['id'] : block for page in raw_notion.values() for parent_id, blocks in pop_and_replace_child_pages_recursively(page).items() for block in blocks}
     for page in child_pages.values():
         page['url'] = page.get('url', 'https://www.notion.so/' + page.get('id', '').replace('-', ''))
     print('Child pages:', len(child_pages))
@@ -321,9 +324,11 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
         pages[page_id] = {}
         pages[page_id]["assets_to_download"] = []
 
-        pages[page_id]["last_edited_time"] = page["last_edited_time"]
+        pages[page_id]["last_edited_time"] = page.get("last_edited_time", 'N/A')
         pages[page_id]['title'] = page.get('title', 'N/A')
-        pages[page_id]["type"] = page.get('type', page["object"])
+        pages[page_id]["type"] = page.get('type') or page.get("object")
+        if pages[page_id]["type"] is None:
+            breakpoint()
         #pages[page_id]['url'] = page.get('url', 'https://notion.so/' + page.get('id', '').replace('-', ''))
 
         assert pages[page_id]["type"] not in ["database", "db_entry"]
@@ -368,7 +373,7 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
 
     prepared = dict(
         urls = [],
-        include_footer = args.include_footer,
+        #include_footer = args.include_footer,
         root_page_id = list(raw_notion.keys())[0],
         pages = pages # "type" (str):  "page", "database" or "db_entry" | "files" (list): list of urls for nested "title" (str): title of corresponding page,  | "last_edited_time" (str): last edited time in iso format,  | "date" (str): date start in iso format,  | "date_end" (str): date end in iso format,  | "parent" (str): id of parent page, | "children" (list): list of ids of children page, | "cover" (str): cover url, | "emoji" (str): emoji symbol, | "icon" (str): icon url. | 
     )
@@ -379,16 +384,50 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
     for page_id, page in pages.items():
         fill_page_urls_recursively(page_id, prepared, output_dir = args.output_dir, root_page_id = prepared["root_page_id"], slug = slug)
     
-    if args.download_assets:
-        for page_id, page in pages.items():
-            download_assets_(page_id, page, assets_dir = args.assets_dir)
+    #if args.download_assets:
+    #    for page_id, page in pages.items():
+    #        download_assets_(page_id, page, assets_dir = args.assets_dir)
     
     for page_id in raw_notion:
         pages[page_id]["md_content"] = fix_markdown_lists("".join(block2markdown(block, 0, prepared, page_id) for block in (raw_notion[page_id].get("blocks", []) or raw_notion[page_id].get("children", [])))).replace("\n\n\n", "\n\n") # page_md = code_aligner(page_md)
 
     return prepared
 
-def generate_site(prepared: dict, markdown_dir = None, output_dir = None, templates_dir = None, sass_dir = None, html = False, isoparse = "%Y-%m-%dT%H:%M:%S.%fZ"):
+def pop_and_replace_child_pages_recursively(block, parent_id = None):
+    child_pages = {}
+    for keys in ['children', 'blocks']:
+        for i in reversed(range(len(block[keys]) if block.get(keys, []) else 0)):
+            if block[keys][i]['type'] == 'child_page':
+                child_page = block[keys][i]
+                if (not child_page.get('icon')) and child_page['has_children'] and child_page['children']:
+                    for subblock in child_page['children']:
+                        if subblock['type'] == 'callout':
+                            child_page['icon'] = dict(emoji = subblock.get('callout', {}).get('icon', {})).get('emoji')
+                            break
+                block[keys][i] = {
+                    'object' : 'block', 
+                    'has_children' : False,
+                    'type' : 'link_to_page',
+                    'link_to_page' : {'type' : 'page_id', 'page_id' : child_page['id']} 
+                }
+                child_page['title'] = child_page['child_page']['title']
+                child_page['url'] = child_page.get('url', 'https://www.notion.so/' + child_page.get('id', '').replace('-', ''))
+                if parent_id not in child_pages:
+                    child_pages[parent_id] = []
+                child_pages[parent_id].append(child_page)
+
+                for k, l in pop_and_replace_child_pages_recursively(block[keys][i], parent_id = child_page['id']).items():
+                    if k not in child_pages:
+                        child_pages[k] = []
+                    child_pages[k].extend(l)
+            else:
+                for k, l in pop_and_replace_child_pages_recursively(block[keys][i], parent_id = parent_id).items():
+                    if k not in child_pages:
+                        child_pages[k] = []
+                    child_pages[k].extend(l)
+    return child_pages
+
+def generate_site(prepared: dict, output_dir = None, isoparse = "%Y-%m-%dT%H:%M:%S.%fZ"):
     prepared['base_url'] = output_dir
     prepared['archive_url'] = 'N/A'
     for page_id, page in prepared["pages"].items():
@@ -402,50 +441,28 @@ def generate_site(prepared: dict, markdown_dir = None, output_dir = None, templa
         
         page_md_content = '[#](../) / {emoji} {title}\n<hr/>\n\n'.format(**page) + ('![cover]({cover})\n\n' if page.get('cover') else '').format(**page) + '# {emoji} {title}\n\n'.format(**page) + page['md_content']
 
-        os.makedirs(markdown_dir, exist_ok = True)
-        with open(os.path.join(markdown_dir, page["basename"]), 'w+', encoding='utf-8') as m: #  + '.md'
-            print('Generated', os.path.join(markdown_dir, page["basename"]), '|', page['title'])
+        os.makedirs(output_dir, exist_ok = True)
+        with open(os.path.join(output_dir, page["basename"]), 'w+', encoding='utf-8') as m: #  + '.md'
+            print('Generated', os.path.join(output_dir, page["basename"]), '|', page['title'])
             m.write(page_md_content)
         
 
 
 
 def main(args):
-    if os.path.exists(args.notion_cache_json) and not args.notion_cache_reset:
-        with open(args.notion_cache_json, "r") as f:
-            notion_cache = json.load(f)
-        print(json.dumps(notion_cache, ensure_ascii = False, indent = 4))
-    else:
-        notion_api = notion_client.Client(auth = args.notion_token)
-        notion_pages = notion_api_retrieve_recursively(notion_api, args.notion_page_id, {})
-        notion_assets = download_assets(notion_pages.values(), {})
-        notion_cache = dict(pages = notion_pages, assets = notion_assets)
-        with open(args.notion_cache_json, 'w', encoding='utf-8') as f:
-            json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
+    with open(args.input_path, "r") as f:
+        notion_cache = json.load(f)
    
-    if args.markdown or args.html:
-        prepared = prepare_notion_content(notion_cache, args)
-        with open(args.notion_prepared_json, 'w', encoding="utf-8") as f:
-            json.dump(prepared, f, ensure_ascii = False, indent = 4)
-        generate_site(prepared, markdown_dir = args.markdown_dir, output_dir = args.output_dir, templates_dir = args.templates_dir, sass_dir = args.sass_dir, html = args.html)
+    prepared = prepare_notion_content(notion_cache, args)
+    generate_site(prepared, output_dir = args.output_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--notion-token',         default = os.getenv('NOTION_TOKEN'))
-    parser.add_argument('--notion-page-id',       default = os.getenv('NOTION_PAGE_ID'))
-    parser.add_argument('--output-dir', '-o',     default = './_site')
-    parser.add_argument('--markdown-dir',         default = './_markdown')
+    parser.add_argument('--input-path', '-i')
+    parser.add_argument('--output-dir', '-o')
     parser.add_argument('--assets-dir',           default = './_assets')
-    parser.add_argument('--templates-dir',        default = './_templates')
-    parser.add_argument('--sass-dir',             default = './_sass')
     parser.add_argument('--slug-json',            default = 'slug.json')
-    parser.add_argument('--notion-cache-json',    default = 'notion_cache.json')
-    parser.add_argument('--notion-prepared-json', default = 'notion_prepared.json')
-    parser.add_argument('--html',                 action  = 'store_true')
-    parser.add_argument('--markdown',             action  = 'store_true')
-    parser.add_argument('--notion-cache-reset',   action  = 'store_true')
-    parser.add_argument('--download-assets',      action  = 'store_true')
-    parser.add_argument('--include-footer',       action  = 'store_true')
+    parser.add_argument('--html-details-open', action = 'store_true')
     args = parser.parse_args()
     
     print(args)

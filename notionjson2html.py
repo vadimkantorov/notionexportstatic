@@ -413,7 +413,7 @@ def extract_html_nested(output_dir, notion_assets = {}, notion_pages = {}, notio
 
     for page_id, block in notion_pages.items():
         os.makedirs(output_dir, exist_ok = True)
-        slug = notion_slugs.get(page_id) or notion_slugs.get(page_id.replace('-', '')) or page_id
+        slug = notion_slugs.get(page_id) or notion_slugs.get(page_id.replace('-', '')) or page_id.replace('-', '')
         page_dir = os.path.join(output_dir, slug) if index_html and slug != 'index' else output_dir
         os.makedirs(page_dir, exist_ok = True)
 

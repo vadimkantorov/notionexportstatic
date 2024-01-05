@@ -5,7 +5,6 @@
 # TODO: support column_list / column
 # TODO: delete nested mode? delete nested + extract_files ?
 # TODO: allow multiple page_ids
-# TODO: delete dashes from default slug
 
 import os
 import json
@@ -185,7 +184,7 @@ def extract_json_nested(output_dir, notion_assets = {}, notion_pages = {}, notio
     notion_pages |= child_pages_by_id
     for page_id, block in notion_pages.items():
         os.makedirs(output_dir, exist_ok = True)
-        slug = notion_slugs.get(page_id) or notion_slugs.get(page_id.replace('-', '')) or page_id
+        slug = notion_slugs.get(page_id) or notion_slugs.get(page_id.replace('-', '')) or page_id.replace('-', '')
         json_path = os.path.join(output_dir, slug + '.json')
         with open(json_path, 'w', encoding = 'utf-8') as f:
             assets_dir = os.path.join(output_dir, slug + '_files')
