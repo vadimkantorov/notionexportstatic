@@ -1,7 +1,6 @@
-# TODO: add basic CSS: minima?
+# TODO: add basic CSS: minima with CSS3?
 # TODO: flatten child pages and include them
 # TODO: put all json props as html attributes
-# TODO: get rid of ctx and global vars
 # TODO: embed resources by default
 # TODO: add basic fixed top nav which should also work for single-page
 # TODO: for multi-article add TOC and generation date
@@ -34,15 +33,15 @@ def richtext2html(richtext, title_mode=False) -> str:
     text_link = lambda kwargs: '<a href="{url}">{caption}</a>'.format(caption = kwargs['content'], url = kwargs['link']['url'])
     #TODO: format link to page
     #"toggle": {
-    #                                                    "rich_text": [
-    #                                                        {
-    #                                                            "type": "text",
-    #                                                            "text": {
-    #                                                                "content": "LGBTQI+",
-    #                                                                "link": {
-    #                                                                    "url": "/e924e4c97ced46d48e7bfe0c177d13c0"
-    #                                                                }
-    #                                                            },
+    # "rich_text": [
+    #     {
+    #         "type": "text",
+    #         "text": {
+    #             "content": "LGBTQI+",
+    #             "link": {
+    #                 "url": "/e924e4c97ced46d48e7bfe0c177d13c0"
+    #             }
+    #         },
     database = lambda kwargs: _mention_link(kwargs['content'], kwargs['url'])
     annotation_map = dict(bold = bold, italic = italic, strikethrough = strikethrough, underline = underline, code = code)
     mention_map = dict(user = user, page = page, database = database, date = date, link_preview = link_preview)
@@ -111,29 +110,42 @@ def link_like(block, ctx, block_type, tag = 'a'):
     return html
 
 def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>'):
-    link_to_page_type = block[link_to_page.__name__].get('type') # should be 'page_id'
-    link_to_page_page_id = block[link_to_page.__name__].get('page_id', '')
-    
-    slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
-   
-    #TODO: need to use html <base> element?
-    href = '#404'
-    if ctx['extract_html'] == 'single':
-        if link_to_page_page_id in ctx['page_ids']:
-            href = '#' + slug 
-        else:
-            #TODO: find the page path in relation to the current path, need to know flat or flat.html
-            #TODO: allow passing url-style explicitly, if not set, detect if slug.html or if /slug/ exists already and maybe have some url-style as default
-            href = './' + slug
-    elif ctx['extract_html'] == 'flat':
-        href = '../' if slug == 'index' else '../' + slug
-    
     id2block = {}
     stack = list(ctx['pages'].values())
     while stack:
         top = stack.pop()
         id2block[top.get('id')] = top
         stack.extend(top.get('blocks', []) + top.get('children', []))
+
+    parent_block = block
+    while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
+        parent_id = parent_block.get('parent', {}).get(parent_block.get('parent', {}).get('type'))
+        if not parent_id or parent_id not in id2block:
+            break
+        parent_block = id2block[parent_id]
+
+    cur_page_id = parent_block['id']
+    curslug = ctx['notion_slugs'].get(cur_page_id) or ctx['notion_slugs'].get(cur_page_id.replace('-', '')) or cur_page_id.replace('-', '')
+
+    link_to_page_type = block[link_to_page.__name__].get('type') # should be 'page_id'
+    link_to_page_page_id = block[link_to_page.__name__].get(link_to_page_type, '')
+    
+    slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
+
+   
+    href = '#404'
+    is_index_page = curslug == 'index'
+    url_suffix = '/index.html'.lstrip('/' if slug == 'index' else '') if args.html_link_to_page_index_html else ''
+    if ctx['extract_html'] == 'single':
+        if link_to_page_page_id in ctx['page_ids']:
+            href = '#' + slug 
+        else:
+            #TODO: find the page path in relation to the current path, need to know flat or flat.html
+            #TODO: allow passing url-style explicitly, if not set, detect if slug.html or if /slug/ exists already and maybe have some url-style as default
+            href = './' + slug + url_suffix
+    elif ctx['extract_html'] == 'flat':
+        href = ('./' if is_index_page else '../') + ('' if slug == 'index' else slug) + url_suffix
+
     
     subblock = id2block.get(link_to_page_page_id) 
     if subblock:
@@ -358,11 +370,11 @@ def header2html(block, ctx):
     
     parent_path = []
     block_id = block[0]
+    header_parent_page_id = block_id
     while True:
         block = id2block[block_id]
-
         if (block.get('type') or block.get('object')) in ['page', 'child_page']:
-            parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id)))
+            parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id)))
         parent_id = block['parent'].get(block['parent'].get('type'))
         if parent_id not in id2block:
             break
@@ -391,6 +403,7 @@ def site2html(page_ids = [], ctx = {}, notion_pages = {}, style = ''):
     '''
 
 def pop_and_replace_child_pages_recursively(block, parent_id = None):
+    block_type = block.get('type') or block.get('object')
     child_pages = {}
     for keys in ['children', 'blocks']:
         for i in reversed(range(len(block[keys]) if block.get(keys, []) else 0)):
@@ -401,12 +414,14 @@ def pop_and_replace_child_pages_recursively(block, parent_id = None):
                         if subblock['type'] == 'callout':
                             child_page['icon'] = dict(emoji = subblock.get('callout', {}).get('icon', {})).get('emoji')
                             break
-                block[keys][i] = {
-                    'object' : 'block', 
-                    'has_children' : False,
-                    'type' : 'link_to_page',
-                    'link_to_page' : {'type' : 'page_id', 'page_id' : child_page['id']} 
-                }
+                parent_id_type = 'page_id' if block_type in ['page', 'child_page'] else 'block_id'
+                block[keys][i] = dict(
+                    object = 'block', 
+                    has_children = False,
+                    type = 'link_to_page',
+                    link_to_page = dict(type = 'page_id', page_id = child_page['id']),
+                    parent = {'type' : parent_id_type, parent_id_type : block['id']}
+                )
                 child_page['title'] = child_page['child_page']['title']
                 child_page['url'] = child_page.get('url', 'https://www.notion.so/' + child_page.get('id', '').replace('-', ''))
                 if parent_id not in child_pages:
@@ -510,6 +525,7 @@ def main(args):
     ctx = notion_cache
     ctx['notion_attrs_verbose'] = args.notion_attrs_verbose
     ctx['html_details_open'] = args.html_details_open
+    ctx['html_link_to_page_index_html'] = args.html_link_to_page_index_html
     ctx['page_ids'] = page_ids
     ctx['extract_html'] = args.extract_html
     ctx['notion_slugs'] = notion_slugs
@@ -529,6 +545,7 @@ if __name__ == '__main__':
     parser.add_argument('--notion-page-id', nargs = '*', default = [])
     parser.add_argument('--notion-attrs-verbose', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
+    parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-html', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
     parser.add_argument('--default-style-css')
