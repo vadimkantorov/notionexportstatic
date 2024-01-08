@@ -30,8 +30,7 @@ article
 }
 
 details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important}
-
-.notion-table-of-contents { list-style-type: none; }
+.notion-table-of-contents { list-style-type: none !important; margin:0 !important }
 .notion-table-of-contents>li:hover {background-color: gray !important}
 .notion-toc-section {padding-left: 10px}
 .notion-toc-subsection {padding-left: 20px}
