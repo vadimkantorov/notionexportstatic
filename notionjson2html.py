@@ -32,6 +32,17 @@ def richtext2html(richtext, title_mode=False) -> str:
     link_preview = lambda kwargs: _mention_link(kwargs['content'], kwargs['url'])
     mention_kwargs = lambda payload: {'content' : payload['plain_text']} if not payload['href'] else {'url': payload['href'], 'content': payload['plain_text'] if payload['plain_text'] != 'Untitled' else payload['href']}
     text_link = lambda kwargs: '<a href="{url}">{caption}</a>'.format(caption = kwargs['content'], url = kwargs['link']['url'])
+    #TODO: format link to page
+    #"toggle": {
+    #                                                    "rich_text": [
+    #                                                        {
+    #                                                            "type": "text",
+    #                                                            "text": {
+    #                                                                "content": "LGBTQI+",
+    #                                                                "link": {
+    #                                                                    "url": "/e924e4c97ced46d48e7bfe0c177d13c0"
+    #                                                                }
+    #                                                            },
     database = lambda kwargs: _mention_link(kwargs['content'], kwargs['url'])
     annotation_map = dict(bold = bold, italic = italic, strikethrough = strikethrough, underline = underline, code = code)
     mention_map = dict(user = user, page = page, database = database, date = date, link_preview = link_preview)
@@ -84,11 +95,7 @@ def toggle_like(block, ctx, block_type, tag):
     text_html = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     color = block[block_type].get('color', '')
     html_details_open = ['', 'open'][ctx['html_details_open']]
-    html = f'<details class="notion-color-{color}" {html_details_open}'  + notionattrs2html(block, ctx, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + '>' 
-    html += f'<summary><{tag}>' + text_html + f'</{tag}></summary>\n'
-    html += children_like(block, ctx)
-    html += '</details>\n'
-    return html
+    return f'<details class="notion-color-{color}" {html_details_open}' + notionattrs2html(block, ctx, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'><summary><{tag}>{text_html}</{tag}></summary>\n' + children_like(block, ctx) + '</details>\n'
 
 def heading_like(block, ctx, block_type, tag):
     if block.get(block_type, {}).get('is_toggleable') is not True: 
@@ -119,7 +126,7 @@ def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>'):
             #TODO: allow passing url-style explicitly, if not set, detect if slug.html or if /slug/ exists already and maybe have some url-style as default
             href = './' + slug
     elif ctx['extract_html'] == 'flat':
-        href = './' + slug
+        href = '../' if slug == 'index' else '../' + slug
     
     id2block = {}
     stack = list(ctx['pages'].values())
