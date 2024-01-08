@@ -344,7 +344,7 @@ def block2html(block, ctx = 0, begin = False, end = False):
 def header2html(parent_path, ctx):
     return '&nbsp;/&nbsp;'.join(link_to_page(block, ctx, suffix_html = '') for block in parent_path)
 
-def site2html(page_ids, notion_pages = {}, style = '', ctx = 0):
+def site2html(page_ids = [], ctx = {}, notion_pages = {}, style = ''):
     #TODO: extract the html template if needed?
     
     parent_path = [dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_ids[0]))]
@@ -427,15 +427,21 @@ def prepare_and_extract_assets(notion_pages, assets_dir, notion_assets = {}, ext
             print(asset_path)
     return assets
 
-def extract_html_single(output_path, page_ids, child_pages_by_id = {}, extract_assets = False, style = '', notion_cache = {}):
+def extract_html_single(output_path, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, style = '', notion_slugs = {}):
+    notion_cache = ctx
+    notion_assets = notion_cache.get('assets', {})
+    
     notion_cache['pages'].update(child_pages_by_id)
     
-    notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_cache['assets'], extract_assets = extract_assets)
+    notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
     with open(output_path, 'w', encoding = 'utf-8') as f:
-        f.write(site2html(page_ids, style = style, notion_pages = notion_cache['pages']))
+        f.write(site2html(page_ids, ctx = ctx, style = style, notion_pages = notion_cache['pages']))
     print(output_path)
 
-def extract_html_nested(output_dir, notion_assets = {}, notion_pages = {}, notion_slugs = {}, child_pages_by_id = {}, child_pages_by_parent_id = {}, extract_assets = False, style = '', index_html = False):
+def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, style = '', notion_slugs = {}, notion_pages = {}, child_pages_by_parent_id = {}, index_html = False):
+    notion_cache = ctx
+    notion_pages = notion_cache['pages'] if notion_pages is None else {}
+    notion_assets =  notion_cache.get('assets', {})
     os.makedirs(output_dir, exist_ok = True)
     notion_pages.update(child_pages_by_id)
 
@@ -450,20 +456,18 @@ def extract_html_nested(output_dir, notion_assets = {}, notion_pages = {}, notio
         notion_assets_for_block = prepare_and_extract_assets({page_id : block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         block2html.notion_cache['assets'] = notion_assets_for_block
         with open(html_path, 'w', encoding = 'utf-8') as f:
-            f.write(site2html([page_id], style = style, notion_pages = notion_pages))
+            f.write(site2html([page_id], ctx = ctx, style = style, notion_pages = notion_pages))
         print(html_path)
         if children := child_pages_by_parent_id.pop(page_id, []):
             extract_html_nested(page_dir, notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, notion_slugs = notion_slugs, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets, style = style, index_html = index_html)
 
 def main(args):
-    notion_cache = json.load(open(args.input_path))
+    output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id)
     
+    notion_cache = json.load(open(args.input_path)) if args.input_path else {}
     notion_slugs = json.load(open(args.slug_json)) if args.slug_json else {}
+    style = open(args.default_style_css).read() if args.default_style_css else ''
 
-    notionattrs2html.notion_attrs_verbose = args.notion_attrs_verbose
-    toggle_like.html_details_open = args.html_details_open
-    block2html.notion_cache = notion_cache
-    
     root_page_ids = args.notion_page_id or list(notion_cache['pages'].keys())
     for i in range(len(root_page_ids)):
         for k, v in notion_slugs.items():
@@ -472,35 +476,30 @@ def main(args):
         for k in notion_cache['pages'].keys():
             if root_page_ids[i] == k.replace('-', ''):
                 root_page_ids[i] = k
-
     # TODO: add error checking that all root_page_ids are found in actual pages and non zero pages
     # TODO:add all child_pages recursively, and not just a single time. should update child_pages always? add special option
     child_pages_by_parent_id = {k: v for page_id, page in notion_cache['pages'].items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
     child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
-    
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id[page_id] if child_page['id'] not in root_page_ids]
 
+    notionattrs2html.notion_attrs_verbose = args.notion_attrs_verbose
+    toggle_like.html_details_open = args.html_details_open
+    block2html.notion_cache = notion_cache
     link_to_page.page_ids = page_ids
     link_to_page.extract_html = args.extract_html
     link_to_page.notion_slugs = notion_slugs
-    
-    notion_assets = notion_cache.get('assets', {})
-    
-    style = open(args.default_style_css).read() if args.default_style_css else ''
-    
-    output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id)
+    ctx = notion_cache
 
     if args.extract_html == 'single':
-        extract_html_single(output_path if args.output_path else output_path + '.html', page_ids, child_pages_by_id = child_pages_by_id, extract_assets = args.extract_assets, style = style, notion_cache = notion_cache)
+        extract_html_single(output_path if args.output_path else output_path + '.html', ctx = ctx, notion_slugs = notion_slugs, page_ids = page_ids, child_pages_by_id = child_pages_by_id, extract_assets = args.extract_assets, style = style)
 
     else:
-        extract_html_nested(output_path, notion_pages = notion_cache['pages'], notion_assets = notion_assets, notion_slugs = notion_slugs, child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, style = style, index_html = args.extract_html in ['flat', 'nested'], extract_assets = args.extract_assets) #  | child_pages_by_id <- breaks notion_cache in the context and link_to_page resolving
-            
-        
+        extract_html_nested(output_path, ctx = ctx, notion_slugs = notion_slugs, page_ids = page_ids, child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}, extract_assets = args.extract_assets, style = style, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested']) #  | child_pages_by_id <- breaks notion_cache in the context and link_to_page resolving
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input-path', '-i')
+    parser.add_argument('--input-path', '-i', required = True)
     parser.add_argument('--output-path', '-o')
     parser.add_argument('--slug-json')
     parser.add_argument('--notion-page-id', nargs = '*', default = [])
