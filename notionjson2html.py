@@ -341,16 +341,33 @@ def block2html(block, ctx = {}, begin = False, end = False):
         # TODO: print all unsupported to a log? include as comment? or just as element? render children? replace by <!-- --> or maybe "p"?
         return f'\n<{block_type} unsupported="1"' + notionattrs2html(block, ctx) + '/>\n\n'
 
-def header2html(parent_path, ctx):
-    return '&nbsp;/&nbsp;'.join(link_to_page(block, ctx, suffix_html = '') for block in parent_path)
+def header2html(block, ctx):
+    id2block = {}
+    stack = list(ctx['pages'].values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+    
+    parent_path = []
+    block_id = block[0]
+    while True:
+        block = id2block[block_id]
+
+        if (block.get('type') or block.get('object')) in ['page', 'child_page']:
+            parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id)))
+        parent_id = block['parent'].get(block['parent'].get('type'))
+        if parent_id not in id2block:
+            break
+        block_id = parent_id
+
+    return '&nbsp;/&nbsp;'.join(link_to_page(block, ctx, suffix_html = '') for block in reversed(parent_path))
 
 def site2html(page_ids = [], ctx = {}, notion_pages = {}, style = ''):
     #TODO: extract the html template if needed?
-    
-    parent_path = [dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_ids[0]))]
 
     main_html = '\n\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
-    header_html = header2html(parent_path, ctx = ctx)
+    header_html = header2html(page_ids, ctx = ctx)
 
     return f'''
     <html><body>
@@ -440,7 +457,7 @@ def extract_html_single(output_path, ctx = {}, page_ids = [], child_pages_by_id 
 
 def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, style = '', notion_pages = {}, child_pages_by_parent_id = {}, index_html = False):
     notion_cache = ctx
-    notion_pages = notion_cache['pages'] if notion_pages is None else {}
+    notion_pages = notion_cache['pages'] if notion_pages is not None else {}
     notion_slugs = ctx['notion_slugs']
     notion_assets =  notion_cache.get('assets', {})
     os.makedirs(output_dir, exist_ok = True)

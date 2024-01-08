@@ -17,8 +17,8 @@ import urllib.request
 
 
 
-def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
-    def render_block_kwargs(payload:dict, prepared: dict, page_id, block_type = None) -> dict:
+def block2markdown(block:object,depth=0, ctx={}, page_id='') -> str:
+    def render_block_kwargs(payload:dict, ctx: dict, page_id, block_type = None) -> dict:
         kwargs = {}
         if 'checked' in payload:
             kwargs['checked'] = payload['checked']
@@ -37,14 +37,14 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
         if 'rich_text' in payload:
             kwargs['text'] = richtext2markdown(payload['rich_text'])
         if 'page_id' in payload:
-            kwargs['url'] = prepared['pages'][payload['page_id']]['url']
-            kwargs['caption'] = prepared['pages'][payload['page_id']]['title']
-            kwargs['emoji'] = prepared['pages'][payload['page_id']].get('emoji') or ''
+            kwargs['url'] = ctx['pages'][payload['page_id']]['url']
+            kwargs['caption'] = ctx['pages'][payload['page_id']]['title']
+            kwargs['emoji'] = ctx['pages'][payload['page_id']].get('emoji') or ''
         if 'url' in payload or 'external' in payload or 'file' in payload:
             kwargs['url'] = payload.get('url') or payload.get('external', {}).get('url') or payload.get('file', {}).get('url')
             #print('kwargs url', block_type, payload.get('type'), kwargs['url'])
             if block_type == 'image':
-                prepared['pages'][page_id]['assets_to_download'].append(kwargs['url'])
+                ctx['pages'][page_id]['assets_to_download'].append(kwargs['url'])
         return kwargs
 
     paragraph = lambda kwargs: kwargs['text']
@@ -79,14 +79,14 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
     outcome_block = ""
     block_type = block['type']
     #if block_type in ["child_page", "child_database", "db_entry"]:
-    #    title = prepared['pages'][block['id']]['title']
-    #    url = prepared['pages'][block['id']]['url']
+    #    title = ctx['pages'][block['id']]['title']
+    #    url = ctx['pages'][block['id']]['url']
     #    outcome_block = f"{title}]({url})\n\n"
-    #    if prepared['pages'][block['id']]['emoji']:
-    #        emoji = prepared['pages'][block['id']]['emoji']
+    #    if ctx['pages'][block['id']]['emoji']:
+    #        emoji = ctx['pages'][block['id']]['emoji']
     #        outcome_block = f"[{emoji} {outcome_block}"
-    #    elif prepared['pages'][block['id']]['icon']:
-    #        icon = prepared['pages'][block['id']]['icon']
+    #    elif ctx['pages'][block['id']]['icon']:
+    #        icon = ctx['pages'][block['id']]['icon']
     #        outcome_block = f"""[<span class="miniicon"> <img src="{icon}"></img></span> {outcome_block}"""
     #    else:
     #        outcome_block = f"[{outcome_block}"
@@ -100,7 +100,7 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
     if block_type in render_block:
         if block_type in ["embed", "video"]:
             block[block_type]["dont_download"] = True
-        outcome_block = render_block[block_type](render_block_kwargs(block[block_type], prepared, page_id, block_type = block_type)) + "\n\n"
+        outcome_block = render_block[block_type](render_block_kwargs(block[block_type], ctx, page_id, block_type = block_type)) + "\n\n"
     else:
         outcome_block = f'''block [type="{block_type}", id="{block.get('id')}"] is unsupported at page="{page_id}", has_children: {block['has_children']}]\n\n'''
         print(outcome_block)
@@ -111,7 +111,7 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
 
     if block['has_children'] and block_type == 'table':
         depth += 1
-        table_list = [render_block[cell_block['type']](render_block_kwargs(cell_block[cell_block['type']], prepared, page_id, block_type = cell_block['type'])) for cell_block in block["children"]]
+        table_list = [render_block[cell_block['type']](render_block_kwargs(cell_block[cell_block['type']], ctx, page_id, block_type = cell_block['type'])) for cell_block in block["children"]]
         sanitize_table_cell = lambda md: md.replace('\n', ' ')
         for index,value in enumerate(table_list):
             if index == 0:
@@ -123,17 +123,17 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
    
     elif block['has_children'] and block_type == 'callout':
         outcome_block = outcome_block.rstrip() + '\n'
-        outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block2markdown(subblock, 0, prepared, page_id).splitlines()) + '>\n' for subblock in block["children"])
+        outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block2markdown(subblock, 0, ctx, page_id).splitlines()) + '>\n' for subblock in block["children"])
         outcome_block = outcome_block.rstrip() + '\n'
         
     elif block['has_children'] and block_type in ['column_list', 'column']:
         for subblock in block["children"]:
-            outcome_block += block2markdown(subblock, 0, prepared, page_id)
+            outcome_block += block2markdown(subblock, 0, ctx, page_id)
     
     elif block['has_children'] and block_type.startswith('heading_'):
         outcome_block = '\n<details markdown="1">\n<summary markdown="1">\n\n' + outcome_block + '\n\n</summary>\n\n'
         for subblock in block["children"]:
-            outcome_block += block2markdown(subblock, 0, prepared, page_id)
+            outcome_block += block2markdown(subblock, 0, ctx, page_id)
         outcome_block += '\n\n</details>\n\n'
     
     elif block['has_children']:
@@ -144,7 +144,7 @@ def block2markdown(block:object,depth=0, prepared={}, page_id='') -> str:
             # child block for it, which is strange.
             if subblock['type'] == "heading_1":
                 depth = 0
-            outcome_block += "\t"*depth + block2markdown(subblock, depth, prepared, page_id)
+            outcome_block += "\t"*depth + block2markdown(subblock, depth, ctx, page_id)
 
     return outcome_block
 
@@ -207,19 +207,19 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
             parent_path = collect_parent_path_recursively(par_id, parent_path, pages)
         return parent_path
 
-    def fill_page_urls_recursively(page_id:str, prepared: dict, output_dir:str, root_page_id:str, slug:dict = {}, translate = {ord(" "): "_", ord("$"): "_", ord("\\"): "_"}):
-        parent_id = prepared["pages"][page_id]["parent"]
-        parent_url = prepared["pages"][parent_id]["url"] if parent_id is not None else ''
-        #basename = prepared["pages"][page_id]["title"].translate(translate) + '.md'
+    def fill_page_urls_recursively(page_id:str, ctx: dict, output_dir:str, root_page_id:str, slug:dict = {}, translate = {ord(" "): "_", ord("$"): "_", ord("\\"): "_"}):
+        parent_id = ctx["pages"][page_id]["parent"]
+        parent_url = ctx["pages"][parent_id]["url"] if parent_id is not None else ''
+        #basename = ctx["pages"][page_id]["title"].translate(translate) + '.md'
         
         basename = slug.get(page_id.replace('-', ''), page_id) + '.md'
         
         url = os.path.join(output_dir, basename)
-        prepared["pages"][page_id]["basename"] = basename
-        prepared["pages"][page_id]["url"] = basename #url
-        prepared["urls"].append(url)
-        for child_id in prepared["pages"][page_id]["children"]:
-            fill_page_urls_recursively(child_id, prepared, output_dir = output_dir, root_page_id = root_page_id, slug = slug)
+        ctx["pages"][page_id]["basename"] = basename
+        ctx["pages"][page_id]["url"] = basename #url
+        ctx["urls"].append(url)
+        for child_id in ctx["pages"][page_id]["children"]:
+            fill_page_urls_recursively(child_id, ctx, output_dir = output_dir, root_page_id = root_page_id, slug = slug)
 
     def fix_markdown_lists(page_md: str) -> str:
         page_md_fixed_lines = []
@@ -371,7 +371,7 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
             pages[page_id]["assets_to_download"].append(icon)
     
 
-    prepared = dict(
+    ctx = dict(
         urls = [],
         #include_footer = args.include_footer,
         root_page_id = list(raw_notion.keys())[0],
@@ -382,16 +382,16 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
         page["parent_path"] = collect_parent_path_recursively(page_id, [], pages)
 
     for page_id, page in pages.items():
-        fill_page_urls_recursively(page_id, prepared, output_dir = args.output_dir, root_page_id = prepared["root_page_id"], slug = slug)
+        fill_page_urls_recursively(page_id, ctx, output_dir = args.output_dir, root_page_id = ctx["root_page_id"], slug = slug)
     
     #if args.download_assets:
     #    for page_id, page in pages.items():
     #        download_assets_(page_id, page, assets_dir = args.assets_dir)
     
     for page_id in raw_notion:
-        pages[page_id]["md_content"] = fix_markdown_lists("".join(block2markdown(block, 0, prepared, page_id) for block in (raw_notion[page_id].get("blocks", []) or raw_notion[page_id].get("children", [])))).replace("\n\n\n", "\n\n") # page_md = code_aligner(page_md)
+        pages[page_id]["md_content"] = fix_markdown_lists("".join(block2markdown(block, 0, ctx, page_id) for block in (raw_notion[page_id].get("blocks", []) or raw_notion[page_id].get("children", [])))).replace("\n\n\n", "\n\n") # page_md = code_aligner(page_md)
 
-    return prepared
+    return ctx
 
 def pop_and_replace_child_pages_recursively(block, parent_id = None):
     child_pages = {}
@@ -433,23 +433,21 @@ def main(args):
    
     output_dir = args.output_dir
     isoparse = "%Y-%m-%dT%H:%M:%S.%fZ"
-    prepared = prepare_notion_content(notion_cache, args)
-    
-    prepared['base_url'] = output_dir
-    prepared['archive_url'] = 'N/A'
-    for page_id, page in prepared["pages"].items():
+    ctx = prepare_notion_content(notion_cache, args)
+    ctx['base_url'] = output_dir
+    ctx['archive_url'] = 'N/A'
+    for page_id, page in ctx["pages"].items():
         for k in page.keys() & ['date', 'date_end', 'last_edited_time']:
-            prepared["pages"][page_id][k] = datetime.datetime.strptime(page[k], isoparse)
+            ctx["pages"][page_id][k] = datetime.datetime.strptime(page[k], isoparse)
 
-    for page_id, page in prepared["pages"].items():
+    for page_id, page in ctx["pages"].items():
         metadata = '''---\ntitle: "{title}"\ncover: {cover}\nemoji: {emoji}\n{properties}\n---\n\n'''.format(properties = '\n'.join(f"{k}: {v}" for k, v in page.get("properties_md", {}).items()), **page)
         #page_md_content = metadata + page['md_content']
-        
         page_md_content = '[#](../) / {emoji} {title}\n<hr/>\n\n'.format(**page) + ('![cover]({cover})\n\n' if page.get('cover') else '').format(**page) + '# {emoji} {title}\n\n'.format(**page) + page['md_content']
-
+        
         os.makedirs(output_dir, exist_ok = True)
         with open(os.path.join(output_dir, page["basename"]), 'w+', encoding='utf-8') as m: #  + '.md'
-            print('Generated', os.path.join(output_dir, page["basename"]), '|', page['title'])
+            print('generated', os.path.join(output_dir, page["basename"]), '|', page['title'])
             m.write(page_md_content)
 
 if __name__ == "__main__":
