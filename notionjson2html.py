@@ -103,12 +103,13 @@ def link_like(block, ctx, block_type, tag = 'a'):
     html = '\n' + f'<{tag}' + notionattrs2html(block, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {text_html}</{tag}><br />\n'
     return html
 
-def link_to_page(block, ctx, tag = 'a'):
+def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>'):
     link_to_page_type = block[link_to_page.__name__].get('type') # should be 'page_id'
     link_to_page_page_id = block[link_to_page.__name__].get('page_id', '')
     
     slug = link_to_page.notion_slugs.get(link_to_page_page_id) or link_to_page.notion_slugs.get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
-    
+   
+    #TODO: need to use html <base> element?
     href = '#404'
     if link_to_page.extract_html == 'single':
         if link_to_page_page_id in link_to_page.page_ids:
@@ -135,7 +136,7 @@ def link_to_page(block, ctx, tag = 'a'):
     else:
         caption = f'title of linked page [{link_to_page_page_id}] not found'
 
-    return f'<{tag} href="{href}"' + notionattrs2html(block, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id']) + f'>{caption}</{tag}><br />\n'
+    return f'<{tag} href="{href}"' + notionattrs2html(block, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id']) + f'>{caption}</{tag}>{suffix_html}\n'
 
 def table(block, ctx, tag = 'table'):
     #TODO: headers: row-header, column-header
@@ -328,7 +329,7 @@ def block2html(block, ctx = 0, begin = False, end = False):
     block2render = dict(paragraph = paragraph, heading_1 = heading_1, heading_2 = heading_2, heading_3 = heading_3, toggle = toggle, quote = quote, blank = blank, table = table, divider = divider, table_of_contents = table_of_contents, callout = callout, image = image, page = page, child_page = child_page, column_list = column_list, column = column, video = video, embed = embed, file = file, pdf = pdf, link_to_page = link_to_page, bookmark = bookmark)
     block2render_with_begin_end = dict(numbered_list_item = numbered_list_item, bulleted_list_item = bulleted_list_item)
 
-    block_type = str(block.get('type') or block.get('object'))
+    block_type = block.get('type') or block.get('object') or ''
     
     if block_type in block2render:
         return block2render[block_type](block, ctx)
@@ -340,16 +341,27 @@ def block2html(block, ctx = 0, begin = False, end = False):
         # TODO: print all unsupported to a log? include as comment? or just as element? render children? replace by <!-- --> or maybe "p"?
         return f'\n<{block_type} unsupported="1"' + notionattrs2html(block) + '/>\n\n'
 
-def site2html(page_ids, notion_pages = {}, style = ''):
-    html = '\n\n'.join(block2html(notion_pages[k], ctx = 0) for k in page_ids)
+def header2html(parent_path, ctx):
+    return '&nbsp;/&nbsp;'.join(link_to_page(block, ctx, suffix_html = '') for block in parent_path)
+
+def site2html(page_ids, notion_pages = {}, style = '', ctx = 0):
+    #TODO: extract the html template if needed?
+    
+    parent_path = [dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_ids[0]))]
+
+    main_html = '\n\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
+    header_html = header2html(parent_path, ctx = ctx)
+
     return f'''
     <html><body>
     <style>
     {style}
     </style>
-    <header class="site-header"><a class="site-title" href="/notionfun/">Exil Solidaire</a></header>
+    <header class="site-header">
+    {header_html}
+    </header>
     <main class="page-content" aria-label="Content"><div class="wrapper">
-    {html}
+    {main_html}
     </div></main>
     </body></html>
     '''
