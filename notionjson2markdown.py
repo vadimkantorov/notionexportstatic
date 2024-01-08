@@ -427,14 +427,20 @@ def pop_and_replace_child_pages_recursively(block, parent_id = None):
                     child_pages[k].extend(l)
     return child_pages
 
-def generate_site(prepared: dict, output_dir = None, isoparse = "%Y-%m-%dT%H:%M:%S.%fZ"):
+def main(args):
+    with open(args.input_path, "r") as f:
+        notion_cache = json.load(f)
+   
+    output_dir = args.output_dir
+    isoparse = "%Y-%m-%dT%H:%M:%S.%fZ"
+    prepared = prepare_notion_content(notion_cache, args)
+    
     prepared['base_url'] = output_dir
     prepared['archive_url'] = 'N/A'
     for page_id, page in prepared["pages"].items():
         for k in page.keys() & ['date', 'date_end', 'last_edited_time']:
             prepared["pages"][page_id][k] = datetime.datetime.strptime(page[k], isoparse)
 
-    
     for page_id, page in prepared["pages"].items():
         metadata = '''---\ntitle: "{title}"\ncover: {cover}\nemoji: {emoji}\n{properties}\n---\n\n'''.format(properties = '\n'.join(f"{k}: {v}" for k, v in page.get("properties_md", {}).items()), **page)
         #page_md_content = metadata + page['md_content']
@@ -445,25 +451,15 @@ def generate_site(prepared: dict, output_dir = None, isoparse = "%Y-%m-%dT%H:%M:
         with open(os.path.join(output_dir, page["basename"]), 'w+', encoding='utf-8') as m: #  + '.md'
             print('Generated', os.path.join(output_dir, page["basename"]), '|', page['title'])
             m.write(page_md_content)
-        
-
-
-
-def main(args):
-    with open(args.input_path, "r") as f:
-        notion_cache = json.load(f)
-   
-    prepared = prepare_notion_content(notion_cache, args)
-    generate_site(prepared, output_dir = args.output_dir)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-path', '-i')
     parser.add_argument('--output-dir', '-o')
-    parser.add_argument('--assets-dir',           default = './_assets')
-    parser.add_argument('--slug-json',            default = 'slug.json')
+    parser.add_argument('--assets-dir', default = './_assets')
+    parser.add_argument('--slug-json')
     parser.add_argument('--html-details-open', action = 'store_true')
+    parser.add_argument('--extract-markdown', choices = ['flat', 'single'], default = 'flat')
     args = parser.parse_args()
-    
     print(args)
     main(args)
