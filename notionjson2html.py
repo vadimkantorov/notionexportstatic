@@ -106,7 +106,19 @@ def link_like(block, ctx, block_type, tag = 'a'):
 def link_to_page(block, ctx, tag = 'a'):
     link_to_page_type = block[link_to_page.__name__].get('type') # should be 'page_id'
     link_to_page_page_id = block[link_to_page.__name__].get('page_id', '')
-    href = '#' + link_to_page_page_id #TODO: use slugs
+    
+    slug = link_to_page.notion_slugs.get(link_to_page_page_id) or link_to_page.notion_slugs.get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
+    
+    href = '#404'
+    if link_to_page.extract_html == 'single':
+        if link_to_page_page_id in link_to_page.page_ids:
+            href = '#' + slug 
+        else:
+            #TODO: find the page path in relation to the current path, need to know flat or flat.html
+            #TODO: allow passing url-style explicitly, if not set, detect if slug.html or if /slug/ exists already and maybe have some url-style as default
+            href = './' + slug
+    elif link_to_page.extract_html == 'flat':
+        href = './' + slug
     
     id2block = {}
     stack = list(block2html.notion_cache['pages'].values())
@@ -146,7 +158,11 @@ def page_like(block, ctx, tag = 'article'):
     src = block2html.notion_cache['assets'].get(src, {}).get('data_uri', src)
 
     title = block.get("properties", {}).get("title", {}).get("title", [])[0]["plain_text"] if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', '')) 
-    html = f'<{tag} class="post"' + notionattrs2html(block, used_keys = ['blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-page-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
+    
+    link_to_page_page_id = block.get('id', '')
+    slug = link_to_page.notion_slugs.get(link_to_page_page_id) or link_to_page.notion_slugs.get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
+    
+    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-page-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
     html += children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children')
     html += '\n' + f'</div></{tag}>\n'
     return html
@@ -436,7 +452,6 @@ def main(args):
     toggle_like.html_details_open = args.html_details_open
     block2html.notion_cache = notion_cache
     
-    #assert len(notion_cache['pages']) >= 1
     root_page_ids = args.notion_page_id or list(notion_cache['pages'].keys())
     for i in range(len(root_page_ids)):
         for k, v in notion_slugs.items():
@@ -444,13 +459,18 @@ def main(args):
                 root_page_ids[i] = k
         for k in notion_cache['pages'].keys():
             if root_page_ids[i] == k.replace('-', ''):
-                root_page_ids[i] = k 
-    # TODO: add error checking that all root_page_ids are found in actual pages?
+                root_page_ids[i] = k
+
+    # TODO: add error checking that all root_page_ids are found in actual pages and non zero pages
     # TODO:add all child_pages recursively, and not just a single time. should update child_pages always? add special option
     child_pages_by_parent_id = {k: v for page_id, page in notion_cache['pages'].items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
     child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
     
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id[page_id] if child_page['id'] not in root_page_ids]
+
+    link_to_page.page_ids = page_ids
+    link_to_page.extract_html = args.extract_html
+    link_to_page.notion_slugs = notion_slugs
     
     notion_assets = notion_cache.get('assets', {})
     
