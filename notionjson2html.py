@@ -109,6 +109,62 @@ def link_like(block, ctx, block_type, tag = 'a'):
     html = '\n' + f'<{tag}' + notionattrs2html(block, ctx, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {text_html}</{tag}><br />\n'
     return html
 
+def page_like(block, ctx, tag = 'article'):
+    #TODO: page title and mini-nav
+    icon_type = block['icon'].get('type') #TODO: for child_page depends on pop_and_replace_child_pages_recursively
+    icon_emoji = block['icon'].get('emoji', '')
+    cover_type = block.get('cover', {}).get('type')
+    src = block.get('cover', {}).get('file', {}).get('url', '')
+    src = ctx['assets'].get(src, {}).get('data_uri', src)
+
+    title = block.get("properties", {}).get("title", {}).get("title", [])[0]["plain_text"] if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', '')) 
+    
+    link_to_page_page_id = block.get('id', '')
+    slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
+    
+    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-page-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
+    html += children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children')
+    html += '\n' + f'</div></{tag}>\n'
+    return html
+
+
+def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
+    color = block[table_of_contents.__name__].get('color', '')
+    
+    id2block = {}
+    stack = list(ctx['pages'].values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+
+    parent_block = block
+    while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
+        parent_id = parent_block['parent'].get(parent_block['parent'].get('type'))
+        if parent_id not in id2block:
+            break
+        parent_block = id2block[parent_id]
+
+    headings = []
+    stack = [parent_block]
+    while stack:
+        top = stack.pop()
+        is_heading = top.get('type', '') in [heading_1.__name__, heading_2.__name__, heading_3.__name__]
+        if is_heading:
+            headings.append(top)
+        
+        if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
+            stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
+    
+    html = f'<{tag} class="notion-table-of-contents notion-color-{color}"' +  notionattrs2html(block, ctx, used_keys = ['table_of_contents-color']) + '/>\n'
+    for block in headings:
+        heading_class = dict(heading_1 = 'notion-toc-section', heading_2 = 'notion-toc-subsection', heading_3 = 'notion-toc-subsubsection').get(block.get('type'), '')
+        block_id = block['id']
+        html += f'<li class="{heading_class}"><a href="#{block_id}">' + richtext2html(block[block.get('type')].get('text') or block[block.get('type')].get('rich_text') or [], title_mode = True) + '</a></li>\n'
+    html += f'</{tag}>\n'
+    return html
+
+
 def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>'):
     id2block = {}
     stack = list(ctx['pages'].values())
@@ -169,24 +225,6 @@ def table(block, ctx, tag = 'table'):
     html += f'</{tag}>\n'
     return html
 
-def page_like(block, ctx, tag = 'article'):
-    #TODO: page title and mini-nav
-    icon_type = block['icon'].get('type') #TODO: for child_page depends on pop_and_replace_child_pages_recursively
-    icon_emoji = block['icon'].get('emoji', '')
-    cover_type = block.get('cover', {}).get('type')
-    src = block.get('cover', {}).get('file', {}).get('url', '')
-    src = ctx['assets'].get(src, {}).get('data_uri', src)
-
-    title = block.get("properties", {}).get("title", {}).get("title", [])[0]["plain_text"] if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', '')) 
-    
-    link_to_page_page_id = block.get('id', '')
-    slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
-    
-    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-page-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
-    html += children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children')
-    html += '\n' + f'</div></{tag}>\n'
-    return html
-
 def page(block, ctx, tag = 'article'):
     return page_like(block, ctx, tag = tag)
 
@@ -226,21 +264,20 @@ def embed(block, ctx, tag = 'iframe'):
     src = block[embed.__name__].get('url', '')
     return f'<{tag}' + notionattrs2html(block, ctx, used_keys = [embed.__name__ + '-caption', embed.__name__ + '-url']) + f' src="{src}"></{tag}>\n'
 
-def callout(block, ctx, tag = 'p'):
+def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
     icon_type = block[callout.__name__].get('icon', {}).get('type')
     icon_emoji = block[callout.__name__].get('icon', {}).get('emoji', '')
     color = block[callout.__name__].get('color', '')
     text_html = text_like(block, ctx, block_type = callout.__name__, tag = tag, used_keys = [callout.__name__ + '-icon'])
     return f'<div style="display:flex" class="notion-callout-block notion-color-{color}"><div>{icon_emoji}</div><div>\n' + text_html + '\n</div></div>\n'
 
-
-def column_list(block, ctx, tag = 'div'):
+def column_list(block, ctx, tag = 'div', class_name = 'notion-column_list-block'):
     html = f'<{tag}' + notionattrs2html(block, ctx, used_keys = ['children']) + '>\n'
     html += children_like(block, ctx)
     html += f'</{tag}>\n'
     return html
 
-def column(block, ctx, tag = 'div'):
+def column(block, ctx, tag = 'div', class_name = 'notion-column-block'):
     html = f'<{tag}' + notionattrs2html(block, ctx, used_keys = ['children']) + '>\n'
     html += children_like(block, ctx, tag = tag)
     html += f'</{tag}>\n'
@@ -285,42 +322,6 @@ def bulleted_list_item(block, ctx, tag = 'ul', begin = False, end = False):
 def numbered_list_item(block, ctx, tag = 'ol', begin = False, end = False):
     return (f'<{tag}>\n' if begin else '') + text_like(block, ctx, block_type = numbered_list_item.__name__, tag = 'li') + ('\n' + f'</{tag}>\n' if end else '')
 
-def table_of_contents(block, ctx, tag = 'ul'):
-    color = block[table_of_contents.__name__].get('color', '')
-    
-    id2block = {}
-    stack = list(ctx['pages'].values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-
-    parent_block = block
-    while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
-        parent_id = parent_block['parent'].get(parent_block['parent'].get('type'))
-        if parent_id not in id2block:
-            break
-        parent_block = id2block[parent_id]
-
-    headings = []
-    stack = [parent_block]
-    while stack:
-        top = stack.pop()
-        is_heading = top.get('type', '') in [heading_1.__name__, heading_2.__name__, heading_3.__name__]
-        if is_heading:
-            headings.append(top)
-        
-        if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
-            stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
-    
-    html = f'<{tag} class="notion-table-of-contents notion-color-{color}"' +  notionattrs2html(block, ctx, used_keys = ['table_of_contents-color']) + '/>\n'
-    for block in headings:
-        heading_class = dict(heading_1 = 'notion-toc-section', heading_2 = 'notion-toc-subsection', heading_3 = 'notion-toc-subsubsection').get(block.get('type'), '')
-        block_id = block['id']
-        html += f'<li class="{heading_class}"><a href="#{block_id}">' + richtext2html(block[block.get('type')].get('text') or block[block.get('type')].get('rich_text') or [], title_mode = True) + '</a></li>\n'
-    html += f'</{tag}>\n'
-    return html
-
 
 def notionattrs2html(block, ctx = {}, used_keys = []):
     used_keys_ = used_keys
@@ -332,7 +333,7 @@ def notionattrs2html(block, ctx = {}, used_keys = []):
     keys = ['object', 'id', 'created_time', 'last_edited_time', 'archived', 'type', 'has_children', 'url', 'public_url', 'request_id'] 
     keys_nested1 = [('created_by', 'object'), ('created_by', 'id'), ('last_edited_by', 'object'), ('last_edited_by', 'id'), ('parent', 'type'), ('parent', 'workspace'), ('parent', 'page_id'), ('parent', 'block_id')] 
 
-    keys_alias = {'id' : 'id'}
+    keys_alias = {'id' : 'data-block-id'}
 
     keys_extra = [k for k in block.keys() if k not in keys and k not in used_keys if not isinstance(block[k], dict)] + [f'{k1}-{k2}' for k1 in block.keys() if isinstance(block[k1], dict) for k2 in block[k1].keys() if (k1, k2) not in keys_nested1 and (k1, k2) not in used_keys_nested1]
 
@@ -340,7 +341,7 @@ def notionattrs2html(block, ctx = {}, used_keys = []):
         print(block.get('type') or block.get('object'), ';'.join(keys_extra))
 
     if ctx['notion_attrs_verbose'] is True:
-        return ' ' + ' '.join('{kk}="{v}"'.format(kk = keys_alias.get(k, 'data-notion-' + k), v = block[k]) for k in keys if k in block) + ' ' + ' '.join('data-notion-{k1}-{k2}="{v}"'.format(k1 = k1, k2 = k2, v = block[k1][k2]) for k1, k2 in keys_nested1 if k1 in block and k2 in block[k1]) + (' data-notion-extrakeys="{}"'.format(';'.join(keys_extra)) if keys_extra else '') + ' '
+        return ' id="{id}" '.format(id = block.get('id', '')) + ' '.join('{kk}="{v}"'.format(kk = keys_alias.get(k, 'data-notion-' + k), v = block[k]) for k in keys if k in block) + ' ' + ' '.join('data-notion-{k1}-{k2}="{v}"'.format(k1 = k1, k2 = k2, v = block[k1][k2]) for k1, k2 in keys_nested1 if k1 in block and k2 in block[k1]) + (' data-notion-extrakeys="{}"'.format(';'.join(keys_extra)) if keys_extra else '') + ' '
     else:
         return ' id="{id}" '.format(id = block.get('id', ''))
    
