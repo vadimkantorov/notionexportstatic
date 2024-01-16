@@ -15,6 +15,7 @@ import argparse
 import urllib.parse
 
 def richtext2html(richtext, title_mode=False) -> str:
+    # https://www.notion.so/help/customize-and-style-your-content#markdown
     if isinstance(richtext, list):
         return ''.join(richtext2html(r, title_mode) for r in richtext).strip()
     code = lambda content: f'<code>{content}</code>'
@@ -73,7 +74,7 @@ def richtext2html(richtext, title_mode=False) -> str:
             outcome_word = color(outcome_word, annot['color'])
     return outcome_word
 
-def notionattrs2html(block, ctx = {}, used_keys = []):
+def notionattrs2html(block, ctx = {}, used_keys = [], class_name = '', attrs = {}):
     used_keys_ = used_keys
     used_keys, used_keys_nested1, used_keys_nested2 = [k for k in used_keys if k.count('-') == 0], [tuple(k.split('-')) for k in used_keys if k.count('-') == 1], [tuple(k.split('-')) for k in used_keys if k.count('-') == 2]
 
@@ -84,11 +85,13 @@ def notionattrs2html(block, ctx = {}, used_keys = []):
     keys_nested1 = [('created_by', 'object'), ('created_by', 'id'), ('last_edited_by', 'object'), ('last_edited_by', 'id'), ('parent', 'type'), ('parent', 'workspace'), ('parent', 'page_id'), ('parent', 'block_id')] 
 
     keys_extra = [k for k in block.keys() if k not in keys and k not in used_keys if not isinstance(block[k], dict)] + [f'{k1}-{k2}' for k1 in block.keys() if isinstance(block[k1], dict) for k2 in block[k1].keys() if (k1, k2) not in keys_nested1 and (k1, k2) not in used_keys_nested1]
+    
+    html_attrs = ' ' + ' '.join(f'{k}="{v}"' for k, v in attrs.items()) + ' '
 
     if keys_extra:
         print(block.get('type') or block.get('object'), ';'.join(keys_extra))
     
-    res = ' data-block-id="{id}" '.format(id = block.get('id', ''))
+    res = ' data-block-id="{id}" '.format(id = block.get('id', '')) + (f' class="{class_name}" ' if class_name else '') + html_attrs
     keys.remove('id')
 
     if ctx['notion_attrs_verbose'] is True:
@@ -105,33 +108,27 @@ def children_like(block, ctx, key = 'children', tag = ''):
         html += ((f'<{tag}>') if tag else '') + block2html(subblock, ctx, begin = not same_block_type_as_prev, end = not same_block_type_as_next) + (f'</{tag}>\n' if tag else '')
     return html
 
-def text_like(block, ctx, block_type, tag, used_keys = [], attrs = {}):
+def text_like(block, ctx, block_type, tag, used_keys = [], attrs = {}, class_name = ''):
     color = block[block_type].get('color', '')
-    html_attrs = ' '.join(f'{k}="{v}"' for k, v in attrs.items()) + ' '
-    html = f'<{tag} {html_attrs} class="notion-color-{color}"' + notionattrs2html(block, ctx, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys) + '>' 
-    html += richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
-    html += children_like(block, ctx)
-    html += f'</{tag}>\n'
-    return html
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys) + '>' + richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or []) + children_like(block, ctx) + f'</{tag}>\n'
 
-def toggle_like(block, ctx, block_type, tag, attrs = {}):
+def toggle_like(block, ctx, block_type, tag, attrs = {}, class_name = ''):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     color = block[block_type].get('color', '')
     html_details_open = ['', 'open'][ctx['html_details_open']]
-    html_attrs = ' '.join(f'{k}="{v}"' for k, v in attrs.items()) + ' '
-    return f'<details {html_attrs} class="notion-color-{color}" {html_details_open}' + notionattrs2html(block, ctx, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'><summary><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + '</details>\n'
+    return f'<details {html_details_open}' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'><summary><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + '</details>\n'
 
-def heading_like(block, ctx, block_type, tag):
+def heading_like(block, ctx, block_type, tag, class_name = ''):
     if block.get(block_type, {}).get('is_toggleable') is not True: 
-        return text_like(block, ctx, block_type, tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block['id']))
+        return text_like(block, ctx, block_type, tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block['id']), class_name = class_name)
     else:
-        return toggle_like(block, ctx, block_type, tag, attrs = dict(id = block['id']))
+        return toggle_like(block, ctx, block_type, tag, attrs = dict(id = block['id']), class_name = class_name)
 
-def link_like(block, ctx, block_type, tag = 'a'):
+def link_like(block, ctx, block_type, tag = 'a', class_name = ''):
     assert block[block_type].get('type') in ['file', 'external', None]
     src = block[block_type].get('file', {}).get('url') or block[block_type].get('external', {}).get('url') or block[block_type].get('url') or ''
     html_text = richtext2html(block[block_type].get('caption', [])) or block[block_type].get('name') or src #TODO: urlquote?
-    html = '\n' + f'<{tag}' + notionattrs2html(block, ctx, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {html_text}</{tag}><br />\n'
+    html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {html_text}</{tag}><br />\n'
     return html
 
 def page_like(block, ctx, tag = 'article'):
@@ -155,8 +152,6 @@ def page_like(block, ctx, tag = 'article'):
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
-    color = block[table_of_contents.__name__].get('color', '')
-    
     id2block = {}
     stack = list(ctx['pages'].values())
     while stack:
@@ -182,7 +177,8 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
         if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
             stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
     
-    html = f'<{tag} class="notion-table-of-contents notion-color-{color}"' +  notionattrs2html(block, ctx, used_keys = ['table_of_contents-color']) + '/>\n'
+    color = block[table_of_contents.__name__].get('color', '')
+    html = f'<{tag}' +  notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', used_keys = ['table_of_contents-color']) + '/>\n'
     for block in headings:
         heading_class = dict(heading_1 = 'notion-toc-section', heading_2 = 'notion-toc-subsection', heading_3 = 'notion-toc-subsubsection').get(block.get('type'), '')
         block_id = block['id']
@@ -235,31 +231,31 @@ def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>', class_name = 'not
     else:
         caption = f'title of linked page [{link_to_page_page_id}] not found'
 
-    return f'<{tag} href="{href}"' + notionattrs2html(block, ctx, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id']) + f'>{caption}</{tag}>{suffix_html}\n'
+    return f'<{tag} href="{href}"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id']) + f'>{caption}</{tag}>{suffix_html}\n'
 
 def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     #TODO: headers: row-header, column-header
     table_width, has_row_header, has_column_header = map(block[table.__name__].get, ['table_width', 'has_row_header', 'has_column_header'])
-    html = f'<{tag} data-notion-table_width="{table_width}" data-notion-has_column_header="{has_column_header}" data-notion-has_row_header="{has_row_header}" ' + notionattrs2html(block, ctx, used_keys = ['children', 'table-table_width', 'table-has_column_header', 'table-has_row_header']) + '>\n'
+    html = f'<{tag} data-notion-table_width="{table_width}" data-notion-has_column_header="{has_column_header}" data-notion-has_row_header="{has_row_header}" ' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children', 'table-table_width', 'table-has_column_header', 'table-has_row_header']) + '>\n'
     for subblock in block.get('children', []):
         html += '<tr>\n'
         for cell in subblock.get('table_row', {}).get('cells', []):
-            html += '<td>' + richtext2html(cell) + '</td>\n' #TODO: array -> divs
+            html += '<td>' + (''.join('<div>{html}</div>'.format(html = richtext2html(subcell)) for subcell in cell) if isinstance(cell, list) else richtext2html(cell)) + '</td>\n'
         html += '</tr>\n'
     html += f'</{tag}>\n'
     return html
 
-def page(block, ctx, tag = 'article'):
+def page(block, ctx, tag = 'article'): #TODO: class_name
     return page_like(block, ctx, tag = tag)
 
-def child_page(block, ctx, tag = 'article'):
+def child_page(block, ctx, tag = 'article'): #TODO: class_name
     return page_like(block, ctx, tag = tag)
 
 def column_list(block, ctx, tag = 'div', class_name = 'notion-column_list-block'):
-    return f'<{tag}' + notionattrs2html(block, ctx, used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
 
 def column(block, ctx, tag = 'div', class_name = 'notion-column-block'):
-    return f'<{tag}' + notionattrs2html(block, ctx, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'
 
 def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     caption = richtext2html(block[video.__name__].get('caption', []))
@@ -268,7 +264,7 @@ def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     is_youtube = 'youtube.com' in src
     src = src.replace("http://", "https://").replace('/watch?v=', '/embed/').split('&')[0] if is_youtube else src
     
-    html = f'<{tag}' + notionattrs2html(block, ctx, used_keys = [video.__name__ + '-caption', video.__name__ + '-type', video.__name__ + '-external', video.__name__ + '-external-url']) + '>'
+    html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [video.__name__ + '-caption', video.__name__ + '-type', video.__name__ + '-external', video.__name__ + '-external-url']) + '>'
     if is_youtube:
         html += f'<div class="res_emb_block"><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>'
     else:
@@ -285,59 +281,60 @@ def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
     src = ctx['assets'].get(src, {}).get('data_uri', src)
     if src.startswith('file:///'):
         src = src.split('file:///', maxsplit = 1)[-1]
-    caption = richtext2html(block['image']['caption']) # TODO: html.escape
-    html = f'<{tag}' + notionattrs2html(block, ctx, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external']) + f' src="{src}">{caption}</{tag}>\n'
+    html_text = richtext2html(block['image']['caption']) # TODO: html.escape, TODO: figure
+    html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external']) + f' src="{src}"></{tag}><div>{html_text}</div>\n'
     return html
 
 def embed(block, ctx, tag = 'iframe', class_name = 'notion-embed-block'):
     html_text = richtext2html(block[embed.__name__].get('caption', [])) 
     src = block[embed.__name__].get('url', '')
-    return f'<{tag}' + notionattrs2html(block, ctx, used_keys = [embed.__name__ + '-caption', embed.__name__ + '-url']) + f' src="{src}"></{tag}><div>{html_text}</div>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [embed.__name__ + '-caption', embed.__name__ + '-url']) + f' src="{src}"></{tag}><div>{html_text}</div>\n'
 
-def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
+def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'): #TODO: notionattrs
     icon_type = block[callout.__name__].get('icon', {}).get('type')
     icon_emoji = block[callout.__name__].get('icon', {}).get('emoji', '')
     color = block[callout.__name__].get('color', '')
     html_text = text_like(block, ctx, block_type = callout.__name__, tag = tag, used_keys = [callout.__name__ + '-icon'])
-    return f'<div style="display:flex" class="notion-callout-block notion-color-{color}"><div>{icon_emoji}</div><div>\n{html_text}\n</div></div>\n'
-
-def pdf(block, ctx, tag = 'a', class_name = 'notion-pdf-block'):
-    return link_like(block, ctx, block_type = pdf.__name__, tag = tag)
+    return f'<div style="display:flex"' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', used_keys = [callout.__name__ + '-icon', callout.__name__ + '-color', callout.__name__ + '-rich_text', 'children']) + f'><div>{icon_emoji}</div><div>\n{html_text}\n</div></div>\n'
 
 def file(block, ctx, tag = 'a', class_name = 'notion-file-block'):
-    return link_like(block, ctx, block_type = file.__name__, tag = tag)
+    return link_like(block, ctx, block_type = file.__name__, tag = tag, class_name = class_name)
 
 def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block'):
-    return link_like(block, ctx, block_type = bookmark.__name__, tag = tag)
-    
+    return link_like(block, ctx, block_type = bookmark.__name__, tag = tag, class_name = class_name)
+
+def pdf(block, ctx, tag = 'a', class_name = 'notion-pdf-block'):
+    #TODO: instead embed pdf viewer
+    return link_like(block, ctx, block_type = pdf.__name__, tag = tag, class_name = class_name)
+
 def paragraph(block, ctx, tag = 'p', class_name = 'notion-text-block'):
     #if block_type == "paragraph" and not block['has_children'] and not block[block_type]['text']:
     #    outcome_block = <br/>" +"\n\n"
-    return text_like(block, ctx, block_type = paragraph.__name__, tag = tag)
+    return text_like(block, ctx, block_type = paragraph.__name__, tag = tag, class_name = class_name)
 
 def heading_1(block, ctx, tag = 'h1', class_name = 'notion-header-block'):
-    return heading_like(block, ctx, block_type = heading_1.__name__, tag = tag)
+    return heading_like(block, ctx, block_type = heading_1.__name__, tag = tag, class_name = class_name)
 
 def heading_2(block, ctx, tag = 'h2', class_name = 'notion-sub_header-block'):
-    return heading_like(block, ctx, block_type = heading_2.__name__, tag = tag)
+    return heading_like(block, ctx, block_type = heading_2.__name__, tag = tag, class_name = class_name)
     
 def heading_3(block, ctx, tag = 'h3', class_name = 'notion-sub_sub_header-block'):
-    return heading_like(block, ctx, block_type = heading_3.__name__, tag = tag)
+    return heading_like(block, ctx, block_type = heading_3.__name__, tag = tag, class_name = class_name)
 
 def quote(block, ctx, tag = 'blockquote', class_name = 'notion-quote-block'):
-    return text_like(block, ctx, block_type = quote.__name__, tag = tag)
+    return text_like(block, ctx, block_type = quote.__name__, tag = tag, class_name = class_name)
 
 def toggle(block, ctx, tag = 'span', class_name = 'notion-toggle-block'):
-    return toggle_like(block, ctx, block_type = toggle.__name__, tag = tag)
+    return toggle_like(block, ctx, block_type = toggle.__name__, tag = tag, class_name = class_name)
 
 def divider(block, ctx, tag = 'hr', class_name = 'notion-divider-block'):
-    return f'<{tag}' + notionattrs2html(block, ctx) + '/>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name) + '/>\n'
 
 def bulleted_list_item(block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block'):
-    return (f'<{tag}>\n' if begin else '') + text_like(block, ctx, block_type = bulleted_list_item.__name__, tag = 'li') + ('\n' + f'</{tag}>\n' if end else '')
+    return (f'<{tag} class="{class_name}">\n' if begin else '') + text_like(block, ctx, block_type = bulleted_list_item.__name__, tag = 'li') + ('\n' + f'</{tag}>\n' if end else '')
 
 def numbered_list_item(block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block'):
-    return (f'<{tag}>\n' if begin else '') + text_like(block, ctx, block_type = numbered_list_item.__name__, tag = 'li') + ('\n' + f'</{tag}>\n' if end else '')
+    return (f'<{tag} class="{class_name}">\n' if begin else '') + text_like(block, ctx, block_type = numbered_list_item.__name__, tag = 'li') + ('\n' + f'</{tag}>\n' if end else '')
 
 
 

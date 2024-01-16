@@ -30,13 +30,82 @@ article
 }
 
 details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important}
-.notion-table-of-contents { list-style-type: none !important; margin:0 !important }
-.notion-table-of-contents>li:hover {background-color: gray !important}
+.notion-table_of_contents-block { list-style-type: none !important; margin:0 !important }
+.notion-table_of_contents-block>li:hover {background-color: gray !important}
 .notion-toc-section {padding-left: 10px}
 .notion-toc-subsection {padding-left: 20px}
 .notion-toc-subsubsection {padding-left: 30px}
 
-/* light mode foreground */
+:root {
+/* https://docs.super.so/notion-colors */
+/* light mode */
+--color-text-default: #37352F;
+--color-bg-default: #FFFFFF;
+--color-pill-default: rgba(206,205,202,0.5);
+--color-text-gray : #9B9A97;
+--color-bg-gray : #EBECED;
+--color-pill-gray : rgba(155,154,151,0.4);
+--color-text-brown : #64473A;
+--color-bg-brown : #E9E5E3;
+--color-pill-brown : rgba(140,46,0,0.2);
+--color-text-orange : #D9730D;
+--color-bg-orange : #FAEBDD;
+--color-pill-orange : rgba(245,93,0,0.2);
+--color-text-yellow : #DFAB01;
+--color-bg-yellow : #FBF3DB;
+--color-pill-yellow : rgba(233,168,0,0.2);
+--color-text-green : #0F7B6C;
+--color-bg-green : #DDEDEA;
+--color-pill-green : rgba(0,135,107,0.2);
+--color-text-blue : #0B6E99;
+--color-bg-blue : #DDEBF1;
+--color-pill-blue : rgba(0,120,223,0.2);
+--color-text-purple : #6940A5;
+--color-bg-purple : #EAE4F2;
+--color-pill-purple : rgba(103,36,222,0.2);
+--color-text-pink : #AD1A72;
+--color-bg-pink : #F4DFEB;
+--color-pill-pink : rgba(221,0,129,0.2);
+--color-text-red : #E03E3E;
+--color-bg-red : #FBE4E4;
+--color-pill-red : rgba(255,0,26,0.2);
+
+/* dark mode */
+/*
+--color-text-default : rgba(255,255,255,0.9);
+--color-bg-default : #2F3437;
+--color-pill-default : rgba(206,205,202,0.5);
+--color-text-gray : rgba(151,154,155,0.95);
+--color-bg-gray : #454B4E;
+--color-pill-gray : rgba(151,154,155,0.5);
+--color-text-brown : #937264;
+--color-bg-brown : #434040;
+--color-pill-brown : rgba(147,114,100,0.5);
+--color-text-orange : #FFA344;
+--color-bg-orange : #594A3A;
+--color-pill-orange : rgba(255,163,68,0.5);
+--color-text-yellow : #FFDC49;
+--color-bg-yellow : #59563B;
+--color-pill-yellow : rgba(255,220,73,0.5);
+--color-text-green : #4DAB9A;
+--color-bg-green : #354C4B;
+--color-pill-green : rgba(77,171,154,0.5);
+--color-text-blue : #529CCA;
+--color-bg-blue : #364954;
+--color-pill-blue : rgba(82,156,202,0.5);
+--color-text-purple : #9A6DD7;
+--color-bg-purple : #443F57;
+--color-pill-purple : rgba(154,109,215,0.5);
+--color-text-pink : #E255A1;
+--color-bg-pink : #533B4C;
+--color-pill-pink : rgba(226,85,161,0.5);
+--color-text-red : #FF7369;
+--color-bg-red : #594141;
+--color-pill-red : rgba(255,115,105,0.5);
+*/
+}
+
+/*
 .notion-color-default { color: #37352f }
 .notion-color-gray { color: #787774 }
 .notion-color-brown { color: #9f6b53 }
@@ -47,8 +116,6 @@ details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !import
 .notion-color-purple { color: #9065b0 }
 .notion-color-pink { color: #c14c8a }
 .notion-color-red { color: #d44c47 }
-
-/* light mode background */
 .notion-color-gray_background { background-color:  #f1f1ef }
 .notion-color-brown_background { background-color:  #f4eeee }
 .notion-color-orange_background { background-color:  #faebdd }
@@ -58,7 +125,82 @@ details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !import
 .notion-color-purple_background { background-color:  #f6f3f9 }
 .notion-color-pink_background { background-color:  #faf1f5 }
 .notion-color-red_background { background-color:  #fdebec }
+*/
 
+.notion-color-default { color: var(--color-text-default); }
+.notion-color-gray    { color: var(--color-text-gray); }
+.notion-color-brown   { color: var(--color-text-brown); }
+.notion-color-orange  { color: var(--color-text-orange); }
+.notion-color-yellow  { color: var(--color-text-yellow); }
+.notion-color-green   { color: var(--color-text-green); }
+.notion-color-blue    { color: var(--color-text-blue); }
+.notion-color-purple  { color: var(--color-text-purple); }
+.notion-color-pink    { color: var(--color-text-pink); }
+.notion-color-red     { color: var(--color-text-red); }
+
+.notion-color-default_background { background-color: var(--color-bg-default); }
+.notion-color-gray_background    { background-color: var(--color-bg-gray); }
+.notion-color-brown_background   { background-color: var(--color-bg-brown); }
+.notion-color-orange_background  { background-color: var(--color-bg-orange); }
+.notion-color-yellow_background  { background-color: var(--color-bg-yellow); }
+.notion-color-green_background   { background-color: var(--color-bg-green); }
+.notion-color-blue_background    { background-color: var(--color-bg-blue); }
+.notion-color-purple_background  { background-color: var(--color-bg-purple); }
+.notion-color-pink_background    { background-color: var(--color-bg-pink); }
+.notion-color-red_background     { background-color: var(--color-bg-red); }
+
+/*
+https://www.notionavenue.co/post/notion-color-code-hex-palette 
+
+Notion Light Mode Hex Code for Background
+Text Color (Best for Icon)
+Notion Default: #37352F
+Notion Grey: #787774
+Notion Brown: #9F6B53
+Notion Orange: #D9730D
+Notion Yellow: #CB912F
+Notion Green: #448361
+Notion Blue: #337EA9
+Notion Purple: #9065B0
+Notion Pink: #C14C8A
+Notion Red: #D44C47
+Notion Light Mode Hex Code for Background
+(Callout and Text background) Best for banner or background
+Notion Grey: #F1F1EF
+Notion Brown: #F4EEEE
+Notion Orange: #FAEBDD
+Notion yellow: #FBF3DB
+Notion green: #EDF3EC
+Notion blue: #E7F3F8
+Notion purple: #F6F3F9
+Notion pink: #FAF1F5
+Notion red: #FDEBEC
+
+Notion Dark Mode Hex Code
+Notion Dark Mode Hex Code for Text
+Best for Icon
+Notion Grey: #979A9B
+Notion Brown: #937264
+Notion Orange: #FFA344
+Notion Yellow: #FFDC49
+Notion Green: #4DAB9A
+Notion Blue: #529CCA
+Notion Purple: #9A6DD7
+Notion Pink: #E255A1
+Notion Red: #FF7369
+Notion Dark Mode Hex Code for Background
+Best for banner or background
+Notion Grey: #454B4E
+Notion Brown: #594A3A
+Notion Orange: #594A3A
+Notion Yellow: #59563B
+Notion Green: #354C4B
+Notion Blue: #364954
+Notion Purple: #443F57
+Notion Pink: #533B4C
+Notion Red: #594141
+
+*/
 
 @font-face {
     font-family: 'Twemoji Country Flags';
