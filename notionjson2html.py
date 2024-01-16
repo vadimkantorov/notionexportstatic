@@ -252,10 +252,11 @@ def child_page(block, ctx, tag = 'article'): #TODO: class_name
     return page_like(block, ctx, tag = tag)
 
 def column_list(block, ctx, tag = 'div', class_name = 'notion-column_list-block'):
-    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
+    flex_direction = 'column' if ctx['html_columnlist_disable'] else 'row'
+    return f'<{tag} style="display:flex; flex-direction: {flex_direction};"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
 
 def column(block, ctx, tag = 'div', class_name = 'notion-column-block'):
-    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'
+    return f'<{tag} style="display:flex; flex-direction: column;"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'
 
 def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     caption = richtext2html(block[video.__name__].get('caption', []))
@@ -269,7 +270,6 @@ def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
         html += f'<div class="res_emb_block"><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>'
     else:
         html += f'<video playsinline autoplay muted loop controls src="{src}"></video>'
-
     html += f'</{tag}>\n'
     return html
 
@@ -554,6 +554,7 @@ def main(args):
     ctx = notion_cache
     ctx['notion_attrs_verbose'] = args.notion_attrs_verbose
     ctx['html_details_open'] = args.html_details_open
+    ctx['html_columnlist_disable'] = args.html_columnlist_disable
     ctx['html_link_to_page_index_html'] = args.html_link_to_page_index_html
     ctx['page_ids'] = page_ids
     ctx['extract_html'] = args.extract_html
@@ -574,6 +575,7 @@ if __name__ == '__main__':
     parser.add_argument('--notion-page-id', nargs = '*', default = [])
     parser.add_argument('--notion-attrs-verbose', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
+    parser.add_argument('--html-columnlist-disable', action = 'store_true')
     parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-html', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
