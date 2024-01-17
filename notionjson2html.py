@@ -131,7 +131,7 @@ def link_like(block, ctx, block_type, tag = 'a', class_name = ''):
     html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {html_text}</{tag}><br />\n'
     return html
 
-def page_like(block, ctx, tag = 'article'):
+def page_like(block, ctx, tag = 'article', class_name = ''):
     #TODO: page title and mini-nav
     icon_type = block['icon'].get('type') #TODO: for child_page depends on pop_and_replace_child_pages_recursively
     icon_emoji = block['icon'].get('emoji', '')
@@ -144,7 +144,7 @@ def page_like(block, ctx, tag = 'article'):
     link_to_page_page_id = block.get('id', '')
     slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
     
-    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-page-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
+    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-page-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
     html += children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children')
     html += '\n' + f'</div></{tag}>\n'
     return html
@@ -152,6 +152,7 @@ def page_like(block, ctx, tag = 'article'):
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
+    # https://www.notion.so/help/columns-headings-and-dividers#how-it-works
     id2block = {}
     stack = list(ctx['pages'].values())
     while stack:
@@ -173,16 +174,21 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
         is_heading = top.get('type', '') in [heading_1.__name__, heading_2.__name__, heading_3.__name__]
         if is_heading:
             headings.append(top)
-        
         if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
             stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
     
     color = block[table_of_contents.__name__].get('color', '')
     html = f'<{tag}' +  notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', used_keys = ['table_of_contents-color']) + '/>\n'
+    
+    inc_heading_type = dict(heading_0 = 'heading_1', heading_1 = 'heading_2', heading_2 = 'heading_3', heading_3 = 'heading_3').get
+    nominal_heading_type, effective_heading_type = 'heading_1', 'heading_0'
     for block in headings:
-        heading_class = dict(heading_1 = 'notion-toc-section', heading_2 = 'notion-toc-subsection', heading_3 = 'notion-toc-subsubsection').get(block.get('type'), '')
         block_id = block['id']
-        html += f'<li class="{heading_class}"><a href="#{block_id}">' + richtext2html(block[block.get('type')].get('text') or block[block.get('type')].get('rich_text') or [], title_mode = True) + '</a></li>\n'
+        heading_type = block.get('type', '')
+        nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
+        html_text = richtext2html(block[block.get('type')].get('text') or block[block.get('type')].get('rich_text') or [], title_mode = True)
+        html += f'<li class="notion-table_of_contents-heading notion-table_of_contents-{effective_heading_type}"><a href="#{block_id}">' + html_text + '</a></li>\n'
+
     html += f'</{tag}>\n'
     return html
 
@@ -245,11 +251,11 @@ def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     html += f'</{tag}>\n'
     return html
 
-def page(block, ctx, tag = 'article'): #TODO: class_name
-    return page_like(block, ctx, tag = tag)
+def page(block, ctx, tag = 'article', class_name = 'notion-page-block'):
+    return page_like(block, ctx, tag = tag, class_name = class_name)
 
-def child_page(block, ctx, tag = 'article'): #TODO: class_name
-    return page_like(block, ctx, tag = tag)
+def child_page(block, ctx, tag = 'article', class_name = 'notion-page-block'):
+    return page_like(block, ctx, tag = tag, class_name = class_name)
 
 def column_list(block, ctx, tag = 'div', class_name = 'notion-column_list-block'):
     flex_direction = 'column' if ctx['html_columnlist_disable'] else 'row'
@@ -260,8 +266,7 @@ def column(block, ctx, tag = 'div', class_name = 'notion-column-block'):
 
 def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     caption = richtext2html(block[video.__name__].get('caption', []))
-    video_type = block[video.__name__]['type'] # should be "external"
-    src = block[video.__name__].get('external', {}).get('url', '')
+    src = block[video.__name__].get(block[video.__name__]['type'], {}).get('url', '')
     is_youtube = 'youtube.com' in src
     src = src.replace("http://", "https://").replace('/watch?v=', '/embed/').split('&')[0] if is_youtube else src
     
@@ -412,9 +417,11 @@ def header2html(block, ctx):
     return '&nbsp;/&nbsp;'.join(link_to_page(block, ctx, suffix_html = '') for block in reversed(parent_path))
 
 def site2html(page_ids = [], ctx = {}, notion_pages = {}, style = ''):
-    #TODO: extract the html template if needed?
+    # https://docs.super.so/super-css-classes
+    # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
+    # TODO: allow passing a python file having the render function
 
-    main_html = '\n\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
+    main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
     header_html = header2html(page_ids, ctx = ctx)
 
     return f'''
