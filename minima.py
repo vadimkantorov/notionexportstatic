@@ -267,7 +267,7 @@ article, .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-
 .notion-table_of_contents-block>li:hover {background-color: gray !important}
 */
 
-.notion-embed-block {width: 100% important!; height: 500px; border: 0!important}
+.notion-embed-block {width: 100% !important; height: 500px; border: 0!important}
 
 article
 {
