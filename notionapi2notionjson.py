@@ -197,7 +197,7 @@ def extract_json_nested(output_dir, notion_assets = {}, notion_pages = {}, notio
 def main(args):
     notionapi = notion_client.Client(auth = args.notion_token)
 
-    notion_slugs = json.load(open(args.slug_json)) if args.slug_json else {}
+    notion_slugs = json.load(open(args.pages_json)) if args.pages_json else {}
     
     # TODO: support flattening pages for single?
     # TODO: support multiple notion_page_id
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-json', default = 'single', choices = ['flat', 'single', 'nested'])
     parser.add_argument('--output-path', '-o')
-    parser.add_argument('--slug-json')
+    parser.add_argument('--pages-json')
     args = parser.parse_args()
     print(args)
     main(args)

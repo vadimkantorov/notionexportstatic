@@ -497,7 +497,7 @@ def main(args):
     output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id)
     
     notion_cache = json.load(open(args.input_path)) if args.input_path else {}
-    notion_slugs = json.load(open(args.slug_json)) if args.slug_json else {}
+    notion_slugs = json.load(open(args.pages_json)) if args.pages_json else {}
 
     root_page_ids = args.notion_page_id or list(notion_cache['pages'].keys())
     for i in range(len(root_page_ids)):
@@ -535,7 +535,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-path', '-i', required = True)
     parser.add_argument('--output-path', '-o')
-    parser.add_argument('--slug-json')
+    parser.add_argument('--pages-json')
     parser.add_argument('--notion-page-id', nargs = '*', default = [])
     parser.add_argument('--notion-attrs-verbose', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
