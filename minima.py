@@ -9,7 +9,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
     header_html = header2html(page_ids, ctx = ctx, block2html = block2html)
 
-    style = minima_css + notion_colors_css + notion_css
+    style = notion_css + notion_colors_css + minima_css
     #import sass, os; os.chdir('./minima/_sass/'); lightmode_minima_css = sass.compile(string = '@import "minima/skins/classic", "minima/initialize"') 
 
     return f'''
