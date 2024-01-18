@@ -488,10 +488,10 @@ def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id =
         notion_assets_for_block = prepare_and_extract_assets({page_id : block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         ctx['assets'] = notion_assets_for_block
         with open(html_path, 'w', encoding = 'utf-8') as f:
-            f.write(sitepages2html([page_id], ctx = ctx, style = style, notion_pages = notion_pages, block2html = block2html))
+            f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages, block2html = block2html))
         print(html_path)
         if children := child_pages_by_parent_id.pop(page_id, []):
-            extract_html_nested(page_dir, ctx = ctx, notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets, style = style, index_html = index_html)
+            extract_html_nested(page_dir, ctx = ctx, notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets, index_html = index_html)
 
 def main(args):
     output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id)
