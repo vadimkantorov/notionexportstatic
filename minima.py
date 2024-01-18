@@ -1,3 +1,6 @@
+# https://github.com/jekyll/minima
+# https://github.com/jekyll/jekyll-seo-tag/blob/master/lib/template.html
+
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx: '')):
     # https://docs.super.so/super-css-classes
     # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
@@ -7,7 +10,6 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     header_html = header2html(page_ids, ctx = ctx, block2html = block2html)
 
     style = minima_css + notion_colors_css + notion_css
-    #git clone https://github.com/jekyll/minima
     #import sass, os; os.chdir('./minima/_sass/'); lightmode_minima_css = sass.compile(string = '@import "minima/skins/classic", "minima/initialize"') 
 
     return f'''
