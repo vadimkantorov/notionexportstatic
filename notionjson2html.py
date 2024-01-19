@@ -185,7 +185,7 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
     html = f'<{tag}' +  notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', used_keys = ['table_of_contents-color']) + '/>\n'
     
     inc_heading_type = dict(heading_0 = 'heading_1', heading_1 = 'heading_2', heading_2 = 'heading_3', heading_3 = 'heading_3').get
-    nominal_heading_type, effective_heading_type = 'heading_1', 'heading_0'
+    nominal_heading_type, effective_heading_type = 'heading_0', 'heading_0'
     for block in headings:
         block_id = block['id']
         heading_type = block.get('type', '')
@@ -244,9 +244,11 @@ def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>', class_name = 'not
     return f'<{tag} href="{href}"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id']) + f'>{caption}</{tag}>{suffix_html}\n'
 
 def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
-    #TODO: headers: row-header, column-header
-    table_width, has_row_header, has_column_header = map(block[table.__name__].get, ['table_width', 'has_row_header', 'has_column_header'])
-    html = f'<{tag} data-notion-table_width="{table_width}" data-notion-has_column_header="{has_column_header}" data-notion-has_row_header="{has_row_header}" ' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children', 'table-table_width', 'table-has_column_header', 'table-has_row_header']) + '>\n'
+    #TODO: headers: table_width, row-header, column-header
+    table_width = block[table.__name__].get('table_width')
+    has_row_header = block[table.__name__].get('has_row_header')
+    has_column_header = block[table.__name__].get('has_column_header')
+    html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children', 'table-table_width', 'table-has_column_header', 'table-has_row_header']) + '>\n'
     for subblock in block.get('children', []):
         html += '<tr>\n'
         for cell in subblock.get('table_row', {}).get('cells', []):
