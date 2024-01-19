@@ -296,7 +296,7 @@ def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
     html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external']) + f' src="{src}"></{tag}><div>{html_text}</div>\n'
     return html
 
-def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'): #TODO: notionattrs
+def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
     icon_type = block[callout.__name__].get('icon', {}).get('type')
     icon_emoji = block[callout.__name__].get('icon', {}).get('emoji', '')
     color = block[callout.__name__].get('color', '')
@@ -355,10 +355,6 @@ def numbered_list_item(block, ctx, tag = 'ol', begin = False, end = False, class
    
 def block2html(block, ctx = {}, begin = False, end = False):
     # https://developers.notion.com/reference/block
-    block2render_with_begin_end = dict(
-        numbered_list_item = numbered_list_item, 
-        bulleted_list_item = bulleted_list_item
-    )
     block2render = dict(
         bookmark = bookmark,
         #breadcrumb
@@ -374,22 +370,26 @@ def block2html(block, ctx = {}, begin = False, end = False):
         file = file,
         heading_1 = heading_1, heading_2 = heading_2, heading_3 = heading_3,
         image = image,
-        #link preview
+        #link_preview
         #mention
         numbered_list_item = numbered_list_item,
         paragraph = paragraph,
         pdf = pdf,
         quote = quote,
-        #synced block
+        #synced_block
         table = table,
         table_of_contents = table_of_contents,
         #template
-        #to do
+        #to_do
         toggle = toggle,
         video = video,
         
         page = page,
         link_to_page = link_to_page,
+    )
+    block2render_with_begin_end = dict(
+        numbered_list_item = numbered_list_item, 
+        bulleted_list_item = bulleted_list_item
     )
 
     block_type = block.get('type') or block.get('object') or ''
