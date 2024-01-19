@@ -350,7 +350,14 @@ def bulleted_list_item(block, ctx, tag = 'ul', begin = False, end = False, class
 def numbered_list_item(block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block'):
     return (f'<{tag} class="{class_name}">\n' if begin else '') + text_like(block, ctx, block_type = numbered_list_item.__name__, tag = 'li') + ('\n' + f'</{tag}>\n' if end else '')
 
+def code(block, ctx, tag = 'code', class_name = 'notion-code-block'):
+    caption = richtext2html(block[code.__name__].get('caption', []))
+    language = block[code.__name__].get('language', '')
+    return f'<pre><{tag data-language="{language}"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [code.__name__ + '-caption', code.__name__ + '-rich_text', code.__name__ + '-language']) + '>\n' + richtext2html(block[code.__name__].get('rich_text', [])) + f'\n</{tag}>\n<div>{caption}</div></pre>\n'
 
+def equation(block, ctx, tag = 'pre', class_name = 'notion-equation-block'):
+    expression = block[equation.__name__].get('expression', '')
+    return f'<{tag' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [equation.__name__ + '-expression']) + '>\n{expression}\n</{tag}>\n'
 
    
 def block2html(block, ctx = {}, begin = False, end = False):
@@ -362,11 +369,11 @@ def block2html(block, ctx = {}, begin = False, end = False):
         callout = callout,
         #child_database
         child_page = child_page,
-        #code
+        code = code,
         column_list = column_list, column = column,
         divider = divider,
         embed = embed,
-        #equation
+        equation = equation,
         file = file,
         heading_1 = heading_1, heading_2 = heading_2, heading_3 = heading_3,
         image = image,
