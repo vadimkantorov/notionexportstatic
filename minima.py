@@ -35,7 +35,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     <style>
     {style}
     </style>
-    <header class="site-header">
+    <header class="site-header notion-topbar">
     {header_html}
     </header>
     <main class="page-content" aria-label="Content"><div class="wrapper">
@@ -292,7 +292,7 @@ article
   padding-top: 100px !important;
 }*/
 
-.post-title,.notion-page-icon {
+.post-title,.notion-page-icon, .notion-topbar {
     font-family: 'Twemoji Country Flags', sans-serif;
     font-size: 78px;
     line-height: 1.1;
