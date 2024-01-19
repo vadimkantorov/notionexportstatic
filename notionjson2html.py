@@ -6,6 +6,7 @@
 # TODO: support recursive conversion of all json to html? or maybe example with find -exec?
 # TODO: for a single or nested mode, what to do with unresolved link_to_pages? extend slug.json info? or scan the current directory?
 # TODO: fix links in flat/nested mode
+# https://docs.super.so/super-css-classes
 
 import os
 import json

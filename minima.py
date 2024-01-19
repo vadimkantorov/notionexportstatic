@@ -1,14 +1,32 @@
 # https://github.com/jekyll/minima
 # https://github.com/jekyll/jekyll-seo-tag/blob/master/lib/template.html
 
+#TODO: add InteractionObserver-based nav for single-page or for side menu
+
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx: '')):
-    # https://docs.super.so/super-css-classes
     # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
-    # TODO: allow passing a python file having the render function
+    # TODO: move nav path computation to ctx
+    
+    id2block = {}
+    stack = list(ctx['pages'].values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+    parent_path = []
+    block_id = page_ids[0]
+    header_parent_page_id = block_id
+    while True:
+        block = id2block[block_id]
+        if (block.get('type') or block.get('object')) in ['page', 'child_page']:
+            parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id)))
+        parent_id = block['parent'].get(block['parent'].get('type'))
+        if parent_id not in id2block:
+            break
+        block_id = parent_id
 
     main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
-    header_html = header2html(page_ids, ctx = ctx, block2html = block2html)
-
+    header_html = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(parent_path))
     style = notion_css + notion_colors_css + minima_css
     #import sass, os; os.chdir('./minima/_sass/'); lightmode_minima_css = sass.compile(string = '@import "minima/skins/classic", "minima/initialize"') 
 
@@ -27,26 +45,6 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     '''
 
 def header2html(block, ctx, block2html = (lambda page, ctx: '')):
-    id2block = {}
-    stack = list(ctx['pages'].values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-    
-    parent_path = []
-    block_id = block[0]
-    header_parent_page_id = block_id
-    while True:
-        block = id2block[block_id]
-        if (block.get('type') or block.get('object')) in ['page', 'child_page']:
-            parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id)))
-        parent_id = block['parent'].get(block['parent'].get('type'))
-        if parent_id not in id2block:
-            break
-        block_id = parent_id
-
-    return '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(parent_path))
 
 minima_template_base = '''
 <!DOCTYPE html>
@@ -69,18 +67,6 @@ minima_template_base = '''
   </body>
 
 </html>
-'''
-
-minima_google_analytics = '''
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ site.google_analytics }}"></script>
-<script>
-  window['ga-disable-{{ site.google_analytics }}'] = window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1";
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){window.dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', '{{ site.google_analytics }}');
-</script>
 '''
 
 minima_template_head_header = '''
@@ -191,6 +177,19 @@ minima_template_footer = '''
 </social-item.html>
 
 '''
+
+minima_google_analytics = '''
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ site.google_analytics }}"></script>
+<script>
+  window['ga-disable-{{ site.google_analytics }}'] = window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNotTrack === "yes" || navigator.msDoNotTrack === "1";
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){window.dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', '{{ site.google_analytics }}');
+</script>
+'''
+
 
 minima_template_post_page = '''
 <article class="post">
