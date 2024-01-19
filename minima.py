@@ -248,6 +248,17 @@ notion_css = '''
     font-family: 'Twemoji Country Flags', sans-serif !important;
 }
 
+.post-title, .notion-record-icon
+    font-family: 'Twemoji Country Flags', sans-serif !important;
+    font-size: 78px !important;
+    line-height: 1.1 !important;
+    margin-left: 0 !important;
+}
+
+
+details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important}
+
+
 article, .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
 
 .notion-table_of_contents-block { margin-top: 10px !important; margin-left: 0 !important; }
@@ -266,10 +277,6 @@ article, .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-
 
 .notion-bookmark-block {border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
 
-/*
-.notion-table_of_contents-block>li:hover {background-color: gray !important}
-*/
-
 .notion-embed-block {width: 100% !important; height: 500px; border: 0!important}
 
 article
@@ -285,26 +292,6 @@ article
   z-index: 9 !important;
   background-color: white !important;
 }
-
-/*.site-header {
-  position: fixed !important;
-  width: 100% !important;
-  z-index: 9 !important;
-  background-color: white !important;
-}
-.page-content {
-  padding-top: 100px !important;
-}*/
-
-.post-title, .notion-page-icon
-    font-family: 'Twemoji Country Flags', sans-serif;
-    font-size: 78px;
-    line-height: 1.1;
-    margin-left: 0;
-}
-
-
-details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important}
 
 '''
 

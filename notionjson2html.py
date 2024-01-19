@@ -148,7 +148,7 @@ def page_like(block, ctx, tag = 'article', class_name = ''):
     link_to_page_page_id = block.get('id', '')
     slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
     
-    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-page-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
+    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
     html += children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children')
     html += '\n' + f'</div></{tag}>\n'
     return html
