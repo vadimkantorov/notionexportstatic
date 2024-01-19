@@ -244,6 +244,9 @@ minima_template_post_page = '''
 ######
 
 notion_css = '''
+.notion-topbar {
+    font-family: 'Twemoji Country Flags', sans-serif !important;
+}
 
 article, .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
 
@@ -300,9 +303,6 @@ article
     margin-left: 0;
 }
 
-.notion-topbar {
-    font-family: 'Twemoji Country Flags', sans-serif !important;
-}
 
 details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important}
 
