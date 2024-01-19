@@ -90,6 +90,9 @@ def notionattrs2html(block, ctx = {}, used_keys = [], class_name = '', attrs = {
 
     if keys_extra:
         print(block.get('type') or block.get('object'), ';'.join(keys_extra))
+        #if list(keys_extra) == list(['pdf-type', 'pdf-external']):
+        #    breakpoint()
+            
     
     res = ' data-block-id="{id}" '.format(id = block.get('id', '')) + (f' class="{class_name}" ' if class_name else '') + html_attrs
     keys.remove('id')
@@ -124,10 +127,11 @@ def heading_like(block, ctx, block_type, tag, class_name = ''):
     else:
         return toggle_like(block, ctx, block_type, tag, attrs = dict(id = block['id']), class_name = class_name)
 
-def link_like(block, ctx, block_type, tag = 'a', class_name = ''):
+def link_like(block, ctx, tag = 'a', class_name = ''):
+    block_type = block.get('type', '')
     assert block[block_type].get('type') in ['file', 'external', None]
     src = block[block_type].get('file', {}).get('url') or block[block_type].get('external', {}).get('url') or block[block_type].get('url') or ''
-    html_text = richtext2html(block[block_type].get('caption', [])) or block[block_type].get('name') or src #TODO: urlquote?
+    html_text = richtext2html(block[block_type].get('caption', [])) or block[block_type].get('name') or os.path.basename(src) #TODO: urlquote?
     html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {html_text}</{tag}><br />\n'
     return html
 
@@ -290,11 +294,6 @@ def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
     html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external']) + f' src="{src}"></{tag}><div>{html_text}</div>\n'
     return html
 
-def embed(block, ctx, tag = 'iframe', class_name = 'notion-embed-block'):
-    html_text = richtext2html(block[embed.__name__].get('caption', [])) 
-    src = block[embed.__name__].get('url', '')
-    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [embed.__name__ + '-caption', embed.__name__ + '-url']) + f' src="{src}"></{tag}><div>{html_text}</div>\n'
-
 def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'): #TODO: notionattrs
     icon_type = block[callout.__name__].get('icon', {}).get('type')
     icon_emoji = block[callout.__name__].get('icon', {}).get('emoji', '')
@@ -302,19 +301,25 @@ def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'): #TODO: 
     html_text = text_like(block, ctx, block_type = callout.__name__, tag = tag, used_keys = [callout.__name__ + '-icon'])
     return f'<div style="display:flex"' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', used_keys = [callout.__name__ + '-icon', callout.__name__ + '-color', callout.__name__ + '-rich_text', 'children']) + f'><div>{icon_emoji}</div><div>\n{html_text}\n</div></div>\n'
 
-def file(block, ctx, tag = 'a', class_name = 'notion-file-block'):
-    return link_like(block, ctx, block_type = file.__name__, tag = tag, class_name = class_name)
-
-def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block'):
-    return link_like(block, ctx, block_type = bookmark.__name__, tag = tag, class_name = class_name)
+def embed(block, ctx, tag = 'iframe', class_name = 'notion-embed-block'):
+    block_type = block.get('type', '')
+    link_type = block[block_type].get('type', '')
+    src = block[block_type].get('url') or block[block_type].get(link_type, {}).get('url') or ''
+    html_text = richtext2html(block.get(block_type, {}).get('caption', [])) 
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [block_type + '-caption', block_type + '-url', block_type + '-type', block_type + '-' + link_type]) + f' src="{src}"></{tag}><div>{html_text}</div>\n'
 
 def pdf(block, ctx, tag = 'a', class_name = 'notion-pdf-block'):
-    #TODO: instead embed pdf viewer
-    return link_like(block, ctx, block_type = pdf.__name__, tag = tag, class_name = class_name)
+    return link_like(block, ctx, tag = tag, class_name = class_name) + embed(block, ctx)
+
+def file(block, ctx, tag = 'a', class_name = 'notion-file-block'):
+    return link_like(block, ctx, tag = tag, class_name = class_name)
+
+def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block'):
+    return link_like(block, ctx, tag = tag, class_name = class_name)
 
 def paragraph(block, ctx, tag = 'p', class_name = 'notion-text-block'):
-    #if block_type == "paragraph" and not block['has_children'] and not block[block_type]['text']:
-    #    outcome_block = <br/>" +"\n\n"
+    if block.get('has_children') is False and not (block[block['type']].get('text') or block[block['type']].get('rich_text')):
+        return '<br ' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children', paragraph.__name__ + '-text', paragraph.__name__ + '-rich_text', paragraph.__name__ + '-color']) + '/>\n'
     return text_like(block, ctx, block_type = paragraph.__name__, tag = tag, class_name = class_name)
 
 def heading_1(block, ctx, tag = 'h1', class_name = 'notion-header-block'):

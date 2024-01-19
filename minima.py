@@ -27,7 +27,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
 
     main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
     header_html = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(parent_path))
-    style = notion_css + notion_colors_css + minima_css
+    style = notion_css + notion_colors_css + twitter_emoji_font_css + minima_css
     #import sass, os; os.chdir('./minima/_sass/'); lightmode_minima_css = sass.compile(string = '@import "minima/skins/classic", "minima/initialize"') 
 
     return f'''
@@ -43,8 +43,6 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     </div></main>
     </body></html>
     '''
-
-def header2html(block, ctx, block2html = (lambda page, ctx: '')):
 
 minima_template_base = '''
 <!DOCTYPE html>
