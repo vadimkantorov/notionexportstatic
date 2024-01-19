@@ -301,7 +301,7 @@ article
 }
 
 .notion-topbar {
-    font-family: 'Twemoji Country Flags', sans-serif;
+    font-family: 'Twemoji Country Flags', sans-serif !important;
 }
 
 details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important}
