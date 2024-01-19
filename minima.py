@@ -260,6 +260,8 @@ article, .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-
 .notion-table_of_contents-heading_2 {padding-left: 20px}
 .notion-table_of_contents-heading_3 {padding-left: 30px}
 
+.notion-bookmark-block {border-color: rgba(55, 53, 47, 0.16) !important; border-width: 0.66px; border-style: solid}
+
 /*
 .notion-table_of_contents-block>li:hover {background-color: gray !important}
 */

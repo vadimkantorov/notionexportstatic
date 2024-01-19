@@ -127,11 +127,11 @@ def heading_like(block, ctx, block_type, tag, class_name = ''):
     else:
         return toggle_like(block, ctx, block_type, tag, attrs = dict(id = block['id']), class_name = class_name)
 
-def link_like(block, ctx, tag = 'a', class_name = ''):
+def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False):
     block_type = block.get('type', '')
     assert block[block_type].get('type') in ['file', 'external', None]
     src = block[block_type].get('file', {}).get('url') or block[block_type].get('external', {}).get('url') or block[block_type].get('url') or ''
-    html_text = richtext2html(block[block_type].get('caption', [])) or block[block_type].get('name') or os.path.basename(src) #TODO: urlquote?
+    html_text = richtext2html(block[block_type].get('caption', [])) or block[block_type].get('name') or (src if full_url_as_caption else os.path.basename(src)) #TODO: urlquote?
     html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {html_text}</{tag}><br />\n'
     return html
 
@@ -317,7 +317,9 @@ def file(block, ctx, tag = 'a', class_name = 'notion-file-block'):
     return link_like(block, ctx, tag = tag, class_name = class_name)
 
 def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block'):
-    return link_like(block, ctx, tag = tag, class_name = class_name)
+    # TODO: generate social media card: title, maybe description, favicon
+    # TODO: border
+    return link_like(block, ctx, tag = tag, class_name = class_name, full_url_as_caption = True)
 
 def paragraph(block, ctx, tag = 'p', class_name = 'notion-text-block'):
     if block.get('has_children') is False and not (block[block['type']].get('text') or block[block['type']].get('rich_text')):
