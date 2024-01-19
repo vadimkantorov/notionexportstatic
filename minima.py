@@ -2,6 +2,7 @@
 # https://github.com/jekyll/jekyll-seo-tag/blob/master/lib/template.html
 
 #TODO: add InteractionObserver-based nav for single-page or for side menu
+#TODO: margin between blocks
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx: '')):
     # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
@@ -292,11 +293,15 @@ article
   padding-top: 100px !important;
 }*/
 
-.post-title,.notion-page-icon, .notion-topbar {
+.post-title, .notion-page-icon
     font-family: 'Twemoji Country Flags', sans-serif;
     font-size: 78px;
     line-height: 1.1;
     margin-left: 0;
+}
+
+.notion-topbar {
+    font-family: 'Twemoji Country Flags', sans-serif;
 }
 
 details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important}
