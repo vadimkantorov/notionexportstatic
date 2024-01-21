@@ -32,7 +32,11 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     #import sass, os; os.chdir('./minima/_sass/'); lightmode_minima_css = sass.compile(string = '@import "minima/skins/classic", "minima/initialize"') 
 
     return f'''
-        <html><body>
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        </head>
+        <body>
         <style>
         {style}
         </style>
@@ -42,7 +46,8 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
         <main class="page-content" aria-label="Content"><div class="wrapper">
         {main_html}
         </div></main>
-        </body></html>
+        </body>
+        </html>
     '''
 
 minima_template_base = '''
