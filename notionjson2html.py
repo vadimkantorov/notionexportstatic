@@ -351,7 +351,7 @@ def code(block, ctx, tag = 'code', class_name = 'notion-code-block'):
 
 def equation(block, ctx, tag = 'pre', class_name = 'notion-equation-block'):
     expression = block[equation.__name__].get('expression', '')
-    return f'<{tag' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [equation.__name__ + '-expression']) + '>\n{expression}\n</{tag}>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [equation.__name__ + '-expression']) + '>\n{expression}\n</{tag}>\n'
 
    
 def block2html(block, ctx = {}, begin = False, end = False):
