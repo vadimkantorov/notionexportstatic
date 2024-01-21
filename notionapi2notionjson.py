@@ -2,9 +2,9 @@
 # TODO: download JSON per given child page
 # TODO: url naming styles: id, slug, and sanitized title
 # TODO: rename data_uri to uri
-# TODO: support column_list / column
 # TODO: delete nested mode? delete nested + extract_files ?
-# TODO: allow multiple page_ids
+# TODO: support flattening pages for single?
+
 
 import os
 import json
@@ -17,8 +17,8 @@ import urllib.request
 
 import notion_client
 
-def notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = {}):
-    def block_parser(block: dict, notionapi)-> dict:
+def notionapi_retrieve_recursively(notionapi, notion_page_ids, notion_pages = {}):
+    def block_parser(block: dict, notionapi):
         print('block', block.get('id'), block.get('type'))
         if block['has_children']:
             block['children'] = []
@@ -70,7 +70,7 @@ def notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = {})
             block['type'] = 'db_entry'
             notion_pages[page['id']]['blocks'][i_block] = block
             if block['object'] in ['page', 'child_page', 'child_database']:
-                notionapi_retrieve_recursively(notionapi, block['id'], notion_pages = notion_pages)
+                notionapi_retrieve_recursively(notionapi, [block['id'], notion_pages = notion_pages)
 
     return notion_pages
 
@@ -198,12 +198,12 @@ def main(args):
     notionapi = notion_client.Client(auth = args.notion_token)
 
     notion_slugs = json.load(open(args.pages_json)) if args.pages_json else {}
-    
-    # TODO: support flattening pages for single?
-    # TODO: support multiple notion_page_id
-    # TODO: support resolving notion_page_id from slugs
+    notion_page_ids = [([k for k, v in notion_slugs.items() if v == notion_page_id] + [notion_page_id])[0].replace('-', '') for notion_page_id in args.notion_page_id]
+   
+    notion_pages = {}
+    for notion_page_id in notion_page_ids:
+        notion_pages = notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = notion_pages)
 
-    notion_pages = notionapi_retrieve_recursively(notionapi, args.notion_page_id[0], {})
     notion_assets = download_assets(notion_pages.values()) if args.download_assets else {}
     
     notion_cache = dict(pages = notion_pages, assets = notion_assets)

@@ -90,9 +90,6 @@ def notionattrs2html(block, ctx = {}, used_keys = [], class_name = '', attrs = {
 
     if keys_extra:
         print(block.get('type') or block.get('object'), ';'.join(keys_extra))
-        #if list(keys_extra) == list(['pdf-type', 'pdf-external']):
-        #    breakpoint()
-            
     
     res = ' data-block-id="{id}" '.format(id = block.get('id', '')) + (f' class="{class_name}" ' if class_name else '') + html_attrs
     keys.remove('id')
@@ -136,7 +133,6 @@ def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = Fals
     return html
 
 def page_like(block, ctx, tag = 'article', class_name = ''):
-    #TODO: page title and mini-nav
     icon_type = block['icon'].get('type') #TODO: for child_page depends on pop_and_replace_child_pages_recursively
     icon_emoji = block['icon'].get('emoji', '')
     cover_type = block.get('cover', {}).get('type')
@@ -214,8 +210,7 @@ def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>', class_name = 'not
     cur_page_id = parent_block['id']
     curslug = ctx['notion_slugs'].get(cur_page_id) or ctx['notion_slugs'].get(cur_page_id.replace('-', '')) or cur_page_id.replace('-', '')
 
-    link_to_page_type = block[link_to_page.__name__].get('type') # should be 'page_id'
-    link_to_page_page_id = block[link_to_page.__name__].get(link_to_page_type, '')
+    link_to_page_page_id = block[link_to_page.__name__].get(block[link_to_page.__name__].get('type'), '')
     
     slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
 
@@ -318,7 +313,6 @@ def file(block, ctx, tag = 'a', class_name = 'notion-file-block'):
 
 def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block'):
     # TODO: generate social media card: title, maybe description, favicon
-    # TODO: border
     return link_like(block, ctx, tag = tag, class_name = class_name, full_url_as_caption = True)
 
 def paragraph(block, ctx, tag = 'p', class_name = 'notion-text-block'):
