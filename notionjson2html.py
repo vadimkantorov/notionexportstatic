@@ -260,11 +260,11 @@ def child_page(block, ctx, tag = 'article', class_name = 'notion-page-block'):
     return page_like(block, ctx, tag = tag, class_name = class_name)
 
 def column_list(block, ctx, tag = 'div', class_name = 'notion-column_list-block'):
-    flex_direction = 'column' if ctx['html_columnlist_disable'] else 'row'
-    return f'<{tag} style="display:flex; flex-direction: {flex_direction};"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
+    style = 'flex-direction:column!important;' if ctx['html_columnlist_disable'] else ''
+    return f'<{tag} style="{style}"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
 
 def column(block, ctx, tag = 'div', class_name = 'notion-column-block'):
-    return f'<{tag} style="display:flex; flex-direction: column;"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'
 
 def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     caption = richtext2html(block[video.__name__].get('caption', []))
@@ -296,8 +296,7 @@ def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
     icon_type = block[callout.__name__].get('icon', {}).get('type')
     icon_emoji = block[callout.__name__].get('icon', {}).get('emoji', '')
     color = block[callout.__name__].get('color', '')
-    html_text = text_like(block, ctx, block_type = callout.__name__, tag = tag, used_keys = [callout.__name__ + '-icon'])
-    return f'<div style="display:flex"' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', used_keys = [callout.__name__ + '-icon', callout.__name__ + '-color', callout.__name__ + '-rich_text', 'children']) + f'><div>{icon_emoji}</div><div>\n{html_text}\n</div></div>\n'
+    return f'<div' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', used_keys = [callout.__name__ + '-icon', callout.__name__ + '-color', callout.__name__ + '-rich_text', 'children']) + f'><div>{icon_emoji}</div><div>\n' + text_like(block, ctx, block_type = callout.__name__, tag = tag, used_keys = [callout.__name__ + '-icon']) + '\n</div></div>\n'
 
 def embed(block, ctx, tag = 'iframe', class_name = 'notion-embed-block'):
     block_type = block.get('type', '')
