@@ -112,12 +112,14 @@ def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg
             mime = mimedb.get(ext, 'text/plain')
             file_bytes = b''
             try:
+                print(url, '->', basename)
                 file_bytes = urllib.request.urlopen(url).read()
             except urllib.error.HTTPError as exc:
                 file_bytes = str(exc).encode()
                 print(f'🤖Cannot download [{basename}] from link {url}.')
                 mime = 'text/plain'
                 ok = False
+
             datauri = f'data:{mime};base64,' + base64.b64encode(file_bytes).decode()
 
         sha1 = hashlib.sha1()
