@@ -12,7 +12,7 @@ import unicodedata
 
 import notion_client
 
-def notionapi_retrieve_recursively(notionapi, notion_page_ids, notion_pages = {}):
+def notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = {}):
     # https://developers.notion.com/reference/retrieve-a-page
     # https://developers.notion.com/reference/retrieve-a-page-property
     # https://developers.notion.com/reference/retrieve-a-block
@@ -43,6 +43,7 @@ def notionapi_retrieve_recursively(notionapi, notion_page_ids, notion_pages = {}
     except Exception as exc:
         page_type, page = None, {}
         print(exc)
+        #return notion_pages
         
     print('page', page['id'], page_type)
     
