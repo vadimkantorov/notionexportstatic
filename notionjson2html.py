@@ -117,10 +117,12 @@ def toggle_like(block, ctx, block_type, tag, attrs = {}, class_name = ''):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     color = block[block_type].get('color', '')
     html_details_open = ['', 'open'][ctx['html_details_open']]
-    return f'<details {html_details_open}' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'><summary><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + '</details>\n'
+    class_name_summary = ' red' if ' red' in class_name else ''
+    class_name = class_name.replace(' red', '')
+    return f'<details {html_details_open}' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'><summary class="{class_name_summary}"><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + '</details>\n'
 
 def heading_like(block, ctx, block_type, tag, class_name = ''):
-    has_several_parts = len(block[block['type']].get('text', []) or block[block['type']].get('rich_text', [])) > 0
+    has_several_parts = len(block[block['type']].get('text', []) or block[block['type']].get('rich_text', [])) > 1
     if has_several_parts:
         class_name += ' red'
 
