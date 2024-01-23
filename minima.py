@@ -233,11 +233,13 @@ notion_css = '''
 .post-title { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 2.5em !important; line-height: 1.1 !important; margin-left: 0 !important; }
 
 
-article, .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
+.notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
+
 details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important; }
 
-.notion-column_list-block { display:flex; flex-direction: row; }
 .notion-column-block { display:flex; flex-direction: column; }
+.notion-column_list-block { display:flex; flex-direction: row; }
+.notion_column_list-block-vertical {flex-direction: column!important;}
 
 .notion-callout-block { display:flex; }
 
@@ -254,10 +256,12 @@ details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !import
 .notion-embed-block {width: 100% !important; height: 500px; border: 0!important}
 
 
-article { page-break-after: always; page-break-inside: avoid; }
-
+article { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
+ 
 .site-header { position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
 
+
+.red {background-color: lightcoral}
 
 '''
 

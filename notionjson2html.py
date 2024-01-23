@@ -120,6 +120,10 @@ def toggle_like(block, ctx, block_type, tag, attrs = {}, class_name = ''):
     return f'<details {html_details_open}' + notionattrs2html(block, ctx, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'><summary><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + '</details>\n'
 
 def heading_like(block, ctx, block_type, tag, class_name = ''):
+    has_several_parts = len(block[block['type']].get('text', []) or block[block['type']].get('rich_text', [])) > 0
+    if has_several_parts:
+        class_name += ' red'
+
     if block.get(block_type, {}).get('is_toggleable') is not True: 
         return text_like(block, ctx, block_type, tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block['id']), class_name = class_name)
     else:
@@ -260,8 +264,7 @@ def child_page(block, ctx, tag = 'article', class_name = 'notion-page-block'):
     return page_like(block, ctx, tag = tag, class_name = class_name)
 
 def column_list(block, ctx, tag = 'div', class_name = 'notion-column_list-block'):
-    style = 'flex-direction:column!important;' if ctx['html_columnlist_disable'] else ''
-    return f'<{tag} style="{style}"' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name + ' ' + 'notion_column_list-block-vertical' * ctx['html_columnlist_disable'], used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
 
 def column(block, ctx, tag = 'div', class_name = 'notion-column-block'):
     return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'
