@@ -112,11 +112,16 @@ def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg
             mime = mimedb.get(ext, 'text/plain')
             file_bytes = b''
             try:
-                print(url, '->', basename)
-                file_bytes = urllib.request.urlopen(url).read()
-            except urllib.error.HTTPError as exc:
+                # url sanitizatoin is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
+                print(url)
+                urlparsed = urllib.parse.urlparse(url)
+                urlparsed = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urllib.parse.quote(urlparsed.query), urlparsed.fragment)
+                urlopen_url = urllib.parse.urlunparse(urlparsed)
+
+                file_bytes = urllib.request.urlopen(urlopen_url).read()
+            except Exception as exc: # urllib.error.HTTPError is first effort, but url encoding is UnicodeEncodeError
+                print(f'cannot download [{basename}] from link {url}.', exc)
                 file_bytes = str(exc).encode()
-                print(f'🤖Cannot download [{basename}] from link {url}.')
                 mime = 'text/plain'
                 ok = False
 
