@@ -100,6 +100,12 @@ def notionattrs2html(block, ctx = {}, used_keys = [], class_name = '', attrs = {
 
     return res
 
+def open_tag(block, ctx, class_name = '', tag = '', used_keys = [], attrs_kwargs = {}):
+    return (f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = used_keys, **attrs_kwargs) + '>\n') if tag else ''
+
+def close_tag(tag = ''):
+    return f'</{tag}>\n' if tag else ''
+
 def children_like(block, ctx, key = 'children', tag = ''):
     html = ''
     subblocks = block.get(key, [])
@@ -139,19 +145,19 @@ def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = Fals
     html = f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external']) + f' href="{src}">📎 {html_text}</{tag}><br />\n'
     return html
 
-def page_like(block, ctx, tag = 'article', class_name = ''):
+def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block'):
     icon_type = block['icon'].get('type') #TODO: for child_page depends on pop_and_replace_child_pages_recursively
     icon_emoji = block['icon'].get('emoji', '')
     cover_type = block.get('cover', {}).get('type')
     src = block.get('cover', {}).get('file', {}).get('url', '')
     src = ctx['assets'].get(src, {}).get('data_uri', src)
 
-    title = block.get("properties", {}).get("title", {}).get("title", [])[0]["plain_text"] if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', '')) 
+    page_title = ' '.join(t['plain_text'] for t in block.get("properties", {}).get("title", {}).get("title", [])) if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', ''))
     
     link_to_page_page_id = block.get('id', '')
     slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
     
-    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="post-title">{title}</h1></header><div class="post-content">\n'
+    html = f'<{tag} class="post" id="{slug}" ' + notionattrs2html(block, ctx, class_name = '', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'><header class="post-header"><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="post-title {class_name}">{page_title}</h1></header><div class="post-content">\n'
     html += children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children')
     html += '\n' + f'</div></{tag}>\n'
     return html
@@ -237,9 +243,9 @@ def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>', class_name = 'not
     
     subblock = id2block.get(link_to_page_page_id) 
     if subblock:
-        title = subblock.get("properties", {}).get("title", {}).get("title", [])[0]["plain_text"] if len(subblock.get("properties",{}).get('title', {}).get('title', [])) > 0 else (subblock.get('child_page', {}).get('title') or subblock.get('title', ''))
+        page_title = ' '.join(t['plain_text'] for t in subblock.get("properties", {}).get("title", {}).get("title", [])) if len(subblock.get("properties",{}).get('title', {}).get('title', [])) > 0 else (subblock.get('child_page', {}).get('title') or subblock.get('title', ''))
         icon_emoji = subblock.get('icon', {}).get('emoji', '')
-        caption = f'{icon_emoji} {title}' #TODO: html.escape()
+        caption = f'{icon_emoji} {page_title}' #TODO: html.escape()
     else:
         caption = f'title of linked page [{link_to_page_page_id}] not found'
 
@@ -266,7 +272,7 @@ def child_page(block, ctx, tag = 'article', class_name = 'notion-page-block'):
     return page_like(block, ctx, tag = tag, class_name = class_name)
 
 def column_list(block, ctx, tag = 'div', class_name = 'notion-column_list-block'):
-    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name + ' ' + 'notion_column_list-block-vertical' * ctx['html_columnlist_disable'], used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
+    return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name + ' notion_column_list-block-vertical' * ctx['html_columnlist_disable'], used_keys = ['children']) + '>\n' + children_like(block, ctx) + f'</{tag}>\n'
 
 def column(block, ctx, tag = 'div', class_name = 'notion-column-block'):
     return f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = ['children']) + '>\n' + children_like(block, ctx, tag = tag) + f'</{tag}>\n'

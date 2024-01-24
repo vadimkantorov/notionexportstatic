@@ -230,7 +230,7 @@ notion_css = '''
 
 .notion-record-icon { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 78px !important; line-height: 1.1 !important; margin-left: 0 !important; }
 
-.post-title { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 2.5em !important; line-height: 1.1 !important; margin-left: 0 !important; }
+.notion-page-block { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 2.5em !important; line-height: 1.1 !important; margin-left: 0 !important; }
 
 
 .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
