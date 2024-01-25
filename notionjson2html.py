@@ -150,7 +150,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block'):
     icon_emoji = block['icon'].get('emoji', '')
     cover_type = block.get('cover', {}).get('type')
     src = block.get('cover', {}).get('file', {}).get('url', '')
-    src = ctx['assets'].get(src, {}).get('data_uri', src)
+    src = ctx['assets'].get(src, {}).get('uri', src)
 
     page_title = ' '.join(t['plain_text'] for t in block.get("properties", {}).get("title", {}).get("title", [])) if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', ''))
     
@@ -296,7 +296,7 @@ def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
     #TODO: when to embed image
     assert block['image']['type'] in ['file', 'external']
     src = block['image'].get('file', {}).get('url') or block['image'].get('external', {}).get('url') or ''
-    src = ctx['assets'].get(src, {}).get('data_uri', src)
+    src = ctx['assets'].get(src, {}).get('uri', src)
     if src.startswith('file:///'):
         src = src.split('file:///', maxsplit = 1)[-1]
     html_text = richtext2html(block['image']['caption']) # TODO: html.escape, TODO: figure
@@ -475,8 +475,8 @@ def prepare_and_extract_assets(notion_pages, assets_dir, notion_assets = {}, ext
         for asset in assets.values():
             asset_path = os.path.join(assets_dir, asset['name'])
             with open(asset_path, 'wb') as f:
-                f.write(base64.b64decode(asset['data_uri'].split('base64,', maxsplit = 1)[-1].encode()))
-            asset['data_uri'] = 'file:///' + asset_path
+                f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
+            asset['uri'] = 'file:///' + asset_path
             print(asset_path)
     return assets
 
