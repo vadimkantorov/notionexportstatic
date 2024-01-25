@@ -107,7 +107,12 @@ def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg
         else:
             # url sanitizatoin is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
             urlparsed = urllib.parse.urlparse(url)
-            urlparsed_unicode_sanitized_query = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urllib.parse.quote(urlparsed.query), urlparsed.fragment)
+            try:
+                urlparsed.query.encode('ascii')
+                urlparsed_query = urlparsed.query
+            except UnicodeEncodeError:
+                urlparsed_query = urllib.parse.quote(urlparsed.query)
+            urlparsed_unicode_sanitized_query = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urlparsed_query, urlparsed.fragment)
             urlopen_url = urllib.parse.urlunparse(urlparsed_unicode_sanitized_query)
             ext = os.path.splitext(urlparsed.path.lower())[-1]
             basename = os.path.basename(urlparsed.path)
