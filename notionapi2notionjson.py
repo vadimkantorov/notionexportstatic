@@ -105,22 +105,20 @@ def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg
             path = url
             datauri = url
         else:
+            # url sanitizatoin is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
             urlparsed = urllib.parse.urlparse(url)
+            urlparsed_unicode_sanitized_query = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urllib.parse.quote(urlparsed.query), urlparsed.fragment)
+            urlopen_url = urllib.parse.urlunparse(urlparsed_unicode_sanitized_query)
             ext = os.path.splitext(urlparsed.path.lower())[-1]
             basename = os.path.basename(urlparsed.path)
             path = urlparsed.scheme + '://' + urlparsed.netloc + urlparsed.path
             mime = mimedb.get(ext, 'text/plain')
             file_bytes = b''
             try:
-                # url sanitizatoin is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
-                print(url)
-                urlparsed = urllib.parse.urlparse(url)
-                urlparsed = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urllib.parse.quote(urlparsed.query), urlparsed.fragment)
-                urlopen_url = urllib.parse.urlunparse(urlparsed)
-
+                print(url, urlopen_url)
                 file_bytes = urllib.request.urlopen(urlopen_url).read()
             except Exception as exc: # urllib.error.HTTPError is first effort, but url encoding is UnicodeEncodeError
-                print(f'cannot download [{basename}] from link {url}.', exc)
+                print(f'cannot download [{basename}] from link {url}, unparsed {urlopen_url}', exc)
                 file_bytes = str(exc).encode()
                 mime = 'text/plain'
                 ok = False
