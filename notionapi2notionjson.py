@@ -1,3 +1,5 @@
+#TODO: add download timestamp to produced JSONs
+
 import os
 import json
 import copy
