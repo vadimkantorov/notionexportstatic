@@ -100,10 +100,10 @@ def notionattrs2html(block, ctx = {}, used_keys = [], class_name = '', attrs = {
 
     return res
 
-def open_tag(block, ctx, class_name = '', tag = '', used_keys = [], attrs_kwargs = {}):
+def open_block(block, ctx, class_name = '', tag = '', used_keys = [], attrs_kwargs = {}):
     return (f'<{tag}' + notionattrs2html(block, ctx, class_name = class_name, used_keys = used_keys, **attrs_kwargs) + '>\n') if tag else ''
 
-def close_tag(tag = ''):
+def close_block(tag = ''):
     return f'</{tag}>\n' if tag else ''
 
 def children_like(block, ctx, key = 'children', tag = ''):
