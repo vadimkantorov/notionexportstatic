@@ -10,7 +10,7 @@
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx: '')):
     header_html = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(ctx['pages_parent_path'][page_ids[0]]))
-    main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
+    main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for k in page_ids)
     style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
 
     return f'''

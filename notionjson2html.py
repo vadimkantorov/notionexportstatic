@@ -139,9 +139,9 @@ def heading_like(block, ctx, block_type, tag, class_name = ''):
     #<details open id="abc"><summary><h1>abc def&nbsp;<a href="#abc"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></h1></summary>ABC<details>
 
     if block.get(block_type, {}).get('is_toggleable') is not True: 
-        return text_like(block, ctx, block_type, tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block['id']), class_name = class_name)
+        return text_like(block, ctx, block_type,  tag = tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block['id']), class_name = class_name)
     else:
-        return toggle_like(block, ctx, block_type, tag, attrs = dict(id = block['id']), class_name = class_name)
+        return toggle_like(block, ctx, block_type, tag = tag, attrs = dict(id = block['id']), class_name = class_name)
 
 def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False):
     block_type = block.get('type', '')
@@ -163,7 +163,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block'):
     link_to_page_page_id = block.get('id', '')
     slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
     
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'post', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header class="post-header"><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="post-title {class_name}">{page_title}</h1></header><div class="post-content">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + '\n</div>' + close_block(tag)
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'notion-page', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="{class_name}">{page_title}</h1></header><div class="notion-page-content">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + '\n</div>' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
@@ -414,7 +414,7 @@ def block2html(block, ctx = {}, begin = False, end = False):
         return block2render[block_type](block, ctx)
     else:
         # TODO: print all unsupported to a log? include as comment? or just as element? render children? replace by <!-- --> or maybe "p"?
-        return '\n' + open_block(block, ctx, tag = tag, extra_attrstr = 'unsupported="1"', selfclose = True)
+        return '\n' + open_block(block, ctx, tag = block_type, extra_attrstr = 'unsupported="1"', selfclose = True)
 
 
 def pop_and_replace_child_pages_recursively(block, parent_id = None):
