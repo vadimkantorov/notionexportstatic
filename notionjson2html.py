@@ -141,7 +141,7 @@ def heading_like(block, ctx, block_type, tag, class_name = ''):
     if block.get(block_type, {}).get('is_toggleable') is not True: 
         return text_like(block, ctx, block_type,  tag = tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block['id']), class_name = class_name)
     else:
-        return toggle_like(block, ctx, block_type, tag = tag, attrs = dict(id = block['id']), class_name = class_name)
+        return toggle_like(block, ctx, block_type, tag = tag, attrs = dict(id = block['id']), class_name = 'notion-heading-like ' + class_name)
 
 def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False):
     block_type = block.get('type', '')
