@@ -163,11 +163,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block'):
     link_to_page_page_id = block.get('id', '')
     slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
     
-    html = open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'post', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header class="post-header"><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="post-title {class_name}">{page_title}</h1></header><div class="post-content">\n'
-    html += children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children')
-    html += '\n</div>' + close_block(tag)
-    return html
-
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'post', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header class="post-header"><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="post-title {class_name}">{page_title}</h1></header><div class="post-content">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + '\n</div>' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
