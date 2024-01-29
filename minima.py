@@ -9,26 +9,8 @@
 # TODO: move nav path computation to ctx
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx: '')):
-    id2block = {}
-    stack = list(ctx['pages'].values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-    parent_path = []
-    block_id = page_ids[0]
-    header_parent_page_id = block_id
-    while True:
-        block = id2block[block_id]
-        if (block.get('type') or block.get('object')) in ['page', 'child_page']:
-            parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id)))
-        parent_id = block['parent'].get(block['parent'].get('type'))
-        if parent_id not in id2block:
-            break
-        block_id = parent_id
-
+    header_html = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(ctx['pages_parent_path'][page_ids[0]]))
     main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx) for k in page_ids)
-    header_html = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(parent_path))
     style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
 
     return f'''
@@ -50,6 +32,41 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
         </body>
         </html>
     '''
+
+notion_css = '''
+.notion-topbar { font-family: 'Twemoji Country Flags', sans-serif !important; position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
+
+.notion-record-icon { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 78px !important; line-height: 1.1 !important; margin-left: 0 !important; }
+
+.notion-page-block { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 2.5em !important; line-height: 1.1 !important; margin-left: 0 !important; }
+
+.notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
+
+.notion-column-block { display:flex; flex-direction: column; }
+.notion-column_list-block { display:flex; flex-direction: row; }
+.notion_column_list-block-vertical {flex-direction: column!important;}
+
+.notion-callout-block { display:flex; }
+
+.notion-table_of_contents-block { margin-top: 10px !important; margin-left: 0 !important; }
+.notion-table_of_contents-block { list-style-type: none !important; }
+.notion-table_of_contents-heading > a {color: rgb(120, 119, 116) !important;}
+.notion-table_of_contents-heading:hover {background: rgba(55, 53, 47, 0.08) !important;}
+.notion-table_of_contents-heading_1 {padding-left: 10px}
+.notion-table_of_contents-heading_2 {padding-left: 20px}
+.notion-table_of_contents-heading_3 {padding-left: 30px}
+
+.notion-bookmark-block {border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
+
+.notion-embed-block {width: 100% !important; height: 500px; border: 0!important}
+
+details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important; } 
+
+article { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
+
+.red {background-color: lightcoral}
+'''
+
 
 minima_template_base = '''
 <!DOCTYPE html>
@@ -355,43 +372,6 @@ minima_template_page_post = '''
 
 
 ######
-
-notion_css = '''
-.notion-topbar { font-family: 'Twemoji Country Flags', sans-serif !important;}
-
-.notion-record-icon { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 78px !important; line-height: 1.1 !important; margin-left: 0 !important; }
-
-.notion-page-block { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 2.5em !important; line-height: 1.1 !important; margin-left: 0 !important; }
-
-.notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
-
-details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important; }
-
-.notion-column-block { display:flex; flex-direction: column; }
-.notion-column_list-block { display:flex; flex-direction: row; }
-.notion_column_list-block-vertical {flex-direction: column!important;}
-
-.notion-callout-block { display:flex; }
-
-.notion-table_of_contents-block { margin-top: 10px !important; margin-left: 0 !important; }
-.notion-table_of_contents-block { list-style-type: none !important; }
-.notion-table_of_contents-heading > a {color: rgb(120, 119, 116) !important;}
-.notion-table_of_contents-heading:hover {background: rgba(55, 53, 47, 0.08) !important;}
-.notion-table_of_contents-heading_1 {padding-left: 10px}
-.notion-table_of_contents-heading_2 {padding-left: 20px}
-.notion-table_of_contents-heading_3 {padding-left: 30px}
-
-.notion-bookmark-block {border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
-
-.notion-embed-block {width: 100% !important; height: 500px; border: 0!important}
-
-
-article { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
- 
-.site-header { position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
-
-.red {background-color: lightcoral}
-'''
 
 notion_colors_css = '''
 
