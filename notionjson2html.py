@@ -123,13 +123,13 @@ def text_like(block, ctx, block_type, tag, used_keys = [], attrs = {}, class_nam
     color = block[block_type].get('color', '')
     return open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys) + richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or []) + children_like(block, ctx) + close_block(tag)
 
-def toggle_like(block, ctx, block_type, tag, attrs = {}, class_name = ''):
+def toggle_like(block, ctx, block_type, tag = 'div', attrs = {}, class_name = ''):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     color = block[block_type].get('color', '')
     html_details_open = ['', 'open'][ctx['html_details_open']]
     class_name_summary = ' red' if ' red' in class_name else ''
     class_name = class_name.replace(' red', '')
-    return open_block(block, ctx, tag = tag, extra_attrstr = html_details_open, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'<summary class="{class_name_summary}"><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + close_block(tag)
+    return open_block(block, ctx, tag = 'details', extra_attrstr = html_details_open, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'<summary class="{class_name_summary}"><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + close_block('details')
 
 def heading_like(block, ctx, block_type, tag, class_name = ''):
     has_several_parts = len(block[block['type']].get('text', []) or block[block['type']].get('rich_text', [])) > 1
@@ -301,7 +301,7 @@ def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
     if src.startswith('file:///'):
         src = src.split('file:///', maxsplit = 1)[-1]
     html_text = richtext2html(block['image']['caption'])
-    html = open_block(block, ctx, tag = tag, extra_attrstr = f'src="{src}"', class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external'], selfclose = True) + '<div>{html_text}</div>\n'
+    html = open_block(block, ctx, tag = tag, extra_attrstr = f'src="{src}"', class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external'], selfclose = True) + f'<div>{html_text}</div>\n'
     return html
 
 def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'):

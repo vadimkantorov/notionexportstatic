@@ -48,6 +48,8 @@ notion_css = '''
 
 .notion-callout-block { display:flex; }
 
+.notion-quote-block {font-style: normal !important }
+
 .notion-table_of_contents-block { margin-top: 10px !important; margin-left: 0 !important; }
 .notion-table_of_contents-block { list-style-type: none !important; }
 .notion-table_of_contents-heading > a {color: rgb(120, 119, 116) !important;}
