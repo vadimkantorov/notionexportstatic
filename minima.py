@@ -8,29 +8,33 @@
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx: '')):
-    header_html = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(ctx['pages_parent_path'][page_ids[0]]))
-    main_html = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for k in page_ids)
-    style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
+    html_header = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(ctx['pages_parent_path'][page_ids[0]]))
+    html_main = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for k in page_ids)
+    css_style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
+    return layout_page.format(css_style = style, html_header = html_header, html_main = html_main)
 
-    return f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
+layout_page =  '''
+<!DOCTYPE html>
+<html>
+    <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        </head>
-        <body>
         <style>
-        {style}
+            {css_style}
         </style>
+    </head>
+    <body>
         <header class="site-header notion-topbar">
-        {header_html}
+            {html_header}
         </header>
-        <main class="page-content" aria-label="Content"><div class="wrapper">
-        {main_html}
-        </div></main>
-        </body>
-        </html>
-    '''
+        <main class="page-content" aria-label="Content">
+            <div class="wrapper">
+                {html_main}
+            </div>
+        </main>
+    </body>
+</html>
+'''
+
 
 notion_css = '''
 .notion-topbar { font-family: 'Twemoji Country Flags', sans-serif !important; position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
