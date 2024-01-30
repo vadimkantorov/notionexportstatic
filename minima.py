@@ -62,11 +62,9 @@ notion_css = '''
 
 .notion-embed-block {width: 100% !important; height: 500px; border: 0!important}
 
+.notion-page { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
+
 details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important; } 
-
-article { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
-
-.red {background-color: lightcoral}
 '''
 
 

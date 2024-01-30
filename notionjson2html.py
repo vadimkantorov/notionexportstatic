@@ -123,19 +123,13 @@ def text_like(block, ctx, block_type, tag, used_keys = [], attrs = {}, class_nam
     color = block[block_type].get('color', '')
     return open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys) + richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or []) + children_like(block, ctx) + close_block(tag)
 
-def toggle_like(block, ctx, block_type, tag = 'div', attrs = {}, class_name = ''):
+def toggle_like(block, ctx, block_type, tag = 'details', attrs = {}, class_name = ''):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     color = block[block_type].get('color', '')
     html_details_open = ['', 'open'][ctx['html_details_open']]
-    class_name_summary = ' red' if ' red' in class_name else ''
-    class_name = class_name.replace(' red', '')
-    return open_block(block, ctx, tag = 'details', extra_attrstr = html_details_open, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'<summary class="{class_name_summary}"><{tag}>{html_text}</{tag}></summary>\n' + children_like(block, ctx) + close_block('details')
+    return open_block(block, ctx, tag = tag, extra_attrstr = html_details_open, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable']) + f'<summary><div>{html_text}</div></summary>\n' + children_like(block, ctx) + close_block(tag)
 
 def heading_like(block, ctx, block_type, tag, class_name = ''):
-    has_several_parts = len(block[block['type']].get('text', []) or block[block['type']].get('rich_text', [])) > 1
-    if has_several_parts:
-        class_name += ' red'
-
     #<details open id="abc"><summary><h1>abc def&nbsp;<a href="#abc"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></h1></summary>ABC<details>
 
     if block.get(block_type, {}).get('is_toggleable') is not True: 
