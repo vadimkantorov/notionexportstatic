@@ -379,6 +379,9 @@ def to_do(block, ctx, tag = 'div', class_name = 'notion-to_do-block'):
     checked = block[block_type].get('checked', False) 
     return text_like(block, ctx, tag = tag, class_name = class_name, checked = checked, used_keys = [block.get('type', '') + '-checked'])
 
+def unsupported(block, tag = 'div', class_name = 'notion-unsupported-block'):
+    return open_block(block, ctx, tag = tag, class_name = class_name, selfclose = True)
+
 def block2html(block, ctx = {}, begin = False, end = False):
     # https://developers.notion.com/reference/block
     block2render = dict(
@@ -409,6 +412,8 @@ def block2html(block, ctx = {}, begin = False, end = False):
         to_do = to_do,
         toggle = toggle,
         video = video,
+
+        unsupported = unsupported,
         
         page = page,
         link_to_page = link_to_page,
@@ -426,7 +431,7 @@ def block2html(block, ctx = {}, begin = False, end = False):
     elif block_type in block2render:
         return block2render[block_type](block, ctx)
     else:
-        # TODO: print all unsupported to a log? include as comment? or just as element? render children? replace by <!-- --> or maybe "p"?
+        # TODO: print all unsupported to a log + include blocks of type="unsupported"? include as comment? or just as element? render children? replace by <!-- --> or maybe "p"?
         return '\n' + open_block(block, ctx, tag = block_type, extra_attrstr = 'unsupported="1"', selfclose = True)
 
 
