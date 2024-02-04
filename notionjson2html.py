@@ -1,12 +1,13 @@
-# TODO: flatten child pages and include them
-# TODO: put all json props as html attributes
-# TODO: embed resources by default
-# TODO: add basic fixed top nav which should also work for single-page
-# TODO: for multi-article add TOC and generation date
-# TODO: support recursive conversion of all json to html? or maybe example with find -exec?
+# TODO: embed resources by default or follow extracted nested/flat resources if extracted?
+# TODO: fix links in flat/nested mode: need to have some page link and resource resolver, maybe discovered if pages.json is not helpful: in-tree, out-tree? (typically with json-s, it would be in-tree)
 # TODO: for a single or nested mode, what to do with unresolved link_to_pages? extend slug.json info? or scan the current directory?
-# TODO: fix links in flat/nested mode
+# TODO: support recursive conversion of all json to html? or maybe example with find -exec?
+
+# TODO: add basic fixed top nav which should also work for single-page with InteractionObserver?
+# TODO: add switch for multi-article TOC with child-pages
+# TODO: ad generation date and download date
 # TODO: basename -> urlparse
+# TODO: htmlescape
 # TODO: use header slugs as valid anchor targets
 # TODO: add header links on hover
 # https://jeroensormani.com/automatically-add-ids-to-your-headings/
