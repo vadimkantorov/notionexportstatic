@@ -216,7 +216,8 @@ def extract_json_nested(output_dir, notion_assets = {}, notion_pages = {}, notio
         with open(json_path, 'w', encoding = 'utf-8') as f:
             assets_dir = os.path.join(output_dir, slug + '_files')
             notion_assets_for_block = prepare_and_extract_assets({block['id'] : block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
-            json.dump(dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end), f, ensure_ascii = False, indent = 4)
+            notion_cache = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
+            json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
         print(json_path)
         if children := child_pages_by_parent_id.pop(page_id, []):
             extract_json_nested(os.path.join(output_dir, slug), notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, notion_slugs = notion_slugs, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets)
