@@ -2,6 +2,7 @@
 # TODO: fix links in flat/nested mode: need to have some page link and resource resolver, maybe discovered if pages.json is not helpful: in-tree, out-tree? (typically with json-s, it would be in-tree)
 # TODO: for a single or nested mode, what to do with unresolved link_to_pages? extend slug.json info? or scan the current directory?
 # TODO: support recursive conversion of all json to html? or maybe example with find -exec?
+# TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 
 # TODO: topnav: InteractionObserver?
 # TODO: site_like: add switch for multi-article TOC with child-pages
@@ -14,13 +15,10 @@
 # TODO: htmlescape for captions
 # TODO: heading_like: use header slugs as valid anchor targets
 # TODO: heading_like: add header links on hover
-# TODO: heading_like: apply class name to summary
-# TODO: paragraph: br should not be marked as notion-block along with paddings?
 # TODO: unsupported: add page_id and page_title to log
 # TODO: bookmark: generate social media card: title, maybe description, favicon
 # TODO: table: table_width, row-header, column-header
 # TODO: image: fixup url from assets; when to embed image, html.escape for caption, use figure
-# TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 # TODO: main: add error checking that all root_page_ids are found in actual pages and non zero pages
 # TODO: main: add all child_pages recursively, and not just a single time. should update child_pages always? add special option
 # TODO: main: add variant of notion_pages with child_pages merged (notion_cache in the context and link_to_page resolving)
@@ -32,6 +30,7 @@
 import os
 import sys
 import json
+import copy
 import base64
 import argparse
 import urllib.parse
@@ -176,7 +175,6 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
         top = stack.pop()
         id2block[top.get('id')] = top
         stack.extend(top.get('blocks', []) + top.get('children', []))
-
     parent_block = block
     while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
         parent_id = parent_block['parent'].get(parent_block['parent'].get('type'))
@@ -366,7 +364,21 @@ def child_database(block, ctx, tag = 'figure', class_name = 'notion-child_databa
     return open_block(block, ctx, tag = tag, class_name = class_name, used_keys = [child_database.__name__ + '-title'], set_html_contents_and_close = f'child_database:<figcaption>{html_child_database_title}</figcaption>')
 
 def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
-    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = 'Notion Breadcrumb: exact location of the current block with parent path')
+    id2block = {}
+    stack = list(ctx['pages'].values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+    parent_block = block
+    while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
+        parent_id = parent_block['parent'].get(parent_block['parent'].get('type'))
+        if parent_id not in id2block:
+            break
+        parent_block = id2block[parent_id]
+    
+    page_id = parent_block['id']
+    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(ctx['pages_parent_path'][page_id])))
 
 def mention(block, ctx, tag = 'div', class_name = 'notion-mention-block'):
     block_type = block.get('type') # "database", "date", "link_preview", "page", "user"
@@ -440,8 +452,22 @@ def block2html(block, ctx = {}, begin = False, end = False):
         return block2render_with_begin_end[block_type](block, ctx, begin = begin, end = end)
     
     if block_type not in block2render or block_type == 'unsupported':
+        id2block = {}
+        stack = list(ctx['pages'].values())
+        while stack:
+            top = stack.pop()
+            id2block[top.get('id')] = top
+            stack.extend(top.get('blocks', []) + top.get('children', []))
+        parent_block = block
+        while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
+            parent_id = parent_block['parent'].get(parent_block['parent'].get('type'))
+            if parent_id not in id2block:
+                break
+            parent_block = id2block[parent_id]
+
         block_type = 'unsupported'
-        print('unsupported block: type=[{type}] id=[{id}]'.format(**block), file = sys.stderr)
+        block_type_parent = parent_block.get('type', '') or parent_block.get('object', '')
+        print('unsupported block: type=[{type}] id=[{id}] parent_type=[{parent_type}]'.format(type = block['type'], id = block['id'], parent_type = block_type_parent), file = sys.stderr)
 
     return block2render[block_type](block, ctx)
 
@@ -564,13 +590,14 @@ def main(args):
         for k in notion_pages.keys():
             if root_page_ids[i] == k.replace('-', ''):
                 root_page_ids[i] = k
-    
-    child_pages_by_parent_id = {k: v for page_id, page in notion_pages.items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
+   
+    notion_pages_flat = copy.deepcopy(notion_pages)
+    child_pages_by_parent_id = {k: v for page_id, page in notion_pages_flat.items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
     child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id[page_id] if child_page['id'] not in root_page_ids]
 
     ctx = {}
-    ctx['pages'] = notion_pages
+    ctx['pages'] = notion_pages_flat
     ctx['assets'] = notion_cache['assets']
     ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
     ctx['unix_seconds_end'] = notion_cache.get('unix_seconds_end', 0)
@@ -588,7 +615,7 @@ def main(args):
         top = stack.pop()
         id2block[top.get('id')] = top
         stack.extend(top.get('blocks', []) + top.get('children', []))
-    for page_id in ctx['pages'].keys() | child_pages_by_id.keys():
+    for page_id in notion_pages_flat.keys() | child_pages_by_id.keys():
         block_id = page_id
         parent_path = []
         header_parent_page_id = page_id
