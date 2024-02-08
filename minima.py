@@ -11,7 +11,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     html_header = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(ctx['pages_parent_path'][page_ids[0]]))
     html_main = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for k in page_ids)
     css_style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
-    return layout_page.format(css_style = style, html_header = html_header, html_main = html_main)
+    return layout_page.format(css_style = css_style, html_header = html_header, html_main = html_main)
 
 layout_page =  '''
 <!DOCTYPE html>
@@ -47,27 +47,30 @@ notion_css = '''
 
 .notion-column-block { display:flex; flex-direction: column; }
 .notion-column_list-block { display:flex; flex-direction: row; }
-.notion_column_list-block-vertical {flex-direction: column!important;}
+.notion_column_list-block-vertical { flex-direction: column!important;}
 
 .notion-callout-block { display:flex; }
 
-.notion-quote-block {font-style: normal !important }
+.notion-quote-block { font-style: normal !important }
 
 .notion-table_of_contents-block { margin-top: 10px !important; margin-left: 0 !important; }
 .notion-table_of_contents-block { list-style-type: none !important; }
-.notion-table_of_contents-heading > a {color: rgb(120, 119, 116) !important;}
-.notion-table_of_contents-heading:hover {background: rgba(55, 53, 47, 0.08) !important;}
-.notion-table_of_contents-heading_1 {padding-left: 10px}
-.notion-table_of_contents-heading_2 {padding-left: 20px}
-.notion-table_of_contents-heading_3 {padding-left: 30px}
+.notion-table_of_contents-heading > a { color: rgb(120, 119, 116) !important;}
+.notion-table_of_contents-heading:hover { background: rgba(55, 53, 47, 0.08) !important;}
+.notion-table_of_contents-heading_1 { padding-left: 10px }
+.notion-table_of_contents-heading_2 { padding-left: 20px }
+.notion-table_of_contents-heading_3 { padding-left: 30px }
 
-.notion-bookmark-block {border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
+.notion-bookmark-block { border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
 
-.notion-embed-block {width: 100% !important; height: 500px; border: 0!important}
+.notion-embed-block { width: 100% !important; height: 500px; border: 0!important}
 
 .notion-page { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
 
-details>summary>h1,details>summary>h2,details>summary>h3 {display:inline !important; } 
+.notion-toggle-block>summary>h1, .notion-toggle-block>summary>h2, .notion-toggle-block>summary>h3 { display:inline !important; }
+
+.notion-header-block>summary>h1, .notion-sub_header-block>summary>h2, .notion-sub_sub_header-block>summary>h3 { display:inline !important; }
+
 '''
 
 

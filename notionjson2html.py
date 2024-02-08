@@ -12,10 +12,11 @@
 # TODO: link_like: basename -> urlparse
 # TODO: richtext2html/text_link: format link to page if link url/href starts from '/'
 # TODO: htmlescape for captions
-# TODO: header_like: use header slugs as valid anchor targets
-# TODO: header_like: add header links on hover
+# TODO: heading_like: use header slugs as valid anchor targets
+# TODO: heading_like: add header links on hover
+# TODO: heading_like: apply class name to summary
+# TODO: paragraph: br should not be marked as notion-block along with paddings?
 # TODO: unsupported: add page_id and page_title to log
-# TODO: unsupported: escape comment tags
 # TODO: bookmark: generate social media card: title, maybe description, favicon
 # TODO: table: table_width, row-header, column-header
 # TODO: image: fixup url from assets; when to embed image, html.escape for caption, use figure
@@ -125,24 +126,25 @@ def children_like(block, ctx, key = 'children', tag = ''):
         html += ((f'<{tag}>') if tag else '') + block2html(subblock, ctx, begin = not same_block_type_as_prev, end = not same_block_type_as_next) + (f'</{tag}>\n' if tag else '')
     return html
 
-def text_like(block, ctx, block_type, tag, used_keys = [], attrs = {}, class_name = '', checked = None):
+def text_like(block, ctx, block_type, tag, used_keys = [], attrs = {}, class_name = '', checked = None, html_icon = ''):
     color = block[block_type].get('color', '')
     html_checked = '<input type="checkbox" disabled {} />'.format(['', 'checked'][checked]) if checked is not None else ''
-    return open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys, set_html_contents_and_close = html_checked + richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or []) + children_like(block, ctx))
+    return open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys, set_html_contents_and_close = html_checked + html_icon + richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or []) + children_like(block, ctx))
 
-def toggle_like(block, ctx, block_type, tag = 'details', attrs = {}, class_name = ''):
+def toggle_like(block, ctx, block_type, tag = 'span', attrs = {}, class_name = '', html_icon = ''):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     color = block[block_type].get('color', '')
     html_details_open = ['', 'open'][ctx['html_details_open']]
-    return open_block(block, ctx, tag = tag, extra_attrstr = html_details_open, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable'], set_html_contents_and_close = f'<summary><div>{html_text}</div></summary>\n' + children_like(block, ctx))
+    return open_block(block, ctx, tag = 'details', extra_attrstr = html_details_open, class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable'], set_html_contents_and_close = f'<summary><{tag}>{html_icon}{html_text}</{tag}></summary>\n' + children_like(block, ctx))
 
 def heading_like(block, ctx, block_type, tag, class_name = ''):
-    #<details open id="abc"><summary><h1>abc def&nbsp;<a href="#abc"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a></h1></summary>ABC<details>
-
+    block_id = block['id']
+    html_anchor = f'<a href="#{block_id}"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a>'
+    
     if block.get(block_type, {}).get('is_toggleable') is not True: 
-        return text_like(block, ctx, block_type,  tag = tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block['id']), class_name = class_name)
+        return text_like(block, ctx, block_type, tag = tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block_id), class_name = 'notion-heading-like ' + class_name, html_icon = html_anchor)
     else:
-        return toggle_like(block, ctx, block_type, tag = tag, attrs = dict(id = block['id']), class_name = 'notion-heading-like ' + class_name)
+        return toggle_like(block, ctx, block_type, tag = tag, attrs = dict(id = block_id), class_name = 'notion-heading-like ' + class_name, html_icon = html_anchor)
 
 def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False):
     block_type = block.get('type', '')
@@ -206,7 +208,7 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
     html += close_block(tag)
     return html
 
-def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>', class_name = 'notion-alias-block'):
+def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'notion-alias-block'):
     id2block = {}
     stack = list(ctx['pages'].values())
     while stack:
@@ -248,7 +250,7 @@ def link_to_page(block, ctx, tag = 'a', suffix_html = '<br/>', class_name = 'not
     else:
         caption_html = f'title of linked page [{link_to_page_page_id}] not found'
 
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{href}"', class_name = class_name, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id'], set_html_contents_and_close = caption_html) + suffix_html + '\n'
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{href}"', class_name = class_name, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id'], set_html_contents_and_close = caption_html) + html_suffix + '\n'
 
 def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     table_width = block[table.__name__].get('table_width')
@@ -291,9 +293,10 @@ def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
     src = ctx['assets'].get(src, {}).get('uri', src)
     if src.startswith('file:///'):
         src = src.split('file:///', maxsplit = 1)[-1]
-    html_text = richtext2html(block['image']['caption'])
+    html_text = richtext2html(block['image']['caption'], title_mode = False)
+    html_text_alt = richtext2html(block['image']['caption'], title_mode = True)
     
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'src="{src}"', class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external'], selfclose = True) + f'<div>{html_text}</div>\n'
+    return open_block(block, ctx, tag = 'figure', class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external'], set_html_contents_and_close = f'<img src="{src}" alt="{html_text_alt}" /><figcaption>{html_text}</figcaption>')
 
 def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
     icon_type = block[callout.__name__].get('icon', {}).get('type')
@@ -306,7 +309,7 @@ def embed(block, ctx, tag = 'iframe', class_name = 'notion-embed-block'):
     link_type = block[block_type].get('type', '')
     src = block[block_type].get('url') or block[block_type].get(link_type, {}).get('url') or ''
     html_text = richtext2html(block.get(block_type, {}).get('caption', [])) 
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'src="{src}"', class_name = class_name, used_keys = [block_type + '-caption', block_type + '-url', block_type + '-type', block_type + '-' + link_type], set_html_contents_and_close = ' ') + '<div>{html_text}</div>\n'
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'src="{src}"', class_name = class_name, used_keys = [block_type + '-caption', block_type + '-url', block_type + '-type', block_type + '-' + link_type], set_html_contents_and_close = ' ') + f'<div>{html_text}</div>\n'
 
 def pdf(block, ctx, tag = 'a', class_name = 'notion-pdf-block'):
     return link_like(block, ctx, tag = tag, class_name = class_name) + embed(block, ctx)
@@ -347,20 +350,20 @@ def numbered_list_item(block, ctx, tag = 'ol', begin = False, end = False, class
     return (f'<{tag} class="{class_name}">\n' if begin else '') + text_like(block, ctx, block_type = numbered_list_item.__name__, tag = 'li') + ('\n' + f'</{tag}>\n' if end else '')
 
 def code(block, ctx, tag = 'code', class_name = 'notion-code-block'):
-    caption_html = richtext2html(block[code.__name__].get('caption', []))
+    html_caption = richtext2html(block[code.__name__].get('caption', []))
     language = block[code.__name__].get('language', '')
-    return '<pre>' + open_block(block, ctx, tag = tag, extra_attrstr = f'data-language="{language}"', class_name = class_name, used_keys = [code.__name__ + '-caption', code.__name__ + '-rich_text', code.__name__ + '-language'], set_html_contents_and_close = richtext2html(block[code.__name__].get('rich_text', []))) + f'<div>{caption_html}</div></pre>\n'
+    return open_block(block, ctx, tag = 'figure', extra_attrstr = f'data-language="{language}"', class_name = class_name, used_keys = [code.__name__ + '-caption', code.__name__ + '-rich_text', code.__name__ + '-language'], set_html_contents_and_close = f'<figcaption>{html_caption}</figcaption>\n<pre><{tag}>' + richtext2html(block[code.__name__].get('rich_text', [])) + f'</{tag}></pre>')
 
 def equation(block, ctx, tag = 'code', class_name = 'notion-equation-block'):
-    expression_html = block[equation.__name__].get('expression', '')
-    return open_block(block, ctx, tag = tag, class_name = class_name, used_keys = [equation.__name__ + '-expression'], set_html_contents_and_close = expression_html)
+    html_expression = block[equation.__name__].get('expression', '')
+    return open_block(block, ctx, tag = tag, class_name = class_name, used_keys = [equation.__name__ + '-expression'], set_html_contents_and_close = html_expression)
 
 def link_preview(block, ctx, tag = 'a', class_name = 'notion-link_preview-block'):
     return link_like(block, ctx, tag = tag, class_name = class_name)
 
-def child_database(block, ctx, tag = 'div', class_name = 'notion-child_database-block'):
-    child_database_title_html = block[child_database.__name__].get('title', '')
-    return open_block(block, ctx, tag = tag, class_name = class_name, used_keys = [child_database.__name__ + '-title'], set_html_contents_and_close = f'Notion Child Database: ' + child_database_title_html)
+def child_database(block, ctx, tag = 'figure', class_name = 'notion-child_database-block'):
+    html_child_database_title = block[child_database.__name__].get('title', '')
+    return open_block(block, ctx, tag = tag, class_name = class_name, used_keys = [child_database.__name__ + '-title'], set_html_contents_and_close = f'child_database:<figcaption>{html_child_database_title}</figcaption>')
 
 def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = 'Notion Breadcrumb: exact location of the current block with parent path')
@@ -372,23 +375,23 @@ def mention(block, ctx, tag = 'div', class_name = 'notion-mention-block'):
     # only found nested in rich_text blocks, represents @ objects
     return open_block(block, ctx, tag = tag, class_name = class_name)
 
-def template(block, ctx, tag = 'div', class_name = 'notion-template-block'):
+def template(block, ctx, tag = 'figure', class_name = 'notion-template-block'):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     html_children = children_like(block, ctx)
-    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = f'<div>{html_text}</div><div>\n{html_children}</div>')
+    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = f'<figcaption>{html_text}</figcaption>\n{html_children}')
 
-def synced_block(block, ctx, tag = 'div', class_name = 'notion-synced_block-block'):
+def synced_block(block, ctx, tag = 'figure', class_name = 'notion-synced_block-block'):
     synced_from_block_id = block[synced_block.__name__].get('synced_from', {}).get('block_id', '')
     html_children = children_like(block, ctx)
-    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = f'<div>{synced_from_block_id}</div><div>\n{html_children}</div>')
+    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = f'<figcaption>{synced_from_block_id}</figcaption>\n{html_children}')
 
 def to_do(block, ctx, tag = 'div', class_name = 'notion-to_do-block'):
     checked = block[block_type].get('checked', False) 
     return text_like(block, ctx, tag = tag, class_name = class_name, checked = checked, used_keys = [block.get('type', '') + '-checked'])
 
-def unsupported(block, tag = 'div', class_name = 'notion-unsupported-block', comment = True):
+def unsupported(block, ctx, tag = 'div', class_name = 'notion-unsupported-block', comment = True):
     block_type = block.get('type', '')
-    return '\n<!--\n' * comment + open_block(block, ctx, tag = tag, class_name = class_name, extra_attrstr = f' data-notion-block_type="{block_type}', class_name = class_name, selfclose = True) + '\n-->\n' * comment
+    return '\n<!--\n' * comment + open_block(block, ctx, tag = tag, class_name = class_name, extra_attrstr = f' data-notion-block_type="{block_type}', selfclose = True).replace('-->' * comment, '__>' * comment) + '\n-->\n' * comment
 
 def block2html(block, ctx = {}, begin = False, end = False):
     # https://developers.notion.com/reference/block
@@ -569,8 +572,8 @@ def main(args):
     ctx = {}
     ctx['pages'] = notion_pages
     ctx['assets'] = notion_cache['assets']
-    ctx['unix_seconds_begin'] = notion_cache['unix_seconds_begin']
-    ctx['unix_seconds_end'] = notion_cache['unix_seconds_end']
+    ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
+    ctx['unix_seconds_end'] = notion_cache.get('unix_seconds_end', 0)
     ctx['notion_attrs_verbose'] = args.notion_attrs_verbose
     ctx['html_details_open'] = args.html_details_open
     ctx['html_columnlist_disable'] = args.html_columnlist_disable
@@ -578,7 +581,6 @@ def main(args):
     ctx['page_ids'] = page_ids
     ctx['extract_html'] = args.extract_html
     ctx['notion_slugs'] = notion_slugs
-    
     ctx['pages_parent_path'] = {}
     id2block = {}
     stack = list(ctx['pages'].values()) + list(child_pages_by_id.values())
@@ -604,7 +606,7 @@ def main(args):
     if args.extract_html == 'single':
         extract_html_single(output_path if args.output_path else output_path + '.html', ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id, extract_assets = args.extract_assets, sitepages2html = theme.sitepages2html)
     else:
-        extract_html_nested(output_path, ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], theme.sitepages2html)
+        extract_html_nested(output_path, ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], sitepages2html = theme.sitepages2html)
 
 
 if __name__ == '__main__':
