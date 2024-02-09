@@ -12,7 +12,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, bloc
     html_header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx)
     num_pages = len(page_ids)
     
-    html_toc = '' if not toc or num_pages < 2 else f'\n<h1>Table of Contents ({num_pages} pages)</h1>\n' + block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx) + '<hr />\n'
+    html_toc = '' if not toc or num_pages < 2 else f'\n<h1>#</h1>\n' + block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx) + '<hr />\n'
     
     html_main = '\n<hr />\n'.join(block2html(notion_pages[page_id], ctx = ctx).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for page_id in page_ids)
     css_style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
@@ -42,6 +42,11 @@ layout_page =  '''
 
 
 notion_css = '''
+
+.notion-heading-like-icon { visibility : hidden; }
+
+.notion-heading-like:hover > .notion-heading-like-icon { visibility : visible !important; }
+
 .notion-topbar { font-family: 'Twemoji Country Flags', sans-serif !important; position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
 
 .notion-record-icon { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 78px !important; line-height: 1.1 !important; margin-left: 0 !important; }

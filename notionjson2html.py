@@ -6,7 +6,6 @@
 
 # TODO: topnav: InteractionObserver?
 # TODO: site_like: add hierarchical TOC
-# TODO: page_like and site_like: add generation date and download date
 # TODO: page_like: for child_page icons/emoji depends on pop_and_replace_child_pages_recursively
 # TODO: link_to_page: html.escape() the title
 # TODO: link_to_page: find the page path in relation to the current path, need to know flat or flat.html; allow passing url-style explicitly, if not set, detect if slug.html or if /slug/ exists already and maybe have some url-style as default
@@ -14,8 +13,6 @@
 # TODO: richtext2html/text_link: format link to page if link url/href starts from '/'
 # TODO: htmlescape for captions
 # TODO: heading_like: use header slugs as valid anchor targets
-# TODO: heading_like: add header links on hover
-# TODO: unsupported: page_title to log
 # TODO: bookmark: generate social media card: title, maybe description, favicon
 # TODO: table: table_width, row-header, column-header
 # TODO: image: fixup url from assets; when to embed image, html.escape for caption
@@ -30,6 +27,8 @@
 import os
 import sys
 import json
+import time
+import datetime
 import copy
 import base64
 import argparse
@@ -128,17 +127,17 @@ def children_like(block, ctx, key = 'children', tag = ''):
 def text_like(block, ctx, block_type, tag, used_keys = [], attrs = {}, class_name = '', checked = None, html_icon = ''):
     color = block[block_type].get('color', '')
     html_checked = '<input type="checkbox" disabled {} />'.format(['', 'checked'][checked]) if checked is not None else ''
-    return open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys, set_html_contents_and_close = html_checked + html_icon + richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or []) + children_like(block, ctx))
+    return open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color'] + used_keys, set_html_contents_and_close = html_checked + richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or []) + children_like(block, ctx) + html_icon)
 
 def toggle_like(block, ctx, block_type, tag = 'span', attrs = {}, class_name = '', html_icon = ''):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [])
     color = block[block_type].get('color', '')
     html_details_open = ['', 'open'][ctx['html_details_open']]
-    return open_block(block, ctx, tag = 'details', extra_attrstr = html_details_open, class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable'], set_html_contents_and_close = f'<summary><{tag}>{html_icon}{html_text}</{tag}></summary>\n' + children_like(block, ctx))
+    return open_block(block, ctx, tag = 'details', extra_attrstr = html_details_open, class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = attrs, used_keys = ['children', block_type + '-text', block_type + '-rich_text', block_type + '-color', block_type + '-is_toggleable'], set_html_contents_and_close = f'<summary><{tag}>{html_text}{html_icon}</{tag}></summary>\n' + children_like(block, ctx))
 
 def heading_like(block, ctx, block_type, tag, class_name = ''):
     block_id = block['id']
-    html_anchor = f'<a href="#{block_id}"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a>'
+    html_anchor = f'<a href="#{block_id}" class="notion-heading-like-icon"><svg viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"></path></svg></a>'
     
     if block.get(block_type, {}).get('is_toggleable') is not True: 
         return text_like(block, ctx, block_type, tag = tag, used_keys = [block_type + '-is_toggleable'], attrs = dict(id = block_id), class_name = 'notion-heading-like ' + class_name, html_icon = html_anchor)
@@ -152,19 +151,26 @@ def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = Fals
     html_text = richtext2html(block[block_type].get('caption', [])) or block[block_type].get('name') or (src if full_url_as_caption else os.path.basename(src))
     return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{src}"', class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external'], set_html_contents_and_close = '📎 ' + html_text) + '<br/>\n'
 
-def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block'):
+def get_page_title(block):
+    return (' '.join(t['plain_text'] for t in block.get("properties", {}).get("title", {}).get("title", [])) if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', ''))).strip()
+    
+
+def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S'):
+    unix_seconds_downloaded = ctx.get('unix_seconds_end', 0)
+    unix_seconds_generated = ctx.get('unix_seconds_generated', 0)
     icon_type = block['icon'].get('type')
     icon_emoji = block['icon'].get('emoji', '')
     cover_type = block.get('cover', {}).get('type')
     src = block.get('cover', {}).get('file', {}).get('url', '')
     src = ctx['assets'].get(src, {}).get('uri', src)
 
-    page_title = ' '.join(t['plain_text'] for t in block.get("properties", {}).get("title", {}).get("title", [])) if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', ''))
-    
+    page_title = get_page_title(block)
     link_to_page_page_id = block.get('id', '')
     slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
     
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'notion-page', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="{class_name}">{page_title}</h1></header><div class="notion-page-content">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + '\n</div>' + close_block(tag)
+    dt_published = datetime.datetime.fromtimestamp(unix_seconds_generated).strftime(strftime) if unix_seconds_generated else ''
+    dt_modified = datetime.datetime.fromtimestamp(unix_seconds_downloaded).strftime(strftime) if unix_seconds_downloaded else ''
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'notion-page', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="{class_name}">{page_title}</h1><p><sub><time class="dt-modified" datetime="">{dt_modified}</time>&nbsp;~>&nbsp;<time class="dt-published" datetime="">{dt_published}</time></sub></p></header><div class="notion-page-content">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + '\n</div>' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
@@ -469,7 +475,7 @@ def block2html(block, ctx = {}, begin = False, end = False):
 
         block_type = 'unsupported'
         block_type_parent = parent_block.get('type', '') or parent_block.get('object', '')
-        print('unsupported block: type=[{type}] id=[{id}] parent_type=[{parent_type}] parent_id=[{parent_id}]'.format(type = block['type'], id = block['id'], parent_type = block_type_parent, parent_id = parent_block['id']), file = sys.stderr)
+        print('unsupported block: type=[{type}] id=[{id}] parent_type=[{parent_type}] parent_id=[{parent_id}] parent_title=[{parent_title}]'.format(type = block['type'], id = block['id'], parent_type = block_type_parent, parent_id = parent_block['id'], parent_title = get_page_title(parent_block)), file = sys.stderr)
 
     return block2render[block_type](block, ctx)
 
@@ -603,6 +609,7 @@ def main(args):
     ctx['assets'] = notion_cache['assets']
     ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
     ctx['unix_seconds_end'] = notion_cache.get('unix_seconds_end', 0)
+    ctx['unix_seconds_generated'] = int(time.time())
     ctx['notion_attrs_verbose'] = args.notion_attrs_verbose
     ctx['html_details_open'] = args.html_details_open
     ctx['html_columnlist_disable'] = args.html_columnlist_disable
