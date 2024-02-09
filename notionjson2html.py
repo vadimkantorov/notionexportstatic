@@ -5,7 +5,7 @@
 # TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 
 # TODO: topnav: InteractionObserver?
-# TODO: site_like: add switch for multi-article TOC with child-pages
+# TODO: site_like: add hierarchical TOC
 # TODO: page_like and site_like: add generation date and download date
 # TODO: page_like: for child_page icons/emoji depends on pop_and_replace_child_pages_recursively
 # TODO: link_to_page: html.escape() the title
@@ -15,10 +15,10 @@
 # TODO: htmlescape for captions
 # TODO: heading_like: use header slugs as valid anchor targets
 # TODO: heading_like: add header links on hover
-# TODO: unsupported: add page_id and page_title to log
+# TODO: unsupported: page_title to log
 # TODO: bookmark: generate social media card: title, maybe description, favicon
 # TODO: table: table_width, row-header, column-header
-# TODO: image: fixup url from assets; when to embed image, html.escape for caption, use figure
+# TODO: image: fixup url from assets; when to embed image, html.escape for caption
 # TODO: main: add error checking that all root_page_ids are found in actual pages and non zero pages
 # TODO: main: add all child_pages recursively, and not just a single time. should update child_pages always? add special option
 # TODO: main: add variant of notion_pages with child_pages merged (notion_cache in the context and link_to_page resolving)
@@ -169,6 +169,9 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block'):
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
     # https://www.notion.so/help/columns-headings-and-dividers#how-it-works
+    if block.get('site_table_of_contents_page_ids'):
+        return '<ul>\n' + '\n'.join('<li>{html_link_to_page}</li>'.format(html_link_to_page = block2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx)) for page_id in block.get('site_table_of_contents_page_ids', [])) + '\n</ul>'
+
     id2block = {}
     stack = list(ctx['pages'].values())
     while stack:
@@ -213,7 +216,6 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
         top = stack.pop()
         id2block[top.get('id')] = top
         stack.extend(top.get('blocks', []) + top.get('children', []))
-
     parent_block = block
     while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
         parent_id = parent_block.get('parent', {}).get(parent_block.get('parent', {}).get('type'))
@@ -221,7 +223,7 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
             break
         parent_block = id2block[parent_id]
 
-    cur_page_id = parent_block['id']
+    cur_page_id = parent_block.get('id', '')
     curslug = ctx['notion_slugs'].get(cur_page_id) or ctx['notion_slugs'].get(cur_page_id.replace('-', '')) or cur_page_id.replace('-', '')
 
     link_to_page_page_id = block[link_to_page.__name__].get(block[link_to_page.__name__].get('type'), '')
@@ -231,7 +233,7 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     href = '#404'
     is_index_page = curslug == 'index'
     url_suffix = '/index.html'.lstrip('/' if slug == 'index' else '') if args.html_link_to_page_index_html else ''
-    if ctx['extract_html'] == 'single':
+    if ctx['extract_html'] == 'single' or not parent_block.get('id'):
         if link_to_page_page_id in ctx['page_ids']:
             href = '#' + slug 
         else:
@@ -378,7 +380,7 @@ def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
         parent_block = id2block[parent_id]
     
     page_id = parent_block['id']
-    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(block, ctx).replace('<br/>', '') for block in reversed(ctx['pages_parent_path'][page_id])))
+    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(subblock, ctx).replace('<br/>', '') for subblock in reversed(ctx['pages_parent_path'][page_id])))
 
 def mention(block, ctx, tag = 'div', class_name = 'notion-mention-block'):
     block_type = block.get('type') # "database", "date", "link_preview", "page", "user"
@@ -467,7 +469,7 @@ def block2html(block, ctx = {}, begin = False, end = False):
 
         block_type = 'unsupported'
         block_type_parent = parent_block.get('type', '') or parent_block.get('object', '')
-        print('unsupported block: type=[{type}] id=[{id}] parent_type=[{parent_type}]'.format(type = block['type'], id = block['id'], parent_type = block_type_parent), file = sys.stderr)
+        print('unsupported block: type=[{type}] id=[{id}] parent_type=[{parent_type}] parent_id=[{parent_id}]'.format(type = block['type'], id = block['id'], parent_type = block_type_parent, parent_id = parent_block['id']), file = sys.stderr)
 
     return block2render[block_type](block, ctx)
 
@@ -539,7 +541,7 @@ def prepare_and_extract_assets(notion_pages, assets_dir, notion_assets = {}, ext
             print(asset_path)
     return assets
 
-def extract_html_single(output_path, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
+def extract_html_single(output_path, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, toc = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
     notion_cache = ctx
     notion_assets = notion_cache.get('assets', {})
     
@@ -547,10 +549,10 @@ def extract_html_single(output_path, ctx = {}, page_ids = [], child_pages_by_id 
     
     notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
     with open(output_path, 'w', encoding = 'utf-8') as f:
-        f.write(sitepages2html(page_ids, ctx = ctx, notion_pages = notion_cache['pages'], block2html = block2html))
+        f.write(sitepages2html(page_ids, ctx = ctx, notion_pages = notion_cache['pages'], toc = toc, block2html = block2html))
     print(output_path)
 
-def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, notion_pages = {}, child_pages_by_parent_id = {}, index_html = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
+def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, toc = False, notion_pages = {}, child_pages_by_parent_id = {}, index_html = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
     notion_cache = ctx
     notion_pages = notion_cache['pages'] if notion_pages is not None else {}
     notion_slugs = ctx['notion_slugs']
@@ -569,7 +571,7 @@ def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id =
         notion_assets_for_block = prepare_and_extract_assets({page_id : block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         ctx['assets'] = notion_assets_for_block
         with open(html_path, 'w', encoding = 'utf-8') as f:
-            f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages, block2html = block2html))
+            f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages, toc = toc, block2html = block2html))
         print(html_path)
         if children := child_pages_by_parent_id.pop(page_id, []):
             extract_html_nested(page_dir, ctx = ctx, notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets, index_html = index_html)
@@ -631,9 +633,9 @@ def main(args):
 
     import minima as theme
     if args.extract_html == 'single':
-        extract_html_single(output_path if args.output_path else output_path + '.html', ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id, extract_assets = args.extract_assets, sitepages2html = theme.sitepages2html)
+        extract_html_single(output_path if args.output_path else output_path + '.html', ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id, extract_assets = args.extract_assets, toc = args.html_toc, sitepages2html = theme.sitepages2html)
     else:
-        extract_html_nested(output_path, ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], sitepages2html = theme.sitepages2html)
+        extract_html_nested(output_path, ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], toc = args.html_toc, sitepages2html = theme.sitepages2html)
 
 
 if __name__ == '__main__':
@@ -646,6 +648,7 @@ if __name__ == '__main__':
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
     parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
+    parser.add_argument('--html-toc', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-html', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
     args = parser.parse_args()

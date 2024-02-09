@@ -7,11 +7,16 @@
 # TODO: margin between blocks
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 
-def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx: '')):
-    html_header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_ids[0])), ctx)
-    html_main = '\n<hr />\n'.join(block2html(notion_pages[k], ctx = ctx).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for k in page_ids)
+def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2html = (lambda page, ctx: '')):
+    page_id = page_ids[0]
+    html_header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx)
+    num_pages = len(page_ids)
+    
+    html_toc = '' if not toc or num_pages < 2 else f'\n<h1>Table of Contents ({num_pages} pages)</h1>\n' + block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx) + '<hr />\n'
+    
+    html_main = '\n<hr />\n'.join(block2html(notion_pages[page_id], ctx = ctx).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for page_id in page_ids)
     css_style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
-    return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main)
+    return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_toc + html_main)
 
 layout_page =  '''
 <!DOCTYPE html>
