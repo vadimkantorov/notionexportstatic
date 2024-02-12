@@ -164,7 +164,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', str
 
     page_title = get_page_title(block)
     link_to_page_page_id = block.get('id', '')
-    slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
+    slug = ctx['slugs'].get(link_to_page_page_id) or ctx['slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
     
     dt_published = datetime.datetime.fromtimestamp(unix_seconds_generated).strftime(strftime) if unix_seconds_generated else ''
     dt_modified = datetime.datetime.fromtimestamp(unix_seconds_downloaded).strftime(strftime) if unix_seconds_downloaded else ''
@@ -228,11 +228,11 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
         parent_block = id2block[parent_id]
 
     cur_page_id = parent_block.get('id', '')
-    curslug = ctx['notion_slugs'].get(cur_page_id) or ctx['notion_slugs'].get(cur_page_id.replace('-', '')) or cur_page_id.replace('-', '')
+    curslug = ctx['slugs'].get(cur_page_id) or ctx['slugs'].get(cur_page_id.replace('-', '')) or cur_page_id.replace('-', '')
 
     link_to_page_page_id = block[link_to_page.__name__].get(block[link_to_page.__name__].get('type'), '')
     
-    slug = ctx['notion_slugs'].get(link_to_page_page_id) or ctx['notion_slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
+    slug = ctx['slugs'].get(link_to_page_page_id) or ctx['slugs'].get(link_to_page_page_id.replace('-', '')) or link_to_page_page_id.replace('-', '')
 
     href = '#404'
     is_index_page = curslug == 'index'
@@ -555,7 +555,7 @@ def extract_html_single(output_path, ctx = {}, page_ids = [], notion_pages_flat 
     print(output_path)
 
 def extract_html_nested(output_dir, ctx = {}, page_ids = [], extract_assets = False, toc = False, notion_pages_flat = {}, child_pages_by_parent_id = {}, index_html = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
-    notion_slugs = ctx.get('notion_slugs', {})
+    notion_slugs = ctx.get('slugs', {})
     notion_assets = ctx.get('assets', {})
     os.makedirs(output_dir, exist_ok = True)
 
@@ -600,20 +600,22 @@ def main(args):
     assert all(page_id in notion_pages_flat for page_id in root_page_ids)
 
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id[page_id] if child_page['id'] not in root_page_ids]
+    #page_ids = page_ids # child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}
 
     ctx = {}
-    ctx['pages'] = notion_pages_flat
+    ctx['html_details_open'] = args.html_details_open
+    ctx['html_columnlist_disable'] = args.html_columnlist_disable
+    ctx['html_link_to_page_index_html'] = args.html_link_to_page_index_html
+    ctx['extract_html'] = args.extract_html
+    ctx['notion_attrs_verbose'] = args.notion_attrs_verbose
+    ctx['slugs'] = notion_slugs
     ctx['assets'] = notion_cache['assets']
     ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
     ctx['unix_seconds_end'] = notion_cache.get('unix_seconds_end', 0)
     ctx['unix_seconds_generated'] = int(time.time())
-    ctx['notion_attrs_verbose'] = args.notion_attrs_verbose
-    ctx['html_details_open'] = args.html_details_open
-    ctx['html_columnlist_disable'] = args.html_columnlist_disable
-    ctx['html_link_to_page_index_html'] = args.html_link_to_page_index_html
+    ctx['pages'] = notion_pages_flat
     ctx['page_ids'] = page_ids
-    ctx['extract_html'] = args.extract_html
-    ctx['notion_slugs'] = notion_slugs
+    ctx['child_pages_by_parent_id'] = child_pages_by_parent_id
     ctx['pages_parent_path'] = {}
     id2block = {}
     stack = list(ctx['pages'].values()) + list(child_pages_by_id.values())
@@ -639,7 +641,6 @@ def main(args):
     if args.extract_html == 'single':
         extract_html_single(output_path if args.output_path else output_path + '.html', ctx = ctx, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, toc = args.html_toc, sitepages2html = theme.sitepages2html)
     else:
-        page_ids = page_ids # child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}
         extract_html_nested(output_path, ctx = ctx, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], toc = args.html_toc, sitepages2html = theme.sitepages2html)
 
 
