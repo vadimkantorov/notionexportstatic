@@ -4,7 +4,7 @@
 # https://github.com/jekyll/jekyll-sitemap
 
 # TODO: add InteractionObserver-based nav for single-page or for side menu
-# TODO: margin between blocks
+# TODO: margin between blocks, except empty block
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2html = (lambda page, ctx: '')):
@@ -46,6 +46,7 @@ notion_css = '''
 .notion-heading-like-icon { visibility : hidden; }
 
 .notion-heading-like:hover > .notion-heading-like-icon { visibility : visible !important; }
+.notion-heading-like:hover > summary .notion-heading-like-icon { visibility : visible !important; }
 
 .notion-topbar { font-family: 'Twemoji Country Flags', sans-serif !important; position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
 
@@ -73,7 +74,7 @@ notion_css = '''
 
 .notion-bookmark-block { border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
 
-.notion-embed-block { width: 100% !important; height: 500px; border: 0!important}
+.notion-embed-block iframe { width: 100% !important; height: 500px; border: 0!important}
 
 .notion-page { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
 

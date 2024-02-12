@@ -6,7 +6,7 @@
 
 # TODO: topnav: InteractionObserver?
 # TODO: site_like: add hierarchical TOC
-# TODO: page_like: for child_page icons/emoji depends on pop_and_replace_child_pages_recursively
+# TODO: page_like: add get_page_icon() for child_page icons/emoji depends on pop_and_replace_child_pages_recursively
 # TODO: link_to_page: html.escape() the title
 # TODO: link_to_page: find the page path in relation to the current path, need to know flat or flat.html; allow passing url-style explicitly, if not set, detect if slug.html or if /slug/ exists already and maybe have some url-style as default
 # TODO: link_like: basename -> urlparse
@@ -16,9 +16,7 @@
 # TODO: bookmark: generate social media card: title, maybe description, favicon
 # TODO: table: table_width, row-header, column-header
 # TODO: image: fixup url from assets; when to embed image, html.escape for caption
-# TODO: main: add error checking that all root_page_ids are found in actual pages and non zero pages
-# TODO: main: add all child_pages recursively, and not just a single time. should update child_pages always? add special option
-# TODO: main: add variant of notion_pages with child_pages merged (notion_cache in the context and link_to_page resolving)
+# TODO: nested: update only a single page? or all nested dirs as well? add extra switch?
 
 # https://jeroensormani.com/automatically-add-ids-to-your-headings/
 # https://github.com/themightymo/auto-anchor-header-links/blob/master/auto-header-anchor-links.php
@@ -110,7 +108,7 @@ def notionattrs2html(block, ctx = {}, used_keys = [], class_name = '', attrs = {
     return res
 
 def open_block(block = None, ctx = {}, class_name = '', tag = '', extra_attrstr = '', selfclose = False, set_html_contents_and_close = '', **kwargs):
-    return (f'<{tag} {extra_attrstr} ' + (notionattrs2html(block, ctx, class_name = 'notion-block ' + class_name, **kwargs) if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'</{tag}>' if set_html_contents_and_close else '')) if tag else ''
+    return (f'<{tag} {extra_attrstr} ' + (notionattrs2html(block, ctx, class_name = 'notion-block ' + class_name, **kwargs) if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>' if set_html_contents_and_close else '')) if tag else ''
 
 def close_block(tag = ''):
     return f'</{tag}>\n' if tag else ''
@@ -170,7 +168,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     
     dt_published = datetime.datetime.fromtimestamp(unix_seconds_generated).strftime(strftime) if unix_seconds_generated else ''
     dt_modified = datetime.datetime.fromtimestamp(unix_seconds_downloaded).strftime(strftime) if unix_seconds_downloaded else ''
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'notion-page', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="{class_name}">{page_title}</h1><p><sub><time class="dt-modified" datetime="">{dt_modified}</time>&nbsp;~>&nbsp;<time class="dt-published" datetime="">{dt_published}</time></sub></p></header><div class="notion-page-content">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + '\n</div>' + close_block(tag)
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}"', class_name = 'notion-page', used_keys = ['id', 'blocks', 'icon-type', 'icon-emoji', 'cover-type', 'cover-file', 'properties-title', 'children', 'title', 'child_page-title']) + f'<header><img src="{src}"></img><h1 class="notion-record-icon">{icon_emoji}</h1><h1 class="{class_name}">{page_title}</h1><p><sub><time class="dt-modified" datetime="">{dt_modified}</time><br /><time class="dt-published" datetime="">{dt_published}</time></sub></p></header><div class="notion-page-content">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + '\n</div>' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
@@ -288,9 +286,7 @@ def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     src = block[video.__name__].get(block[video.__name__]['type'], {}).get('url', '')
     is_youtube = 'youtube.com' in src
     src = src.replace("http://", "https://").replace('/watch?v=', '/embed/').split('&')[0] if is_youtube else src
-    
     html_contents = f'<div class="res_emb_block"><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>' if is_youtube else f'<video playsinline autoplay muted loop controls src="{src}"></video>'
-
     return open_block(block, ctx, tag = tag, class_name = class_name, used_keys = [video.__name__ + '-caption', video.__name__ + '-type', video.__name__ + '-external', video.__name__ + '-external-url'], set_html_contents_and_close = html_contents)
 
 def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
@@ -301,8 +297,7 @@ def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
         src = src.split('file:///', maxsplit = 1)[-1]
     html_text = richtext2html(block['image']['caption'], title_mode = False)
     html_text_alt = richtext2html(block['image']['caption'], title_mode = True)
-    
-    return open_block(block, ctx, tag = 'figure', class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external'], set_html_contents_and_close = f'<img src="{src}" alt="{html_text_alt}" /><figcaption>{html_text}</figcaption>')
+    return open_block(block, ctx, tag = 'figure', class_name = class_name, used_keys = ['image-caption', 'image-type', 'image-file', 'image-external'], set_html_contents_and_close = f'<{tag} src="{src}" alt="{html_text_alt}"></{tag}><figcaption>{html_text}</figcaption>')
 
 def callout(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
     icon_type = block[callout.__name__].get('icon', {}).get('type')
@@ -315,7 +310,7 @@ def embed(block, ctx, tag = 'iframe', class_name = 'notion-embed-block'):
     link_type = block[block_type].get('type', '')
     src = block[block_type].get('url') or block[block_type].get(link_type, {}).get('url') or ''
     html_text = richtext2html(block.get(block_type, {}).get('caption', [])) 
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'src="{src}"', class_name = class_name, used_keys = [block_type + '-caption', block_type + '-url', block_type + '-type', block_type + '-' + link_type], set_html_contents_and_close = ' ') + f'<div>{html_text}</div>\n'
+    return open_block(block, ctx, tag = 'figure', class_name = class_name, used_keys = [block_type + '-caption', block_type + '-url', block_type + '-type', block_type + '-' + link_type], set_html_contents_and_close = '<{tag} src="{src}"></{tag}><figcaption>{html_text}></figcaption>')
 
 def pdf(block, ctx, tag = 'a', class_name = 'notion-pdf-block'):
     return link_like(block, ctx, tag = tag, class_name = class_name) + embed(block, ctx)
@@ -483,6 +478,9 @@ def block2html(block, ctx = {}, begin = False, end = False):
 def pop_and_replace_child_pages_recursively(block, parent_id = None):
     block_type = block.get('type') or block.get('object')
     child_pages = {}
+    if block.get('type') in ['page', 'child_page']:
+        child_pages[block.get('id')] = [] 
+        
     for keys in ['children', 'blocks']:
         for i in reversed(range(len(block[keys]) if block.get(keys, []) else 0)):
             if block[keys][i]['type'] == 'child_page':
@@ -547,26 +545,22 @@ def prepare_and_extract_assets(notion_pages, assets_dir, notion_assets = {}, ext
             print(asset_path)
     return assets
 
-def extract_html_single(output_path, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, toc = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
+def extract_html_single(output_path, ctx = {}, page_ids = [], notion_pages_flat = {}, extract_assets = False, toc = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
     notion_cache = ctx
     notion_assets = notion_cache.get('assets', {})
     
-    notion_cache['pages'].update(child_pages_by_id)
-    
     notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
     with open(output_path, 'w', encoding = 'utf-8') as f:
-        f.write(sitepages2html(page_ids, ctx = ctx, notion_pages = notion_cache['pages'], toc = toc, block2html = block2html))
+        f.write(sitepages2html(page_ids, ctx = ctx, notion_pages = notion_pages_flat, toc = toc, block2html = block2html))
     print(output_path)
 
-def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id = {}, extract_assets = False, toc = False, notion_pages = {}, child_pages_by_parent_id = {}, index_html = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
-    notion_cache = ctx
-    notion_pages = notion_cache['pages'] if notion_pages is not None else {}
-    notion_slugs = ctx['notion_slugs']
-    notion_assets =  notion_cache.get('assets', {})
+def extract_html_nested(output_dir, ctx = {}, page_ids = [], extract_assets = False, toc = False, notion_pages_flat = {}, child_pages_by_parent_id = {}, index_html = False, sitepages2html = (lambda page_ids, ctx, style, notion_pages: '')):
+    notion_slugs = ctx.get('notion_slugs', {})
+    notion_assets = ctx.get('assets', {})
     os.makedirs(output_dir, exist_ok = True)
-    notion_pages.update(child_pages_by_id)
 
-    for page_id, block in notion_pages.items():
+    for page_id in page_ids:
+        page_block = notion_pages_flat[page_id]
         os.makedirs(output_dir, exist_ok = True)
         slug = notion_slugs.get(page_id) or notion_slugs.get(page_id.replace('-', '')) or page_id.replace('-', '')
         page_dir = os.path.join(output_dir, slug) if index_html and slug != 'index' else output_dir
@@ -574,13 +568,13 @@ def extract_html_nested(output_dir, ctx = {}, page_ids = [], child_pages_by_id =
 
         html_path = os.path.join(page_dir, 'index.html' if index_html else slug + '.html')
         assets_dir = os.path.join(page_dir, slug + '_files')
-        notion_assets_for_block = prepare_and_extract_assets({page_id : block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
+        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         ctx['assets'] = notion_assets_for_block
         with open(html_path, 'w', encoding = 'utf-8') as f:
-            f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages, toc = toc, block2html = block2html))
+            f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages_flat, toc = toc, block2html = block2html))
         print(html_path)
-        if children := child_pages_by_parent_id.pop(page_id, []):
-            extract_html_nested(page_dir, ctx = ctx, notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets, index_html = index_html)
+        if child_pages := child_pages_by_parent_id.pop(page_id, []):
+            extract_html_nested(page_dir, ctx = ctx, page_ids = [child_page['id'] for child_page in child_pages], toc = toc, notion_pages_flat = notion_pages_flat, child_pages_by_parent_id = child_pages_by_parent_id, index_html = index_html, extract_assets = extract_assets, sitepages2html = sitepages2html)
 
 def main(args):
     output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id)
@@ -589,7 +583,12 @@ def main(args):
     notion_slugs = json.load(open(args.pages_json)) if args.pages_json else {}
 
     notion_pages = notion_cache['pages']
-    
+   
+    notion_pages_flat = copy.deepcopy(notion_pages)
+    child_pages_by_parent_id = {k: v for page_id, page in notion_pages_flat.items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
+    child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
+    notion_pages_flat |= child_pages_by_id
+
     root_page_ids = args.notion_page_id or list(notion_pages.keys())
     for i in range(len(root_page_ids)):
         for k, v in notion_slugs.items():
@@ -598,10 +597,8 @@ def main(args):
         for k in notion_pages.keys():
             if root_page_ids[i] == k.replace('-', ''):
                 root_page_ids[i] = k
-   
-    notion_pages_flat = copy.deepcopy(notion_pages)
-    child_pages_by_parent_id = {k: v for page_id, page in notion_pages_flat.items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
-    child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
+    assert all(page_id in notion_pages_flat for page_id in root_page_ids)
+
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id[page_id] if child_page['id'] not in root_page_ids]
 
     ctx = {}
@@ -640,9 +637,10 @@ def main(args):
 
     import minima as theme
     if args.extract_html == 'single':
-        extract_html_single(output_path if args.output_path else output_path + '.html', ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id, extract_assets = args.extract_assets, toc = args.html_toc, sitepages2html = theme.sitepages2html)
+        extract_html_single(output_path if args.output_path else output_path + '.html', ctx = ctx, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, toc = args.html_toc, sitepages2html = theme.sitepages2html)
     else:
-        extract_html_nested(output_path, ctx = ctx, page_ids = page_ids, child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], toc = args.html_toc, sitepages2html = theme.sitepages2html)
+        page_ids = page_ids # child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}
+        extract_html_nested(output_path, ctx = ctx, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], toc = args.html_toc, sitepages2html = theme.sitepages2html)
 
 
 if __name__ == '__main__':
