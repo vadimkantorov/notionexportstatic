@@ -11,7 +11,6 @@
 # TODO: richtext2html/text_link: format link to page if link url/href starts from '/'
 # TODO: htmlescape for captions
 # TODO: bookmark: generate social media card: title, maybe description, favicon
-# TODO: table: table_width, row-header, column-header
 # TODO: image: fixup url from assets; when to embed image, html.escape for caption
 
 # TODO: main: nested: update only a single page? or all nested dirs as well? add extra switch? fix page_ids = to include all child_pages recursively?
@@ -274,14 +273,19 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{href}"', class_name = class_name, used_keys = [link_to_page.__name__ + '-type', link_to_page.__name__ + '-page_id'], set_html_contents_and_close = caption_html) + html_suffix + '\n'
 
 def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
-    table_width = block[table.__name__].get('table_width')
-    has_row_header = block[table.__name__].get('has_row_header')
-    has_column_header = block[table.__name__].get('has_column_header')
+    table_width = block[table.__name__].get('table_width', 0)
+    has_row_header = block[table.__name__].get('has_row_header', False)
+    has_column_header = block[table.__name__].get('has_column_header', False)
     html = open_block(block, ctx, tag = tag, class_name = class_name, used_keys = ['children', 'table-table_width', 'table-has_column_header', 'table-has_row_header'])
-    for subblock in block.get('children', []):
+    rows = block.get('children', [])
+    for i, subblock in enumerate(rows):
         html += '<tr>\n'
-        for cell in subblock.get('table_row', {}).get('cells', []):
-            html += '<td>' + (''.join('<div>{html_text}</div>'.format(html_text = richtext2html(subcell)) for subcell in cell) if isinstance(cell, list) else richtext2html(cell)) + '</td>\n'
+        cells = subblock.get('table_row', {}).get('cells', [])
+        for j, cell in enumerate(cells):
+            tag_cell = 'th' if (has_row_header and i == 0) or (has_column_header and j == 0) else 'td'
+            html += f'<{tag_cell}>' + (''.join('<div>{html_text}</div>'.format(html_text = richtext2html(subcell)) for subcell in cell) if isinstance(cell, list) else richtext2html(cell)) + f'</{tag_cell}>\n'
+        if len(cells) < table_width:
+            html += '<td></td>' * (table_width - len(cells))
         html += '</tr>\n'
     html += close_block(tag)
     return html
