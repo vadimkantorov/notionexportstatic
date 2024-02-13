@@ -279,6 +279,8 @@ def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     html = open_block(block, ctx, tag = tag, class_name = class_name, used_keys = ['children', 'table-table_width', 'table-has_column_header', 'table-has_row_header'])
     rows = block.get('children', [])
     for i, subblock in enumerate(rows):
+        if i == 0:
+            html += '\n<thead>\n' if has_row_header else '\n<tbody>\n'
         html += '<tr>\n'
         cells = subblock.get('table_row', {}).get('cells', [])
         for j, cell in enumerate(cells):
@@ -287,6 +289,9 @@ def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
         if len(cells) < table_width:
             html += '<td></td>' * (table_width - len(cells))
         html += '</tr>\n'
+        if i == 0:
+            html += '\n</thead>\n<tbody>\n' if has_row_header else ''
+    html += '\n</tbody>\n'
     html += close_block(tag)
     return html
 
