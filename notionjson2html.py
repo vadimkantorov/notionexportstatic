@@ -145,12 +145,12 @@ def heading_like(block, ctx, block_type, tag, class_name = ''):
     else:
         return toggle_like(block, ctx, block_type, tag = tag, attrs = dict(id = block_id_no_dashes), class_name = 'notion-heading-like ' + class_name, html_icon = html_anchor, used_keys = [block_type + '-is_toggleable'])
 
-def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False, html_prefix = ''):
+def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False, html_icon = ''):
     block_type = block.get('type', '')
     assert block[block_type].get('type') in ['file', 'external', None]
     src = block[block_type].get('url') or block[block_type].get('file', {}).get('url') or block[block_type].get('external', {}).get('url') or block[block_type].get('url') or ''
     html_text = richtext2html(block[block_type].get('caption', [])) or block[block_type].get('name') or (src if full_url_as_caption else os.path.basename(src))
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{src}"', class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external'], set_html_contents_and_close = html_prefix + html_text) + '<br/>\n'
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{src}"', class_name = class_name, used_keys = [block_type + '-name', block_type + '-url', block_type + '-caption', block_type + '-type', block_type + '-file', block_type + '-external'], set_html_contents_and_close = html_icon + html_text) + '<br/>\n'
 
 def get_page_url(block):
     return block.get('url', 'https://www.notion.so/' + block.get('id', '').replace('-', ''))
@@ -329,16 +329,14 @@ def embed(block, ctx, tag = 'iframe', class_name = 'notion-embed-block', html_te
     html_text = html_text or richtext2html(block.get(block_type, {}).get('caption', [])) 
     return open_block(block, ctx, tag = 'figure', class_name = class_name, used_keys = [block_type + '-caption', block_type + '-url', block_type + '-type', block_type + '-' + link_type], set_html_contents_and_close = f'<figcaption>{html_text}</figcaption><{tag} src="{src}"></{tag}>')
 
-def pdf(block, ctx, tag = 'a', class_name = 'notion-pdf-block', html_prefix = '📄 '):
-    block_without_id = block.copy()
-    del block_without_id['id']
-    return embed(block, ctx, class_name = class_name, html_text = link_like(block_without_id, ctx, tag = tag, html_prefix = html_prefix))
+def pdf(block, ctx, tag = 'a', class_name = 'notion-pdf-block', html_icon = '📄 '):
+    return embed(block, ctx, class_name = class_name, html_text = link_like({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag, html_icon = html_icon))
 
-def file(block, ctx, tag = 'a', class_name = 'notion-file-block', html_prefix = '📎 '):
-    return link_like(block, ctx, tag = tag, class_name = class_name, html_prefix = html_prefix)
+def file(block, ctx, tag = 'a', class_name = 'notion-file-block', html_icon = '📎 '):
+    return link_like(block, ctx, tag = tag, class_name = class_name, html_icon = html_icon)
 
-def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block', html_prefix = '🔖 '):
-    return link_like(block, ctx, tag = tag, class_name = class_name, full_url_as_caption = True, html_prefix = html_prefix)
+def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block', html_icon = '🔖 '):
+    return link_like(block, ctx, tag = tag, class_name = class_name, full_url_as_caption = True, html_icon = html_icon)
 
 def paragraph(block, ctx, tag = 'p', class_name = 'notion-text-block'):
     if block.get('has_children') is False and not (block[block['type']].get('text') or block[block['type']].get('rich_text')):
