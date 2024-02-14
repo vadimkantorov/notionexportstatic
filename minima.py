@@ -6,6 +6,7 @@
 # TODO: add InteractionObserver-based nav for single-page or for side menu
 # TODO: margin between blocks, except empty block
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
+# TODO: add hover style fof breadcrumb
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2html = (lambda page, ctx: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
     page_id = page_ids[0]

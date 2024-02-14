@@ -13,7 +13,7 @@ import unicodedata
 
 import notion_client
 
-def notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = {}):
+def notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages_databases = {}):
     # https://developers.notion.com/reference/retrieve-a-page
     # https://developers.notion.com/reference/retrieve-a-page-property
     # https://developers.notion.com/reference/retrieve-a-block
@@ -44,13 +44,13 @@ def notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = {})
     except Exception as exc:
         page_type, page = None, {}
         print(exc)
-        #return notion_pages
+        return
         
-    print('page', page['id'], page_type)
+    print(page_type, page['id'])
     
     start_cursor = None
-    notion_pages[page['id']] = page
-    notion_pages[page['id']]['blocks'] = []
+    notion_pages_databases[page['id']] = page
+    notion_pages_databases[page['id']]['blocks'] = []
 
     while True:
         if page_type == 'page' or page_type == 'child_page':
@@ -59,25 +59,23 @@ def notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = {})
             blocks = notionapi.databases.query(notion_page_id, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
         
         start_cursor = blocks['next_cursor']
-        notion_pages[page['id']]['blocks'].extend(blocks['results'])
+        notion_pages_databases[page['id']]['blocks'].extend(blocks['results'])
         if start_cursor is None or blocks['has_more'] is False:
             break  
    
-    for i_block, block in enumerate(notion_pages[page['id']]['blocks']):
+    for i_block, block in enumerate(notion_pages_databases[page['id']]['blocks']):
         if page_type == 'page':
             if block['type'] in ['page', 'child_page', 'child_database']:
-                notionapi_retrieve_recursively(notionapi, block['id'], notion_pages = notion_pages)
+                notionapi_retrieve_recursively(notionapi, block['id'], notion_pages_databases = notion_pages_databases)
             else:
                 block = notionapi_blocks_children_list(block, notionapi)
-                notion_pages[page['id']]['blocks'][i_block] = block
+                notion_pages_databases[page['id']]['blocks'][i_block] = block
 
         elif page_type == 'database':
             block['type'] = 'db_entry'
-            notion_pages[page['id']]['blocks'][i_block] = block
+            notion_pages_databases[page['id']]['blocks'][i_block] = block
             if block['object'] in ['page', 'child_page', 'child_database']:
-                notionapi_retrieve_recursively(notionapi, block['id'], notion_pages = notion_pages)
-
-    return notion_pages
+                notionapi_retrieve_recursively(notionapi, block['id'], notion_pages_databases = notion_pages_databases)
 
 def discover_assets(blocks, asset_urls = []):
     for block in blocks:
@@ -86,11 +84,9 @@ def discover_assets(blocks, asset_urls = []):
                 discover_assets(block[keys], asset_urls = asset_urls)
         block_type = block.get('type')
         payload = block.get(block_type, {})
-        urls = [block.get('cover', {}).get('file', {}).get('url'), block.get('icon', {}).get('file', {}).get('url')]
-        
+        urls = [(block.get('cover') or {}).get('file', {}).get('url'), (block.get('icon') or {}).get('file', {}).get('url')]
         if block_type in ['image', 'pdf', 'file'] and ('file' in payload or 'external' in payload):
             urls.append(payload.get('url') or payload.get('external', {}).get('url') or payload.get('file', {}).get('url'))
-
         asset_urls.extend(filter(bool, urls))
     return asset_urls
 
@@ -197,30 +193,31 @@ def get_filename_slug(s, space = '_', lowercase = True):
     s = s.lower() if lowercase else s
     return s
 
-def extract_json_single(output_path, notion_pages = {}, notion_assets = {}, child_pages_by_id = {}, extract_assets = False, unix_seconds_begin = 0, unix_seconds_end = 0):
-    notion_cache = dict(pages = notion_pages, assets = notion_assets, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
-    notion_cache['pages'] |= child_pages_by_id
-    notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_cache['assets'], extract_assets = extract_assets)
-    with open(output_path, 'w', encoding = 'utf-8') as f:
-        json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
-    print(output_path)
-    
-def extract_json_nested(output_dir, notion_assets = {}, notion_pages = {}, notion_slugs = {}, child_pages_by_parent_id = {}, child_pages_by_id = {}, extract_assets = False, extract_json_use_page_title_for_missing_slug = False):
-    os.makedirs(output_dir, exist_ok = True)
+def extract_json(output_path, notion_assets = {}, notion_pages = {}, child_pages_by_id = {}, extract_assets = False, unix_seconds_begin = 0, unix_seconds_end = 0, notion_slugs = {}, child_pages_by_parent_id = {}, extract_json_use_page_title_for_missing_slug = False, mode = ''):
+
+    if mode in ['single', 'singleflat']:
+        notion_cache = dict(pages = notion_pages, assets = notion_assets, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
+        notion_cache['pages'] |= child_pages_by_id
+        notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_cache['assets'], extract_assets = extract_assets)
+        with open(output_path, 'w', encoding = 'utf-8') as f:
+            json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
+        return print(output_path)
+
+    os.makedirs(output_path, exist_ok = True)
     notion_pages |= child_pages_by_id
     for page_id, block in notion_pages.items():
-        os.makedirs(output_dir, exist_ok = True)
+        os.makedirs(output_path, exist_ok = True)
         page_title = ' '.join(t['plain_text'] for t in block.get("properties", {}).get("title", {}).get("title", [])) if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', ''))
         slug = notion_slugs.get(page_id) or notion_slugs.get(page_id.replace('-', '')) or (get_filename_slug(page_title, space = '_') if extract_json_use_page_title_for_missing_slug else None) or page_id.replace('-', '')
-        json_path = os.path.join(output_dir, slug + '.json')
+        json_path = os.path.join(output_path, slug + '.json')
         with open(json_path, 'w', encoding = 'utf-8') as f:
-            assets_dir = os.path.join(output_dir, slug + '_files')
+            assets_dir = os.path.join(output_path, slug + '_files')
             notion_assets_for_block = prepare_and_extract_assets({block['id'] : block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
             notion_cache = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
             json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
         print(json_path)
         if children := child_pages_by_parent_id.pop(page_id, []):
-            extract_json_nested(os.path.join(output_dir, slug), notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, notion_slugs = notion_slugs, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets)
+            extract_json(os.path.join(output_path, slug), notion_assets = notion_assets, notion_pages = {child['id'] : child for child in children}, notion_slugs = notion_slugs, child_pages_by_parent_id = child_pages_by_parent_id, extract_assets = extract_assets, mode = mode, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
 
 def main(args):
     notionapi = notion_client.Client(auth = args.notion_token)
@@ -229,23 +226,28 @@ def main(args):
     notion_page_ids = [([k for k, v in notion_slugs.items() if v.lower() == notion_page_id.lower()] or [notion_page_id])[0].replace('-', '') for notion_page_id in args.notion_page_id]
   
     unix_seconds_begin = int(time.time())
-    notion_pages_orig = {}
+    notion_pages_databases = {}
     for notion_page_id in notion_page_ids:
-        notion_pages_orig = notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages = notion_pages_orig)
-    notion_pages_flat = copy.deepcopy(notion_pages_orig)
+        notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages_databases = notion_pages_databases)
+    notion_pages = {block_id : block for block_id, block in notion_pages_databases.items() if (block.get('object') or block.get('type')) in ['page', 'child_page']}
+    notion_databases = {block_id : block for block_id, block in notion_pages_databases.items() if (block.get('object') or block.get('type')) in ['database', 'child_database']}
+
+    notion_pages_flat = copy.deepcopy(notion_pages)
     child_pages_by_parent_id = {k: v for page_id, page in notion_pages_flat.items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
     child_pages_by_id = {child_page['id'] : child_page for parent_id, pages in child_pages_by_parent_id.items() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
-    notion_assets = download_assets(notion_pages_orig.values()) if args.download_assets else {}
+
+    notion_assets = download_assets(notion_pages.values()) if args.download_assets else {}
     unix_seconds_end = int(time.time())
         
-    output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id) 
+    output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id)
+    output_path = output_path if args.output_path or args.extract_json not in ['single', 'singleflat'] else (output_path + '.json')
     
-    if args.extract_json in ['single', 'singleflat']:
-        extract_json_single(output_path if args.output_path else (output_path + '.json'), notion_pages = notion_pages_orig if args.extract_json == 'single' else notion_pages_flat, notion_assets = notion_assets, extract_assets = args.extract_assets, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
-
-    elif args.extract_json in ['flat', 'nested']:
-        extract_json_nested(output_path, notion_pages = notion_pages_flat, notion_assets = notion_assets, notion_slugs = notion_slugs, child_pages_by_id = child_pages_by_id if args.extract_json == 'flat' else {}, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_json == 'nested' else {}, extract_assets = args.extract_assets, extract_json_use_page_title_for_missing_slug = args.extract_json_use_page_title_for_missing_slug, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
+    extract_json(output_path, notion_assets = notion_assets, extract_assets = args.extract_assets, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end, mode = args.extract_json, notion_slugs = notion_slugs, 
+        notion_pages = notion_pages if args.extract_json == 'single' else notion_pages_flat,
+        child_pages_by_id = child_pages_by_id if args.extract_json == 'flat' else {}, 
+        child_pages_by_parent_id = child_pages_by_parent_id if args.extract_json == 'nested' else {}, 
+        extract_json_use_page_title_for_missing_slug = args.extract_json_use_page_title_for_missing_slug)
             
 
 if __name__ == '__main__':
