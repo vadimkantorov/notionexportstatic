@@ -7,6 +7,7 @@
 # TODO: margin between blocks, except empty block
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 # TODO: add hover style fof breadcrumb
+# TODO: make whole TOC links clickable
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2html = (lambda page, ctx: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
     page_id = page_ids[0]
@@ -15,9 +16,9 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, bloc
     
     html_main_toc = '' if not toc or len(page_ids) <= 1 else block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx)
     
-    html_main = '\n<hr />\n'.join(block2html(notion_pages[page_id], ctx = ctx, html_prefix = html_article_header_html, html_suffix = html_article_footer_html).replace('class="notion-page-block"', 'class="notion-page-block post-title"').replace('<header>', '<header class="post-header">').replace('class="notion-page-content"', 'class="notion-page-content post-content"').replace(' notion-page"', ' notion-page post"') for page_id in page_ids)
+    html_main = '\n<hr />\n'.join(block2html(notion_pages[page_id], ctx = ctx, html_prefix = html_article_header_html, html_suffix = html_article_footer_html, class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
 
-    css_style = notion_css + notion_colors_css + twitter_emoji_font_css + minimacss_classic_full # CSS from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima
+    css_style = css_notion + css_notion_colors + css_notion_colors_classic + css_twitter_emoji_font + css_minimacss_classic 
     
     return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html)
 
@@ -46,7 +47,7 @@ layout_page =  '''
 '''
 
 
-notion_css = '''
+css_notion = '''
 
 .notion-heading-like-icon::after { content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath d='m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z'%3E%3C/path%3E%3C/svg%3E") }
 
@@ -82,7 +83,7 @@ notion_css = '''
 
 .notion-bookmark-block { border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
 
-.notion-pdf-block iframe, notion-embed-block iframe { width: 100% !important; height: 500px; border: 0!important}
+.notion-pdf-block iframe, .notion-embed-block iframe { width: 100% !important; height: 500px; border: 0!important}
 
 .notion-page { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
 
@@ -92,175 +93,98 @@ notion_css = '''
 
 '''
 
-
-
-notion_colors_css = '''
+css_notion_colors = '''
+/* https://docs.super.so/notion-colors */
 
 :root {
-/* https://docs.super.so/notion-colors */
-/* light mode */
---color-text-default: #37352F;
---color-bg-default: #FFFFFF;
---color-pill-default: rgba(206,205,202,0.5);
---color-text-gray : #9B9A97;
---color-bg-gray : #EBECED;
---color-pill-gray : rgba(155,154,151,0.4);
---color-text-brown : #64473A;
---color-bg-brown : #E9E5E3;
---color-pill-brown : rgba(140,46,0,0.2);
---color-text-orange : #D9730D;
---color-bg-orange : #FAEBDD;
---color-pill-orange : rgba(245,93,0,0.2);
---color-text-yellow : #DFAB01;
---color-bg-yellow : #FBF3DB;
---color-pill-yellow : rgba(233,168,0,0.2);
---color-text-green : #0F7B6C;
---color-bg-green : #DDEDEA;
---color-pill-green : rgba(0,135,107,0.2);
---color-text-blue : #0B6E99;
---color-bg-blue : #DDEBF1;
---color-pill-blue : rgba(0,120,223,0.2);
---color-text-purple : #6940A5;
---color-bg-purple : #EAE4F2;
---color-pill-purple : rgba(103,36,222,0.2);
---color-text-pink : #AD1A72;
---color-bg-pink : #F4DFEB;
---color-pill-pink : rgba(221,0,129,0.2);
---color-text-red : #E03E3E;
---color-bg-red : #FBE4E4;
---color-pill-red : rgba(255,0,26,0.2);
+--notion-light-color-text-default: #37352F;
+--notion-light-color-bg-default: #FFFFFF;
+--notion-light-color-pill-default: rgba(206,205,202,0.5);
+--notion-light-color-text-gray : #9B9A97;
+--notion-light-color-bg-gray : #EBECED;
+--notion-light-color-pill-gray : rgba(155,154,151,0.4);
+--notion-light-color-text-brown : #64473A;
+--notion-light-color-bg-brown : #E9E5E3;
+--notion-light-color-pill-brown : rgba(140,46,0,0.2);
+--notion-light-color-text-orange : #D9730D;
+--notion-light-color-bg-orange : #FAEBDD;
+--notion-light-color-pill-orange : rgba(245,93,0,0.2);
+--notion-light-color-text-yellow : #DFAB01;
+--notion-light-color-bg-yellow : #FBF3DB;
+--notion-light-color-pill-yellow : rgba(233,168,0,0.2);
+--notion-light-color-text-green : #0F7B6C;
+--notion-light-color-bg-green : #DDEDEA;
+--notion-light-color-pill-green : rgba(0,135,107,0.2);
+--notion-light-color-text-blue : #0B6E99;
+--notion-light-color-bg-blue : #DDEBF1;
+--notion-light-color-pill-blue : rgba(0,120,223,0.2);
+--notion-light-color-text-purple : #6940A5;
+--notion-light-color-bg-purple : #EAE4F2;
+--notion-light-color-pill-purple : rgba(103,36,222,0.2);
+--notion-light-color-text-pink : #AD1A72;
+--notion-light-color-bg-pink : #F4DFEB;
+--notion-light-color-pill-pink : rgba(221,0,129,0.2);
+--notion-light-color-text-red : #E03E3E;
+--notion-light-color-bg-red : #FBE4E4;
+--notion-light-color-pill-red : rgba(255,0,26,0.2);
 
-/* dark mode */
-/*
---color-text-default : rgba(255,255,255,0.9);
---color-bg-default : #2F3437;
---color-pill-default : rgba(206,205,202,0.5);
---color-text-gray : rgba(151,154,155,0.95);
---color-bg-gray : #454B4E;
---color-pill-gray : rgba(151,154,155,0.5);
---color-text-brown : #937264;
---color-bg-brown : #434040;
---color-pill-brown : rgba(147,114,100,0.5);
---color-text-orange : #FFA344;
---color-bg-orange : #594A3A;
---color-pill-orange : rgba(255,163,68,0.5);
---color-text-yellow : #FFDC49;
---color-bg-yellow : #59563B;
---color-pill-yellow : rgba(255,220,73,0.5);
---color-text-green : #4DAB9A;
---color-bg-green : #354C4B;
---color-pill-green : rgba(77,171,154,0.5);
---color-text-blue : #529CCA;
---color-bg-blue : #364954;
---color-pill-blue : rgba(82,156,202,0.5);
---color-text-purple : #9A6DD7;
---color-bg-purple : #443F57;
---color-pill-purple : rgba(154,109,215,0.5);
---color-text-pink : #E255A1;
---color-bg-pink : #533B4C;
---color-pill-pink : rgba(226,85,161,0.5);
---color-text-red : #FF7369;
---color-bg-red : #594141;
---color-pill-red : rgba(255,115,105,0.5);
-*/
+--notion-dark-color-text-default : rgba(255,255,255,0.9);
+--notion-dark-color-bg-default : #2F3437;
+--notion-dark-color-pill-default : rgba(206,205,202,0.5);
+--notion-dark-color-text-gray : rgba(151,154,155,0.95);
+--notion-dark-color-bg-gray : #454B4E;
+--notion-dark-color-pill-gray : rgba(151,154,155,0.5);
+--notion-dark-color-text-brown : #937264;
+--notion-dark-color-bg-brown : #434040;
+--notion-dark-color-pill-brown : rgba(147,114,100,0.5);
+--notion-dark-color-text-orange : #FFA344;
+--notion-dark-color-bg-orange : #594A3A;
+--notion-dark-color-pill-orange : rgba(255,163,68,0.5);
+--notion-dark-color-text-yellow : #FFDC49;
+--notion-dark-color-bg-yellow : #59563B;
+--notion-dark-color-pill-yellow : rgba(255,220,73,0.5);
+--notion-dark-color-text-green : #4DAB9A;
+--notion-dark-color-bg-green : #354C4B;
+--notion-dark-color-pill-green : rgba(77,171,154,0.5);
+--notion-dark-color-text-blue : #529CCA;
+--notion-dark-color-bg-blue : #364954;
+--notion-dark-color-pill-blue : rgba(82,156,202,0.5);
+--notion-dark-color-text-purple : #9A6DD7;
+--notion-dark-color-bg-purple : #443F57;
+--notion-dark-color-pill-purple : rgba(154,109,215,0.5);
+--notion-dark-color-text-pink : #E255A1;
+--notion-dark-color-bg-pink : #533B4C;
+--notion-dark-color-pill-pink : rgba(226,85,161,0.5);
+--notion-dark-color-text-red : #FF7369;
+--notion-dark-color-bg-red : #594141;
+--notion-dark-color-pill-red : rgba(255,115,105,0.5);
 }
-
-/*
-.notion-color-default { color: #37352f }
-.notion-color-gray { color: #787774 }
-.notion-color-brown { color: #9f6b53 }
-.notion-color-orange { color: #d9730d }
-.notion-color-yellow { color: #cb912f }
-.notion-color-green { color: #448361 }
-.notion-color-blue { color: #337ea9 }
-.notion-color-purple { color: #9065b0 }
-.notion-color-pink { color: #c14c8a }
-.notion-color-red { color: #d44c47 }
-.notion-color-gray_background { background-color:  #f1f1ef }
-.notion-color-brown_background { background-color:  #f4eeee }
-.notion-color-orange_background { background-color:  #faebdd }
-.notion-color-yellow_background { background-color:  #fbf3db }
-.notion-color-green_background { background-color:  #edf3ec }
-.notion-color-blue_background { background-color:  #e7f3f8 }
-.notion-color-purple_background { background-color:  #f6f3f9 }
-.notion-color-pink_background { background-color:  #faf1f5 }
-.notion-color-red_background { background-color:  #fdebec }
-*/
-
-.notion-color-default { color: var(--color-text-default); }
-.notion-color-gray    { color: var(--color-text-gray); }
-.notion-color-brown   { color: var(--color-text-brown); }
-.notion-color-orange  { color: var(--color-text-orange); }
-.notion-color-yellow  { color: var(--color-text-yellow); }
-.notion-color-green   { color: var(--color-text-green); }
-.notion-color-blue    { color: var(--color-text-blue); }
-.notion-color-purple  { color: var(--color-text-purple); }
-.notion-color-pink    { color: var(--color-text-pink); }
-.notion-color-red     { color: var(--color-text-red); }
-
-.notion-color-default_background { background-color: var(--color-bg-default); }
-.notion-color-gray_background    { background-color: var(--color-bg-gray); }
-.notion-color-brown_background   { background-color: var(--color-bg-brown); }
-.notion-color-orange_background  { background-color: var(--color-bg-orange); }
-.notion-color-yellow_background  { background-color: var(--color-bg-yellow); }
-.notion-color-green_background   { background-color: var(--color-bg-green); }
-.notion-color-blue_background    { background-color: var(--color-bg-blue); }
-.notion-color-purple_background  { background-color: var(--color-bg-purple); }
-.notion-color-pink_background    { background-color: var(--color-bg-pink); }
-.notion-color-red_background     { background-color: var(--color-bg-red); }
-
 '''
 
-#https://www.notionavenue.co/post/notion-color-code-hex-palette 
-#Notion Light Mode Hex Code for Background
-#Text Color (Best for Icon)
-#Notion Default: #37352F
-#Notion Grey: #787774
-#Notion Brown: #9F6B53
-#Notion Orange: #D9730D
-#Notion Yellow: #CB912F
-#Notion Green: #448361
-#Notion Blue: #337EA9
-#Notion Purple: #9065B0
-#Notion Pink: #C14C8A
-#Notion Red: #D44C47
-#Notion Light Mode Hex Code for Background
-#(Callout and Text background) Best for banner or background
-#Notion Grey: #F1F1EF
-#Notion Brown: #F4EEEE
-#Notion Orange: #FAEBDD
-#Notion yellow: #FBF3DB
-#Notion green: #EDF3EC
-#Notion blue: #E7F3F8
-#Notion purple: #F6F3F9
-#Notion pink: #FAF1F5
-#Notion red: #FDEBEC
-#Notion Dark Mode Hex Code
-#Notion Dark Mode Hex Code for Text
-#Best for Icon
-#Notion Grey: #979A9B
-#Notion Brown: #937264
-#Notion Orange: #FFA344
-#Notion Yellow: #FFDC49
-#Notion Green: #4DAB9A
-#Notion Blue: #529CCA
-#Notion Purple: #9A6DD7
-#Notion Pink: #E255A1
-#Notion Red: #FF7369
-#Notion Dark Mode Hex Code for Background
-#Best for banner or background
-#Notion Grey: #454B4E
-#Notion Brown: #594A3A
-#Notion Orange: #594A3A
-#Notion Yellow: #59563B
-#Notion Green: #354C4B
-#Notion Blue: #364954
-#Notion Purple: #443F57
-#Notion Pink: #533B4C
-#Notion Red: #594141
+css_notion_colors_classic = '''
+.notion-color-default { color: var(--notion-light-color-text-default); }
+.notion-color-gray    { color: var(--notion-light-color-text-gray); }
+.notion-color-brown   { color: var(--notion-light-color-text-brown); }
+.notion-color-orange  { color: var(--notion-light-color-text-orange); }
+.notion-color-yellow  { color: var(--notion-light-color-text-yellow); }
+.notion-color-green   { color: var(--notion-light-color-text-green); }
+.notion-color-blue    { color: var(--notion-light-color-text-blue); }
+.notion-color-purple  { color: var(--notion-light-color-text-purple); }
+.notion-color-pink    { color: var(--notion-light-color-text-pink); }
+.notion-color-red     { color: var(--notion-light-color-text-red); }
+.notion-color-default_background { background-color: var(--notion-light-color-bg-default); }
+.notion-color-gray_background    { background-color: var(--notion-light-color-bg-gray); }
+.notion-color-brown_background   { background-color: var(--notion-light-color-bg-brown); }
+.notion-color-orange_background  { background-color: var(--notion-light-color-bg-orange); }
+.notion-color-yellow_background  { background-color: var(--notion-light-color-bg-yellow); }
+.notion-color-green_background   { background-color: var(--notion-light-color-bg-green); }
+.notion-color-blue_background    { background-color: var(--notion-light-color-bg-blue); }
+.notion-color-purple_background  { background-color: var(--notion-light-color-bg-purple); }
+.notion-color-pink_background    { background-color: var(--notion-light-color-bg-pink); }
+.notion-color-red_background     { background-color: var(--notion-light-color-bg-red); }
+'''
 
-twitter_emoji_font_css = '''
-
+css_twitter_emoji_font = '''
 @font-face {
     font-family: 'Twemoji Country Flags';
     unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
@@ -269,7 +193,7 @@ twitter_emoji_font_css = '''
 }
 '''
 
-minimacss_classic_full = '''
+css_minimacss_classic = '''/* css from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima */
 
 @media (prefers-color-scheme: light) and (max-width: 1000000px), (min-width: 0px) {
   :root {

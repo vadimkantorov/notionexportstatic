@@ -194,17 +194,16 @@ def get_filename_slug(s, space = '_', lowercase = True):
     return s
 
 def extract_json(output_path, notion_assets = {}, notion_pages = {}, child_pages_by_id = {}, extract_assets = False, unix_seconds_begin = 0, unix_seconds_end = 0, notion_slugs = {}, child_pages_by_parent_id = {}, extract_json_use_page_title_for_missing_slug = False, mode = ''):
+    notion_pages |= child_pages_by_id
 
     if mode in ['single', 'singleflat']:
         notion_cache = dict(pages = notion_pages, assets = notion_assets, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
-        notion_cache['pages'] |= child_pages_by_id
         notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_cache['assets'], extract_assets = extract_assets)
         with open(output_path, 'w', encoding = 'utf-8') as f:
             json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
         return print(output_path)
 
     os.makedirs(output_path, exist_ok = True)
-    notion_pages |= child_pages_by_id
     for page_id, block in notion_pages.items():
         os.makedirs(output_path, exist_ok = True)
         page_title = ' '.join(t['plain_text'] for t in block.get("properties", {}).get("title", {}).get("title", [])) if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', ''))
@@ -229,8 +228,10 @@ def main(args):
     notion_pages_databases = {}
     for notion_page_id in notion_page_ids:
         notionapi_retrieve_recursively(notionapi, notion_page_id, notion_pages_databases = notion_pages_databases)
-    notion_pages = {block_id : block for block_id, block in notion_pages_databases.items() if (block.get('object') or block.get('type')) in ['page', 'child_page']}
-    notion_databases = {block_id : block for block_id, block in notion_pages_databases.items() if (block.get('object') or block.get('type')) in ['database', 'child_database']}
+    notion_pages = notion_pages_databases
+    
+    #notion_pages = {block_id : block for block_id, block in notion_pages_databases.items() if (block.get('object') or block.get('type')) in ['page', 'child_page']}
+    #notion_databases = {block_id : block for block_id, block in notion_pages_databases.items() if (block.get('object') or block.get('type')) in ['database', 'child_database']}
 
     notion_pages_flat = copy.deepcopy(notion_pages)
     child_pages_by_parent_id = {k: v for page_id, page in notion_pages_flat.items() for k, v in pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
