@@ -9,9 +9,7 @@
 
 # TODO: htmlescape for captions
 # TODO: bookmark or link_preview: generate social media card: title, maybe description, favicon
-
 # TODO: heading_like: use header slugs as valid anchor targets
-
 # TODO: add cmdline option for pages/headings links to notion ✏️
 
 # https://jeroensormani.com/automatically-add-ids-to-your-headings/
@@ -32,23 +30,9 @@ import urllib.parse
 import importlib
 
 def notionattrs2html(block, ctx = {}, used_keys = [], class_name = '', attrs = {}):
-    used_keys_ = used_keys
-    used_keys, used_keys_nested1, used_keys_nested2 = [k for k in used_keys if k.count('-') == 0], [tuple(k.split('-')) for k in used_keys if k.count('-') == 1], [tuple(k.split('-')) for k in used_keys if k.count('-') == 2]
-
     default_annotations = dict(bold = False, italic = False, strikethrough = False, underline = False, code = False, color = "default")
-
-    keys = ['object', 'id', 'created_time', 'last_edited_time', 'archived', 'type', 'has_children', 'url', 'public_url', 'request_id'] 
-    keys_nested1 = [('created_by', 'object'), ('created_by', 'id'), ('last_edited_by', 'object'), ('last_edited_by', 'id'), ('parent', 'type'), ('parent', 'workspace'), ('parent', 'page_id'), ('parent', 'block_id')] 
-
-    keys_extra = [k for k in block.keys() if k not in keys and k not in used_keys if not isinstance(block[k], dict)] + [f'{k1}-{k2}' for k1 in block.keys() if isinstance(block[k1], dict) for k2 in block[k1].keys() if (k1, k2) not in keys_nested1 and (k1, k2) not in used_keys_nested1]
     html_attrs = ' ' + ' '.join(f'{k}="{v}"' for k, v in attrs.items()) + ' '
-    if keys_extra and 'notion-unsupported-block' not in class_name:
-        print(block.get('type') or block.get('object'), ';'.join(keys_extra), block.get('id'))
-        
     res = ' data-block-id="{id}" '.format(id = block.get('id', '')) + (f' class="{class_name}" ' if class_name else '') + html_attrs
-    keys.remove('id')
-    if ctx['notion_attrs_verbose'] is True:
-        res += ' '.join('{kk}="{v}"'.format(kk = keys_alias.get(k, 'data-notion-' + k), v = block[k]) for k in keys if k in block) + ' ' + ' '.join('data-notion-{k1}-{k2}="{v}"'.format(k1 = k1, k2 = k2, v = block[k1][k2]) for k1, k2 in keys_nested1 if k1 in block and k2 in block[k1]) + (' data-notion-extrakeys="{}"'.format(';'.join(keys_extra)) if keys_extra else '') + ' '
     return res
 
 def open_block(block = None, ctx = {}, class_name = '', tag = '', extra_attrstr = '', selfclose = False, set_html_contents_and_close = '', **kwargs):
@@ -560,6 +544,9 @@ def extract_html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_f
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract_html_nested(page_dir, ctx = ctx, page_ids = [child_page['id'] for child_page in child_pages], notion_pages_flat = notion_pages_flat, child_pages_by_parent_id = child_pages_by_parent_id, index_html = index_html, extract_assets = extract_assets, sitepages2html = sitepages2html, mode = mode)
 
+class Sitemap:
+    pass
+
 def main(args):
     output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id) if args.extract_html != 'single' else (args.input_path.removesuffix('.json') + '.html')
     
@@ -597,7 +584,6 @@ def main(args):
     ctx['html_columnlist_disable'] = args.html_columnlist_disable
     ctx['html_link_to_page_index_html'] = args.html_link_to_page_index_html
     ctx['extract_html'] = args.extract_html
-    ctx['notion_attrs_verbose'] = args.notion_attrs_verbose
     ctx['slugs'] = notion_slugs
     ctx['assets'] = notion_assets
     ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
@@ -646,7 +632,6 @@ if __name__ == '__main__':
     parser.add_argument('--output-path', '-o')
     parser.add_argument('--pages-json')
     parser.add_argument('--notion-page-id', nargs = '*', default = [])
-    parser.add_argument('--notion-attrs-verbose', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-html', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
     parser.add_argument('--theme-py', default = 'minima.py')
