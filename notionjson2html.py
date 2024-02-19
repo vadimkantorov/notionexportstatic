@@ -30,10 +30,10 @@ import functools
 import urllib.parse
 import importlib
 
-def open_block(block = {}, ctx = {}, class_name = '', tag = '', extra_attrstr = '', selfclose = False, set_html_contents_and_close = '', attrs = {}, **kwargs):
+def open_block(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
-    notion_attrs = ' data-block-id="{id}" '.format(id = block.get('id', '')) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' for k, v in attrs.items()) + ' '
-    return (f'<{tag} {extra_attrstr} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>' if set_html_contents_and_close else '')) if tag else ''
+    notion_attrs = ' data-block-id="{id}" '.format(id = block.get('id', '')) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
+    return (f'<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>' if set_html_contents_and_close else '')) if tag else ''
 
 def close_block(tag = ''):
     return f'</{tag}>\n' if tag else ''
@@ -97,8 +97,7 @@ def text_like(block, ctx, block_type, tag = 'span', attrs = {}, class_name = '',
 def toggle_like(block, ctx, block_type, tag = 'span', attrs = {}, class_name = '', html_icon = ''):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx)
     color = block[block_type].get('color', '')
-    html_details_open = 'open' * ctx['html_details_open']
-    return open_block(block, ctx, tag = 'details', extra_attrstr = html_details_open, class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = attrs, set_html_contents_and_close = f'<summary><{tag}>{html_text}{html_icon}</{tag}></summary>\n' + children_like(block, ctx))
+    return open_block(block, ctx, tag = 'details', class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = dict(attrs, open = None) if ctx['html_details_open'] else attrs, set_html_contents_and_close = f'<summary><{tag}>{html_text}{html_icon}</{tag}></summary>\n' + children_like(block, ctx))
 
 def heading_like(block, ctx, block_type, tag, class_name = ''):
     block_id_no_dashes = block['id'].replace('-', '')
@@ -114,7 +113,7 @@ def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = Fals
     block_type = block.get('type', '')
     src = block[block_type].get('url') or block[block_type].get('file', {}).get('url') or block[block_type].get('external', {}).get('url') or block[block_type].get('url') or block.get('href') or ''
     html_text = richtext2html(block[block_type].get('caption', []), ctx) or block[block_type].get('name') or block.get('plain_text') or (src if full_url_as_caption else os.path.basename(urllib.parse.urlparse(src).path))
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{src}" title="{tooltip}"', class_name = class_name, set_html_contents_and_close = html_icon + html_text) + '<br/>' * line_break
+    return open_block(block, ctx, tag = tag, attrs = dict(href = src, title = tooltip), class_name = class_name, set_html_contents_and_close = html_icon + html_text) + '<br/>' * line_break
 
 def get_page_url(block):
     return block.get('url', 'https://www.notion.so/' + block.get('id', '').replace('-', ''))
@@ -156,6 +155,24 @@ def get_page_current(block, ctx):
 def get_page_slug(page_id, ctx):
     return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id.replace('-', '')) or page_id.replace('-', '')
 
+def get_page_relative_url(block, ctx):
+    return 
+
+def get_page_relative_url_2(base_page_url, target_page_url, ):
+    is_index_page = 'index' == get_page_slug(parent_block.get('id', ''), ctx)
+    url_suffix = '/index.html'.lstrip('/' if page_slug == 'index' else '') if args.html_link_to_page_index_html else ''
+    href = '#404'
+    if ctx['extract_html'] == 'single' or not parent_block.get('id'):
+        if page_id_no_dashes in page_ids_no_dashes:
+            href = '#' + slug 
+        else:
+            href = './' + slug + url_suffix
+    elif ctx['extract_html'] == 'flat':
+        href = ('./' if is_index_page else '../') + ('' if page_slug == 'index' else slug) + url_suffix
+
+    return href
+   
+
 def get_heading_slug(block, ctx):
     pass
 
@@ -185,7 +202,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     page_url = get_page_url(block)
     page_slug = get_page_slug(page_id, ctx) 
     
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{page_slug}" data-notion-url="{page_url}"', class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header id="{page_id_no_dashes}" class="{class_name_header}"><img src="{src}"></img><h1 class="notion-record-icon">{page_emoji}</h1><h1 class="{class_name} {class_name_page_title}">{page_title}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
+    return open_block(block, ctx, tag = tag, attrs = {'id': page_slug, 'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header id="{page_id_no_dashes}" class="{class_name_header}"><img src="{src}"></img><h1 class="notion-record-icon">{page_emoji}</h1><h1 class="{class_name} {class_name_page_title}">{page_title}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
@@ -219,29 +236,20 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     page_id = payload.get(payload.get('type'), '')
     page_id_no_dashes = page_id.replace('-', '') or (block.get('href', '').lstrip('/') if block.get('href', '').startswith('/') else '') 
     page_ids_no_dashes = set(page_id.replace('-', '') for page_id in ctx['page_ids'])
-
+    page_slug = get_page_slug(page_id_no_dashes, ctx) 
     parent_block, id2block = get_page_current(block, ctx)
     
-    is_index_page = 'index' == get_page_slug(parent_block.get('id', ''), ctx)
-    page_slug = get_page_slug(page_id_no_dashes, ctx) 
+    page_url = get_page_relative_url(parent_block, ctx)
+    page_url_target = get_page_relative_url(block, ctx)
 
-    href = '#404'
-    url_suffix = '/index.html'.lstrip('/' if page_slug == 'index' else '') if args.html_link_to_page_index_html else ''
-    if ctx['extract_html'] == 'single' or not parent_block.get('id'):
-        if page_id_no_dashes in page_ids_no_dashes:
-            href = '#' + slug 
-        else:
-            href = './' + slug + url_suffix
-    elif ctx['extract_html'] == 'flat':
-        href = ('./' if is_index_page else '../') + ('' if page_slug == 'index' else slug) + url_suffix
-
+    href = get_page_relative_url_2(page_url_base = page_url, page_url_target = page_url_target)
+    
     page_emoji, page_title = '', (block.get('plain_text', '') or untitled)
     if subblock := id2block.get(page_id_no_dashes):
         page_emoji, page_title = get_page_emoji(subblock), html.escape(get_page_title(subblock))
-    
     html_caption = f'{html_icon}{page_emoji} {page_title}'
 
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'href="{href}"', class_name = class_name, set_html_contents_and_close = html_caption) + html_suffix + '\n'
+    return open_block(block, ctx, tag = tag, attrs = dict(href = href), class_name = class_name, set_html_contents_and_close = html_caption) + html_suffix + '\n'
 
 def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     table_width = block[table.__name__].get('table_width', 0)
@@ -353,7 +361,7 @@ def numbered_list_item(block, ctx, tag = 'ol', begin = False, end = False, class
 def code(block, ctx, tag = 'code', class_name = 'notion-code-block'):
     html_caption = richtext2html(block[code.__name__].get('caption', []), ctx)
     language = block[code.__name__].get('language', '')
-    return open_block(block, ctx, tag = 'figure', extra_attrstr = f'data-language="{language}"', class_name = class_name, set_html_contents_and_close = f'<figcaption>{html_caption}</figcaption>\n<pre><{tag}>' + richtext2html(block[code.__name__].get('rich_text', []), ctx) + f'</{tag}></pre>')
+    return open_block(block, ctx, tag = 'figure', attrs = {'data-language' : language}, class_name = class_name, set_html_contents_and_close = f'<figcaption>{html_caption}</figcaption>\n<pre><{tag}>' + richtext2html(block[code.__name__].get('rich_text', []), ctx) + f'</{tag}></pre>')
 
 def equation(block, ctx, tag = 'code', class_name = 'notion-equation-block'):
     html_expression = block[equation.__name__].get('expression', '') or block.get('plain_text', '')
@@ -385,11 +393,11 @@ def mention(block, ctx, tag = 'div', class_name = 'notion-text-mention-token', u
     if mention_type == 'user':
         user_id = mention_payload.get('id', '')
         user_name = block['plain_text'].removeprefix('@')
-        return open_block(block, ctx, tag = 'strong', class_name = class_name, extra_attrstr = 'title="notion mention of user"', set_html_contents_and_close = f'@{user_name}#{user_id}')
+        return open_block(block, ctx, tag = 'strong', class_name = class_name, attrs = dict(title = "notion mention of user"), set_html_contents_and_close = f'@{user_name}#{user_id}')
 
     if mention_type == 'date':
         date_text = block.get('plain_text', '')
-        return open_block(block, ctx, tag = 'strong', class_name = class_name, extra_attrstr = 'title="notion mention of date"', set_html_contents_and_close = f'@{date_text}⏰')
+        return open_block(block, ctx, tag = 'strong', class_name = class_name, attrs = dict(title = "notion mention of date"), set_html_contents_and_close = f'@{date_text}⏰')
     
     return unsupported(block, ctx)
 
@@ -409,7 +417,7 @@ def to_do(block, ctx, tag = 'div', class_name = 'notion-to_do-block'):
 
 def unsupported(block, ctx, tag = 'div', class_name = 'notion-unsupported-block', comment = True, **ignored):
     block_type = block.get('type', '') or block.get('object', '')
-    return '\n<!--\n' * comment + open_block(block, ctx, tag = tag, class_name = class_name, extra_attrstr = f' data-notion-block_type="{block_type}', selfclose = True).replace('-->' * comment, '__>' * comment) + '\n-->\n' * comment
+    return '\n<!--\n' * comment + open_block(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block_type}, selfclose = True).replace('-->' * comment, '__>' * comment) + '\n-->\n' * comment
 
 def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
     # https://developers.notion.com/reference/block
