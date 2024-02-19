@@ -11,6 +11,7 @@
 # TODO: bookmark or link_preview: generate social media card: title, maybe description, favicon
 # TODO: heading_like: use header slugs as valid anchor targets
 # TODO: add cmdline option for pages/headings links to notion ✏️
+# TODO: move emoji's to CSS
 
 # https://jeroensormani.com/automatically-add-ids-to-your-headings/
 # https://github.com/themightymo/auto-anchor-header-links/blob/master/auto-header-anchor-links.php
@@ -28,9 +29,6 @@ import argparse
 import functools
 import urllib.parse
 import importlib
-
-def notionattrs2html(block, ctx = {}, class_name = '', attrs = {}):
-    return 
 
 def open_block(block = {}, ctx = {}, class_name = '', tag = '', extra_attrstr = '', selfclose = False, set_html_contents_and_close = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
@@ -153,7 +151,7 @@ def get_page_current(block, ctx):
         parent_block = id2block[parent_id]
     
     id2block_no_dashes = {block_id.replace('-', '') : block for block_id, block in id2block.items()}
-    return (id2block | id2block_no_dashes), parent_block
+    return parent_block, (id2block | id2block_no_dashes)
 
 def get_page_slug(page_id, ctx):
     return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id.replace('-', '')) or page_id.replace('-', '')
@@ -161,23 +159,33 @@ def get_page_slug(page_id, ctx):
 def get_heading_slug(block, ctx):
     pass
 
+def get_page_headings(block, ctx):
+    headings = []
+    stack = [block]
+    while stack:
+        top = stack.pop()
+        is_heading = top.get('type', '') in [heading_1.__name__, heading_2.__name__, heading_3.__name__]
+        if is_heading:
+            headings.append(top)
+        if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
+            stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
+    return headings
+
 def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
-    unix_seconds_downloaded = ctx.get('unix_seconds_end', 0)
-    unix_seconds_generated = ctx.get('unix_seconds_generated', 0)
+    dt_modified = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_end', 0)).strftime(strftime) if ctx.get('unix_seconds_end', 0) else ''
+    dt_published = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
     src = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
     src = ctx['assets'].get(src, {}).get('uri', src)
+
+    page_id = block.get('id', '')
+    page_id_no_dashes = page_id.replace('-', '')
 
     page_title = html.escape(get_page_title(block))
     page_emoji = get_page_emoji(block)
     page_url = get_page_url(block)
-
-    link_to_page_page_id = block.get('id', '')
-    slug = get_page_slug(link_to_page_page_id, ctx) 
-    block_id_no_dashes = link_to_page_page_id.replace('-', '')
+    page_slug = get_page_slug(page_id, ctx) 
     
-    dt_published = datetime.datetime.fromtimestamp(unix_seconds_generated).strftime(strftime) if unix_seconds_generated else ''
-    dt_modified = datetime.datetime.fromtimestamp(unix_seconds_downloaded).strftime(strftime) if unix_seconds_downloaded else ''
-    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{slug}" data-notion-url="{page_url}"', class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header id="{block_id_no_dashes}" class="{class_name_header}"><img src="{src}"></img><h1 class="notion-record-icon">{page_emoji}</h1><h1 class="{class_name} {class_name_page_title}">{page_title}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
+    return open_block(block, ctx, tag = tag, extra_attrstr = f'id="{page_slug}" data-notion-url="{page_url}"', class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header id="{page_id_no_dashes}" class="{class_name_header}"><img src="{src}"></img><h1 class="notion-record-icon">{page_emoji}</h1><h1 class="{class_name} {class_name_page_title}">{page_title}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
@@ -189,17 +197,8 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return '<div class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr /></div>\n'
 
-    id2block, parent_block = get_page_current(block, ctx)
-    
-    headings = []
-    stack = [parent_block]
-    while stack:
-        top = stack.pop()
-        is_heading = top.get('type', '') in [heading_1.__name__, heading_2.__name__, heading_3.__name__]
-        if is_heading:
-            headings.append(top)
-        if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
-            stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
+    parent_block, *ignored = get_page_current(block, ctx)
+    headings = get_page_headings(parent_block, ctx)
     
     color = block[table_of_contents.__name__].get('color', '')
     html = open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}')
@@ -221,20 +220,20 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     page_id_no_dashes = page_id.replace('-', '') or (block.get('href', '').lstrip('/') if block.get('href', '').startswith('/') else '') 
     page_ids_no_dashes = set(page_id.replace('-', '') for page_id in ctx['page_ids'])
 
-    id2block, parent_block = get_page_current(block, ctx)
+    parent_block, id2block = get_page_current(block, ctx)
     
     is_index_page = 'index' == get_page_slug(parent_block.get('id', ''), ctx)
-    slug = get_page_slug(page_id_no_dashes, ctx) 
+    page_slug = get_page_slug(page_id_no_dashes, ctx) 
 
     href = '#404'
-    url_suffix = '/index.html'.lstrip('/' if slug == 'index' else '') if args.html_link_to_page_index_html else ''
+    url_suffix = '/index.html'.lstrip('/' if page_slug == 'index' else '') if args.html_link_to_page_index_html else ''
     if ctx['extract_html'] == 'single' or not parent_block.get('id'):
         if page_id_no_dashes in page_ids_no_dashes:
             href = '#' + slug 
         else:
             href = './' + slug + url_suffix
     elif ctx['extract_html'] == 'flat':
-        href = ('./' if is_index_page else '../') + ('' if slug == 'index' else slug) + url_suffix
+        href = ('./' if is_index_page else '../') + ('' if page_slug == 'index' else slug) + url_suffix
 
     page_emoji, page_title = '', (block.get('plain_text', '') or untitled)
     if subblock := id2block.get(page_id_no_dashes):
@@ -284,7 +283,7 @@ def video(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     src = block[video.__name__].get(block[video.__name__]['type'], {}).get('url', '')
     is_youtube = 'youtube.com' in src
     src = src.replace("http://", "https://").replace('/watch?v=', '/embed/').split('&')[0] if is_youtube else src
-    html_contents = f'<div><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>' if is_youtube else f'<video playsinline autoplay muted loop controls src="{src}"></video>'
+    html_contents = f'<div><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>' if is_youtube else f'<video playsinline muted loop controls src="{src}"></video>'
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
 
 def image(block, ctx, tag = 'img', class_name = 'notion-image-block'):
@@ -365,7 +364,7 @@ def child_database(block, ctx, tag = 'figure', class_name = 'notion-child_databa
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = f'<figcaption>{html_icon}<strong>{html_child_database_title}</strong>{html_icon}</figcaption>')
 
 def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
-    id2block, parent_block = get_page_current(block, ctx)
+    parent_block, *ignored = get_page_current(block, ctx)
     page_id = parent_block['id']
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(subblock, ctx).replace('<br/>', '') for subblock in reversed(ctx['pages_parent_path'][page_id])))
 
@@ -385,7 +384,7 @@ def mention(block, ctx, tag = 'div', class_name = 'notion-text-mention-token', u
 
     if mention_type == 'user':
         user_id = mention_payload.get('id', '')
-        user_name = block['plain_text'].lstrip('@')
+        user_name = block['plain_text'].removeprefix('@')
         return open_block(block, ctx, tag = 'strong', class_name = class_name, extra_attrstr = 'title="notion mention of user"', set_html_contents_and_close = f'@{user_name}#{user_id}')
 
     if mention_type == 'date':
@@ -460,7 +459,7 @@ def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
     
     if block_type not in block2render or block_type == 'unsupported':
         block_type = 'unsupported'
-        id2block, parent_block = get_page_current(block, ctx)
+        parent_block, *ignored  = get_page_current(block, ctx)
         print('UNSUPPORTED block: block_type=[{block_type}] block_id=[{block_id}] block_type_parent=[{block_type_parent}] block_id_parent=[{block_id_parent}] title_parent=[{title_parent}]'.format(block_type = block.get('type', '') or block.get('object', ''), block_id = block.get('id', ''), block_type_parent = parent_block.get('type', '') or parent_block.get('object', ''), block_id_parent = parent_block.get('id', ''), title_parent = get_page_title(parent_block)), file = sys.stderr)
 
     return block2render[block_type](block, ctx, **kwargs)
@@ -528,11 +527,11 @@ def extract_html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_f
     for page_id in page_ids:
         page_block = notion_pages_flat[page_id]
         os.makedirs(output_path, exist_ok = True)
-        slug = get_page_slug(page_id, ctx)
-        page_dir = os.path.join(output_path, slug) if index_html and slug != 'index' else output_path
+        page_slug = get_page_slug(page_id, ctx)
+        page_dir = os.path.join(output_path, page_slug) if index_html and page_slug != 'index' else output_path
         os.makedirs(page_dir, exist_ok = True)
-        html_path = os.path.join(page_dir, 'index.html' if index_html else slug + '.html')
-        assets_dir = os.path.join(page_dir, slug + '_files')
+        html_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + '.html')
+        assets_dir = os.path.join(page_dir, page_slug + '_files')
         notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         ctx['assets'] = notion_assets_for_block
         with open(html_path, 'w', encoding = 'utf-8') as f:
