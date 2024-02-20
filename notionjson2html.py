@@ -115,11 +115,16 @@ def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = Fals
     html_text = richtext2html(block[block_type].get('caption', []), ctx) or block[block_type].get('name') or block.get('plain_text') or (src if full_url_as_caption else os.path.basename(urllib.parse.urlparse(src).path))
     return open_block(block, ctx, tag = tag, attrs = dict(href = src, title = tooltip), class_name = class_name, set_html_contents_and_close = html_icon + html_text) + '<br/>' * line_break
 
-def get_page_url(block):
-    return block.get('url', 'https://www.notion.so/' + block.get('id', '').replace('-', ''))
+def get_page_url(block, base_url = 'https://www.notion.so'):
+    return block.get('url', os.path.join(base_url, block.get('id', '').replace('-', '')))
 
 def get_page_title(block, untitled = 'Untitled'):
-    page_title = ' '.join(t['plain_text'] for t in block.get('properties', {}).get('title', {}).get('title', [])).strip() or block.get('child_page', {}).get('title', '').strip() or block.get('title', '').strip() or ' '.join(t['plain_text'] for t in block.get('properties', {}).get('Name', {}).get('title', [])).strip() or untitled
+    page_title = ' '.join(t['plain_text'] for t in block.get('properties', {}).get('title', {}).get('title', [])).strip() or block.get('child_page', {}).get('title', '').strip() or block.get('title', '').strip() or ' '.join(t['plain_text'] for t in block.get('properties', {}).get('Name', {}).get('title', [])).strip() or block.get('plain_text') or untitled
+    
+    #page_emoji, page_title = '', (block.get('plain_text', '') or untitled)
+    #if subblock := ctx['id2block'].get(page_id_no_dashes):
+    #    page_emoji, page_title = get_page_emoji(subblock), html.escape(get_page_title(subblock))
+    
     return page_title
    
 def get_page_emoji(block):
@@ -156,19 +161,48 @@ def get_page_slug(page_id, ctx):
     return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id.replace('-', '')) or page_id.replace('-', '')
 
 def get_page_relative_url(block, ctx):
-    return 
+    page_id = block.get('link_to_page', {}).get('page_id', '') or (block.get('href', '').removeprefix('/') if block.get('href', '').startswith('/') else '') or block.get('id', '')
 
-def get_page_relative_url_2(base_page_url, target_page_url, ):
-    is_index_page = 'index' == get_page_slug(parent_block.get('id', ''), ctx)
-    url_suffix = '/index.html'.lstrip('/' if page_slug == 'index' else '') if args.html_link_to_page_index_html else ''
-    href = '#404'
-    if ctx['extract_html'] == 'single' or not parent_block.get('id'):
-        if page_id_no_dashes in page_ids_no_dashes:
-            href = '#' + slug 
+    page_slug = get_page_slug(page_id, ctx)
+    is_index_page = page_slug == 'index'
+    page_suffix = '/index.html'.removeprefix('/' if is_index_page else '') if ctx['html_link_to_page_index_html'] else ''
+    
+    if ctx['extract_html'] == 'flat':
+        return './' + ('' if is_index_page else page_slug) + page_suffix
+    
+    elif ctx['extract_html'] == 'flat.html':
+        return './' + (page_suffix if is_index_page else page_slug + '.html')
+    
+    elif ctx['extract_html'] == 'single':
+        #TODO: what to do for a single page generation but in fact some nested?
+        # maybe still retrieve from pages.json? or from sitemap.xml?
+        return './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
+
+    elif ctx['extract_html'] == 'nested':
+        return ''
+        
+    return ''
+
+def get_page_relative_link(page_url_base, page_url_target):
+    base_path, base_fragment = page_url_base.split('#') if '#' in page_url_base else (page_url_base, None)
+    target_path, target_fragment = page_url_target.split('#') if '#' in page_url_target else (page_url_target, None)
+
+    if base_path == target_path:
+        return '#' + (target_fragment or '')
+
+    base_path_splitted = base_path.split('/')
+    target_path_splitted = target_path.split('/')
+
+    num_common_parts = 0
+    for i, (part_base, part_target) in enumerate(zip(base_path_splitted, target_path_splitted)):
+        if part_base == part_target:
+            num_common_parts += 1
         else:
-            href = './' + slug + url_suffix
-    elif ctx['extract_html'] == 'flat':
-        href = ('./' if is_index_page else '../') + ('' if page_slug == 'index' else slug) + url_suffix
+            break
+
+    num_cd_parent = len(base_path_splitted) - num_common_parts - 1
+
+    href = '../' * num_cd_parent + './' * (num_cd_parent == 0) + '/'.join(target_path_splitted[num_common_parts:]) + ('#' + target_fragment if target_fragment else '')
 
     return href
    
@@ -239,15 +273,18 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     page_slug = get_page_slug(page_id_no_dashes, ctx) 
     parent_block, id2block = get_page_current(block, ctx)
     
-    page_url = get_page_relative_url(parent_block, ctx)
+    page_url_base = get_page_relative_url(parent_block, ctx)
     page_url_target = get_page_relative_url(block, ctx)
 
-    href = get_page_relative_url_2(page_url_base = page_url, page_url_target = page_url_target)
+    href = get_page_relative_link(page_url_base = page_url_base, page_url_target = page_url_target)
     
     page_emoji, page_title = '', (block.get('plain_text', '') or untitled)
     if subblock := id2block.get(page_id_no_dashes):
         page_emoji, page_title = get_page_emoji(subblock), html.escape(get_page_title(subblock))
     html_caption = f'{html_icon}{page_emoji} {page_title}'
+   
+    base_title = get_page_title(parent_block)
+    #print('RELATIVE_URL', 'base: [', base_title, '](', page_url_base, ') target: [', page_title, '](',  page_url_target, ')')
 
     return open_block(block, ctx, tag = tag, attrs = dict(href = href), class_name = class_name, set_html_contents_and_close = html_caption) + html_suffix + '\n'
 
@@ -324,6 +361,7 @@ def file(block, ctx, tag = 'a', class_name = 'notion-file-block', html_icon = '�
     return link_like(block, ctx, tag = tag, class_name = class_name, html_icon = html_icon, line_break = True)
 
 def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block', html_icon = '🔖 '):
+    # TODO: div and domain name on top: www.ofii.fr, all clickable
     return link_like(block, ctx, tag = tag, class_name = class_name, full_url_as_caption = True, html_icon = html_icon, line_break = True)
 
 def link_preview(block, ctx, tag = 'a', class_name = 'notion-link_preview-block', html_icon = '🌐 '):
@@ -374,7 +412,7 @@ def child_database(block, ctx, tag = 'figure', class_name = 'notion-child_databa
 def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
     parent_block, *ignored = get_page_current(block, ctx)
     page_id = parent_block['id']
-    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(subblock, ctx).replace('<br/>', '') for subblock in reversed(ctx['pages_parent_path'][page_id])))
+    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(subblock, ctx).replace('<br/>', '') for subblock in reversed(ctx['page_parent_paths'][page_id])))
 
 def mention(block, ctx, tag = 'div', class_name = 'notion-text-mention-token', untitled = 'Untitled'):
     mention_type = block[mention.__name__].get('type')
@@ -548,12 +586,30 @@ def extract_html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_f
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract_html_nested(page_dir, ctx = ctx, page_ids = [child_page['id'] for child_page in child_pages], notion_pages_flat = notion_pages_flat, child_pages_by_parent_id = child_pages_by_parent_id, index_html = index_html, extract_assets = extract_assets, sitepages2html = sitepages2html, mode = mode)
 
-class Sitemap:
-    pass
+def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
+    page_parent_paths = {}
+    id2block = {}
+    stack = list(ctx['pages'].values()) + list(child_pages_by_id.values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+    for page_id in notion_pages_flat.keys() | child_pages_by_id.keys():
+        block_id = page_id
+        parent_path = []
+        header_parent_page_id = page_id
+        while True:
+            block = id2block[block_id]
+            if (block.get('type') or block.get('object')) in ['page', 'child_page']:
+                parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id), plain_text = get_page_title(block, untitled = '')))
+            parent_id = block['parent'].get(block['parent'].get('type'))
+            if parent_id not in id2block:
+                break
+            block_id = parent_id
+        page_parent_paths[page_id] = parent_path
+    return page_parent_paths
 
 def main(args):
-    output_path = args.output_path if args.output_path else '_'.join(args.notion_page_id) if args.extract_html != 'single' else (args.input_path.removesuffix('.json') + '.html')
-    
     notion_cache = json.load(open(args.input_path)) if args.input_path else {}
     notion_slugs = json.load(open(args.pages_json)) if args.pages_json else {}
 
@@ -584,6 +640,7 @@ def main(args):
     #page_ids = page_ids # child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}
 
     ctx = {}
+    ctx['output_path'] = args.output_path if args.output_path else '_'.join(args.notion_page_id) if args.extract_html != 'single' else (args.input_path.removesuffix('.json') + '.html')
     ctx['html_details_open'] = args.html_details_open
     ctx['html_columnlist_disable'] = args.html_columnlist_disable
     ctx['html_link_to_page_index_html'] = args.html_link_to_page_index_html
@@ -596,26 +653,7 @@ def main(args):
     ctx['pages'] = notion_pages_flat
     ctx['page_ids'] = page_ids
     ctx['child_pages_by_parent_id'] = child_pages_by_parent_id
-    ctx['pages_parent_path'] = {}
-    id2block = {}
-    stack = list(ctx['pages'].values()) + list(child_pages_by_id.values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-    for page_id in notion_pages_flat.keys() | child_pages_by_id.keys():
-        block_id = page_id
-        parent_path = []
-        header_parent_page_id = page_id
-        while True:
-            block = id2block[block_id]
-            if (block.get('type') or block.get('object')) in ['page', 'child_page']:
-                parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id), plain_text = get_page_title(block, untitled = '')))
-            parent_id = block['parent'].get(block['parent'].get('type'))
-            if parent_id not in id2block:
-                break
-            block_id = parent_id
-        ctx['pages_parent_path'][page_id] = parent_path
+    ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = child_pages_by_id)
 
     try:
         theme = importlib.import_module(os.path.splitext(args.theme_py)[0])
@@ -627,8 +665,24 @@ def main(args):
     read_html_snippet = lambda path: open(path).read() if path and os.path.exists(path) else ''
     sitepages2html = functools.partial(theme.sitepages2html, block2html = block2html, toc = args.html_toc, html_body_header_html = read_html_snippet(args.html_body_header_html), html_body_footer_html = read_html_snippet(args.html_body_footer_html), html_article_header_html = read_html_snippet(args.html_article_header_html), html_article_footer_html = read_html_snippet(args.html_article_footer_html))
     
-    extract_html(output_path, ctx, sitepages2html = sitepages2html, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], mode = args.extract_html)
+    extract_html(ctx['output_path'], ctx, sitepages2html = sitepages2html, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], mode = args.extract_html)
 
+
+#if __name__ == '__main__':
+#    cases = [
+#        ('./abc/index.html#abc', './abc/index.html#def'),
+#        ('./abc/foo.html#abc', './abc/bar.html#def'),
+#        ('./abc/def/ghi/index.html#abc', './abc/index.html#asds'),
+#        ('./abc/def/index.html#asd', './abc/def/ghi/klm/foo.html'),
+#        ('./abc/def/#asd', './abc/def/ghi/klm/index.html'),
+#        ('./abc/', './abc/def/index.html'),
+#        ('./abc/', './abc/def'),
+#        ('./abc/', './abc/def/'),
+#    ]
+#    for base, target in cases:
+#        print(base, target)
+#        print(get_page_relative_link(base, target))
+#        print()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
