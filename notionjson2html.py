@@ -26,6 +26,7 @@ import argparse
 import functools
 import urllib.parse
 import importlib
+import xml.dom.minidom
 
 def open_block(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
@@ -507,6 +508,22 @@ def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
 
     return block2render[block_type](block, ctx, **kwargs)
 
+def sitemap_urlset_read(fp):
+    node_doc = xml.dom.minidom.parse(fp)
+    assert node_doc.documentElement.nodeName == 'urlset'
+    return [{n.nodeName : ''.join(nn.nodeValue for nn in n.childNodes if nn.nodeType == nn.TEXT_NODE) for n in node_url.childNodes if n.nodeType == n.ELEMENT_NODE} for node_url in node_doc.documentElement.getElementsByTagName('url')]
+    
+def sitemap_urlset_write(urlset, fp):
+    node_doc = xml.dom.minidom.Document()
+    node_root = node_doc.appendChild(node_doc.createElement('urlset'))
+    node_root.setAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
+    node_root.setAttribute('xsi:schemaLocation', 'http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd')
+    node_root.setAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9')
+    for entry in urlset:
+        node_url = node_root.appendChild(node_doc.createElement('url'))
+        for field, value in entry.items():
+            node_url.appendChild(node_doc.createElement(field)).appendChild(node_doc.createTextNode(str(value)))
+    node_doc.writexml(fp, addindent = '  ', newl = '\n')
 
 def sitemap():
     '''
@@ -695,6 +712,8 @@ if __name__ == '__main__':
     parser.add_argument('--html-body-footer-html')
     parser.add_argument('--html-article-header-html')
     parser.add_argument('--html-article-footer-html')
+    parser.add_argument('--base-url')
+    parser.add_argument('--config-path')
     args = parser.parse_args()
     print(args)
     main(args)
