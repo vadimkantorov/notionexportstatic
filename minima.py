@@ -22,6 +22,10 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, bloc
     
     return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html)
 
+html_cookies_notice = '''
+<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">cookies</div>
+'''
+
 layout_page =  '''
 <!DOCTYPE html>
 <html>

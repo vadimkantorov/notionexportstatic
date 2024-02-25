@@ -638,12 +638,27 @@ def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
     return page_parent_paths
 
 def main(args):
+    config = json.load(open(args.config_json)) if args.config_json else {}
+    if args.config_html_details_open:
+        config['html_details_open'] = args.config_html_details_open
+    if args.config_html_columnlist_disable:
+        config['html_columnlist_disable'] = args.config_html_columnlist_disable
+    if args.config_html_link_to_page_index_html:
+        config['html_link_to_page_index_html'] = args.config_html_link_to_page_index_html
+    if args.config_html_toc:
+       config['html_toc'] = args.config_html_toc
+    if args.config_html_body_header_html:
+        config['html_body_header_html'] = args.config_html_body_header_html
+    if args.config_html_body_footer_html:
+        config['html_body_footer_html'] = args.config_html_body_footer_html
+    if args.config_html_article_header_html:
+        config['html_article_header_html'] = args.config_html_article_header_html
+    if args.config_html_article_footer_html:
+        config['html_article_footer_html'] = args.config_html_article_footer_html
+
     notion_cache = json.load(open(args.input_path)) if args.input_path else {}
-    notion_slugs = json.load(open(args.pages_json)) if args.pages_json else {}
-
-    notion_pages = notion_cache.get('pages', {})
     notion_assets = notion_cache.get('assets', {})
-
+    notion_pages = notion_cache.get('pages', {})
     notion_pages = {page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page']}
 
     notion_pages_flat = copy.deepcopy(notion_pages)
@@ -656,7 +671,7 @@ def main(args):
 
     root_page_ids = args.notion_page_id or list(notion_pages.keys())
     for i in range(len(root_page_ids)):
-        for k, v in notion_slugs.items():
+        for k, v in config.get('slugs', {}).items():
             if root_page_ids[i] == v:
                 root_page_ids[i] = k
         for k in notion_pages.keys():
@@ -668,12 +683,13 @@ def main(args):
     #page_ids = page_ids # child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}
 
     ctx = {}
+    ctx['html_details_open'] = config.get('html_details_open', False)
+    ctx['html_columnlist_disable'] = config.get('html_columnlist_disable', False)
+    ctx['html_link_to_page_index_html'] = config.get('html_link_to_page_index_html', False)
+    ctx['slugs'] = config.get('slugs', {})
+    
     ctx['output_path'] = args.output_path if args.output_path else '_'.join(args.notion_page_id) if args.extract_html != 'single' else (args.input_path.removesuffix('.json') + '.html')
-    ctx['html_details_open'] = args.html_details_open
-    ctx['html_columnlist_disable'] = args.html_columnlist_disable
-    ctx['html_link_to_page_index_html'] = args.html_link_to_page_index_html
     ctx['extract_html'] = args.extract_html
-    ctx['slugs'] = notion_slugs
     ctx['assets'] = notion_assets
     ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
     ctx['unix_seconds_end'] = notion_cache.get('unix_seconds_end', 0)
@@ -691,7 +707,7 @@ def main(args):
         theme = importlib.import_module(os.path.splitext(args.theme_py)[0])
 
     read_html_snippet = lambda path: open(path).read() if path and os.path.exists(path) else ''
-    sitepages2html = functools.partial(theme.sitepages2html, block2html = block2html, toc = args.html_toc, html_body_header_html = read_html_snippet(args.html_body_header_html), html_body_footer_html = read_html_snippet(args.html_body_footer_html), html_article_header_html = read_html_snippet(args.html_article_header_html), html_article_footer_html = read_html_snippet(args.html_article_footer_html))
+    sitepages2html = functools.partial(theme.sitepages2html, block2html = block2html, toc = config['html_toc'], html_body_header_html = read_html_snippet(config['html_body_header_html']), html_body_footer_html = read_html_snippet(config['html_body_footer_html']), html_article_header_html = read_html_snippet(config['html_article_header_html']), html_article_footer_html = read_html_snippet(config['html_article_footer_html']))
     extract_html(ctx['output_path'], ctx, sitepages2html = sitepages2html, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], mode = args.extract_html)
 
 
@@ -699,21 +715,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-path', '-i', required = True)
     parser.add_argument('--output-path', '-o')
-    parser.add_argument('--pages-json')
     parser.add_argument('--notion-page-id', nargs = '*', default = [])
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-html', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
     parser.add_argument('--theme-py', default = 'minima.py')
-    parser.add_argument('--html-toc', action = 'store_true')
-    parser.add_argument('--html-details-open', action = 'store_true')
-    parser.add_argument('--html-columnlist-disable', action = 'store_true')
-    parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
-    parser.add_argument('--html-body-header-html')
-    parser.add_argument('--html-body-footer-html')
-    parser.add_argument('--html-article-header-html')
-    parser.add_argument('--html-article-footer-html')
-    parser.add_argument('--base-url')
-    parser.add_argument('--config-path')
+
+    parser.add_argument('--config-json')
+    parser.add_argument('--config-html-toc', action = 'store_true')
+    parser.add_argument('--config-html-details-open', action = 'store_true')
+    parser.add_argument('--config-html-columnlist-disable', action = 'store_true')
+    parser.add_argument('--config-html-link-to-page-index-html', action = 'store_true')
+    parser.add_argument('--config-html-body-header-html')
+    parser.add_argument('--config-html-body-footer-html')
+    parser.add_argument('--config-html-article-header-html')
+    parser.add_argument('--config-html-article-footer-html')
+    parser.add_argument('--config-base-url')
+
     args = parser.parse_args()
     print(args)
     main(args)
