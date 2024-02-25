@@ -508,12 +508,20 @@ def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
 
     return block2render[block_type](block, ctx, **kwargs)
 
-def sitemap_urlset_read(fp):
-    node_doc = xml.dom.minidom.parse(fp)
+def sitemap_urlset_read(path):
+    xml = ''
+    if path and os.path.exists(path):
+        with open(path, 'r') as fp:
+            xml = f.read()
+
+    if not xml.strip():
+        return []
+
+    node_doc = xml.dom.minidom.parseString(xml)
     assert node_doc.documentElement.nodeName == 'urlset'
     return [{n.nodeName : ''.join(nn.nodeValue for nn in n.childNodes if nn.nodeType == nn.TEXT_NODE) for n in node_url.childNodes if n.nodeType == n.ELEMENT_NODE} for node_url in node_doc.documentElement.getElementsByTagName('url')]
     
-def sitemap_urlset_write(urlset, fp):
+def sitemap_urlset_write(urlset, path):
     node_doc = xml.dom.minidom.Document()
     node_root = node_doc.appendChild(node_doc.createElement('urlset'))
     node_root.setAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
@@ -523,7 +531,9 @@ def sitemap_urlset_write(urlset, fp):
         node_url = node_root.appendChild(node_doc.createElement('url'))
         for field, value in entry.items():
             node_url.appendChild(node_doc.createElement(field)).appendChild(node_doc.createTextNode(str(value)))
-    node_doc.writexml(fp, addindent = '  ', newl = '\n')
+    
+    with open(path, 'w') as fp:
+        node_doc.writexml(fp, addindent = '  ', newl = '\n')
 
 def sitemap():
     '''
@@ -637,26 +647,47 @@ def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
         page_parent_paths[page_id] = parent_path
     return page_parent_paths
 
-def main(args):
-    config = json.load(open(args.config_json)) if args.config_json else {}
-    if args.config_html_details_open:
-        config['html_details_open'] = args.config_html_details_open
-    if args.config_html_columnlist_disable:
-        config['html_columnlist_disable'] = args.config_html_columnlist_disable
-    if args.config_html_link_to_page_index_html:
-        config['html_link_to_page_index_html'] = args.config_html_link_to_page_index_html
-    if args.config_html_toc:
-       config['html_toc'] = args.config_html_toc
-    if args.config_html_body_header_html:
-        config['html_body_header_html'] = args.config_html_body_header_html
-    if args.config_html_body_footer_html:
-        config['html_body_footer_html'] = args.config_html_body_footer_html
-    if args.config_html_article_header_html:
-        config['html_article_header_html'] = args.config_html_article_header_html
-    if args.config_html_article_footer_html:
-        config['html_article_footer_html'] = args.config_html_article_footer_html
+def main(
+        input_json,
+        output_path,
+        notion_page_id,
+        extract_assets,
+        extract_html,
+        theme_py,
+        sitemap_xml,
 
-    notion_cache = json.load(open(args.input_path)) if args.input_path else {}
+        config_json,
+        config_html_toc,
+        config_html_details_open,
+        config_html_columnlist_disable,
+        config_html_link_to_page_index_html,
+        config_html_body_header_html,
+        config_html_body_footer_html,
+        config_html_article_header_html,
+        config_html_article_footer_html,
+        config_base_url,
+    ):
+    config = json.load(open(config_json)) if config_json else {}
+    if config_html_details_open:
+        config['html_details_open'] = config_html_details_open
+    if config_html_columnlist_disable:
+        config['html_columnlist_disable'] = config_html_columnlist_disable
+    if config_html_link_to_page_index_html:
+        config['html_link_to_page_index_html'] = config_html_link_to_page_index_html
+    if config_html_toc:
+       config['html_toc'] = config_html_toc
+    if config_html_body_header_html:
+        config['html_body_header_html'] = config_html_body_header_html
+    if config_html_body_footer_html:
+        config['html_body_footer_html'] = config_html_body_footer_html
+    if config_html_article_header_html:
+        config['html_article_header_html'] = config_html_article_header_html
+    if config_html_article_footer_html:
+        config['html_article_footer_html'] = config_html_article_footer_html
+
+    sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
+
+    notion_cache = json.load(open(input_json)) if input_json else {}
     notion_assets = notion_cache.get('assets', {})
     notion_pages = notion_cache.get('pages', {})
     notion_pages = {page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page']}
@@ -669,7 +700,7 @@ def main(args):
     child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
 
-    root_page_ids = args.notion_page_id or list(notion_pages.keys())
+    root_page_ids = notion_page_id or list(notion_pages.keys())
     for i in range(len(root_page_ids)):
         for k, v in config.get('slugs', {}).items():
             if root_page_ids[i] == v:
@@ -680,16 +711,17 @@ def main(args):
     assert all(page_id in notion_pages_flat for page_id in root_page_ids)
 
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if child_page['id'] not in root_page_ids]
-    #page_ids = page_ids # child_pages_by_id = child_pages_by_id if args.extract_html in ['flat', 'flat.html'] else {}
+    #page_ids = page_ids # child_pages_by_id = child_pages_by_id if extract_html in ['flat', 'flat.html'] else {}
 
     ctx = {}
     ctx['html_details_open'] = config.get('html_details_open', False)
     ctx['html_columnlist_disable'] = config.get('html_columnlist_disable', False)
     ctx['html_link_to_page_index_html'] = config.get('html_link_to_page_index_html', False)
     ctx['slugs'] = config.get('slugs', {})
-    
-    ctx['output_path'] = args.output_path if args.output_path else '_'.join(args.notion_page_id) if args.extract_html != 'single' else (args.input_path.removesuffix('.json') + '.html')
-    ctx['extract_html'] = args.extract_html
+   
+    ctx['sitemap'] = sitemap
+    ctx['output_path'] = output_path if output_path else '_'.join(notion_page_id) if extract_html != 'single' else (input_json.removesuffix('.json') + '.html')
+    ctx['extract_html'] = extract_html
     ctx['assets'] = notion_assets
     ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
     ctx['unix_seconds_end'] = notion_cache.get('unix_seconds_end', 0)
@@ -700,25 +732,26 @@ def main(args):
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = child_pages_by_id)
 
     try:
-        theme = importlib.import_module(os.path.splitext(args.theme_py)[0])
+        theme = importlib.import_module(os.path.splitext(theme_py)[0])
     except:
-        assert os.path.isfile(args.theme_py)
-        sys.path.append(os.path.dirname(args.theme_py))
-        theme = importlib.import_module(os.path.splitext(args.theme_py)[0])
+        assert os.path.isfile(theme_py)
+        sys.path.append(os.path.dirname(theme_py))
+        theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
     read_html_snippet = lambda path: open(path).read() if path and os.path.exists(path) else ''
-    sitepages2html = functools.partial(theme.sitepages2html, block2html = block2html, toc = config['html_toc'], html_body_header_html = read_html_snippet(config['html_body_header_html']), html_body_footer_html = read_html_snippet(config['html_body_footer_html']), html_article_header_html = read_html_snippet(config['html_article_header_html']), html_article_footer_html = read_html_snippet(config['html_article_footer_html']))
-    extract_html(ctx['output_path'], ctx, sitepages2html = sitepages2html, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = args.extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if args.extract_html == 'nested' else {}, index_html = args.extract_html in ['flat', 'nested'], mode = args.extract_html)
+    sitepages2html = functools.partial(theme.sitepages2html, block2html = block2html, toc = config.get('html_toc', False), html_body_header_html = read_html_snippet(config.get('html_body_header_html', '')), html_body_footer_html = read_html_snippet(config.get('html_body_footer_html', '')), html_article_header_html = read_html_snippet(config.get('html_article_header_html', '')), html_article_footer_html = read_html_snippet(config.get('html_article_footer_html', '')))
+    extract_html(ctx['output_path'], ctx, sitepages2html = sitepages2html, page_ids = page_ids, notion_pages_flat = notion_pages_flat, extract_assets = extract_assets, child_pages_by_parent_id = child_pages_by_parent_id if extract_html == 'nested' else {}, index_html = extract_html in ['flat', 'nested'], mode = extract_html)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input-path', '-i', required = True)
+    parser.add_argument('--input-json', '-i', required = True)
     parser.add_argument('--output-path', '-o')
     parser.add_argument('--notion-page-id', nargs = '*', default = [])
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-html', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
     parser.add_argument('--theme-py', default = 'minima.py')
+    parser.add_argument('--sitemap-xml')
 
     parser.add_argument('--config-json')
     parser.add_argument('--config-html-toc', action = 'store_true')
@@ -733,4 +766,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
-    main(args)
+    main(**vars(args))
