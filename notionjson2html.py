@@ -100,7 +100,8 @@ def toggle_like(block, ctx, block_type, tag = 'span', attrs = {}, class_name = '
     color = block[block_type].get('color', '')
     return open_block(block, ctx, tag = 'details', class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = dict(attrs, open = None) if ctx['html_details_open'] else attrs, set_html_contents_and_close = f'<summary><{tag}>{html_text}{html_icon}</{tag}></summary>\n' + children_like(block, ctx))
 
-def heading_like(block, ctx, block_type, tag, class_name = ''):
+def heading_like(block, ctx, tag, class_name = ''):
+    block_type = block.get('type', '')
     block_id_no_dashes = block['id'].replace('-', '')
     block_slug = get_heading_slug(block, ctx)
     html_anchor = f'<a href="#{block_slug}"></a><a href="#{block_id_no_dashes}" class="notion-heading-like-icon"></a>'
@@ -386,13 +387,13 @@ def paragraph(block, ctx, tag = 'p', class_name = 'notion-text-block'):
     return text_like(block, ctx, block_type = 'paragraph', tag = tag, class_name = class_name)
 
 def heading_1(block, ctx, tag = 'h1', class_name = 'notion-header-block'):
-    return heading_like(block, ctx, block_type = 'heading_1', tag = tag, class_name = class_name)
+    return heading_like(block, ctx, tag = tag, class_name = class_name)
 
 def heading_2(block, ctx, tag = 'h2', class_name = 'notion-sub_header-block'):
-    return heading_like(block, ctx, block_type = 'heading_2', tag = tag, class_name = class_name)
+    return heading_like(block, ctx, tag = tag, class_name = class_name)
     
 def heading_3(block, ctx, tag = 'h3', class_name = 'notion-sub_sub_header-block'):
-    return heading_like(block, ctx, block_type = 'heading_3', tag = tag, class_name = class_name)
+    return heading_like(block, ctx, tag = tag, class_name = class_name)
 
 def quote(block, ctx, tag = 'blockquote', class_name = 'notion-quote-block'):
     return text_like(block, ctx, block_type = 'quote', tag = tag, class_name = class_name)
