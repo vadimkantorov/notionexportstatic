@@ -143,22 +143,13 @@ def get_page_emoji(block):
     return icon_emoji
 
 def get_page_current(block, ctx):
-    id2block = {}
-    stack = list(ctx['pages'].values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id', '')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-    id2block_no_dashes = {block_id.replace('-', '') : block for block_id, block in id2block.items()}
-
     parent_block = block
     while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
         parent_id = parent_block.get('parent', {}).get(parent_block.get('parent', {}).get('type'))
-        if not parent_id or parent_id not in id2block:
+        if not parent_id or parent_id not in ctx['id2block']:
             break
-        parent_block = id2block[parent_id]
-    
-    return parent_block, (id2block | id2block_no_dashes)
+        parent_block = ctx['id2block'][parent_id]
+    return parent_block
 
 def get_page_slug(page_id, ctx):
     return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id.replace('-', '')) or page_id.replace('-', '')
@@ -262,7 +253,7 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return '<div class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr /></div>\n'
 
-    parent_block, *ignored = get_page_current(block, ctx)
+    parent_block = get_page_current(block, ctx)
     headings = get_page_headings(parent_block, ctx)
     
     color = block['table_of_contents'].get('color', '')
@@ -285,7 +276,7 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     page_id_no_dashes = page_id.replace('-', '') or (block.get('href', '').lstrip('/') if block.get('href', '').startswith('/') else '') 
     page_ids_no_dashes = set(page_id.replace('-', '') for page_id in ctx['page_ids'])
     page_slug = get_page_slug(page_id_no_dashes, ctx) 
-    parent_block, id2block = get_page_current(block, ctx)
+    parent_block = get_page_current(block, ctx)
     
     page_url_base = get_page_relative_url(parent_block, ctx)
     page_url_target = get_page_relative_url(block, ctx)
@@ -293,7 +284,7 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     href = get_page_relative_link(page_url_base = page_url_base, page_url_target = page_url_target)
     
     page_emoji, page_title = '', (block.get('plain_text', '') or untitled)
-    if subblock := id2block.get(page_id_no_dashes):
+    if subblock := ctx['id2block'].get(page_id_no_dashes):
         page_emoji, page_title = get_page_emoji(subblock), html.escape(get_page_title(subblock))
     html_caption = f'{html_icon}{page_emoji} {page_title}'
    
@@ -424,7 +415,7 @@ def child_database(block, ctx, tag = 'figure', class_name = 'notion-child_databa
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = f'<figcaption>{html_icon}<strong>{html_child_database_title}</strong>{html_icon}</figcaption>')
 
 def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
-    parent_block, *ignored = get_page_current(block, ctx)
+    parent_block = get_page_current(block, ctx)
     page_id = parent_block['id']
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(subblock, ctx).replace('<br/>', '') for subblock in reversed(ctx['page_parent_paths'][page_id])))
 
@@ -519,7 +510,7 @@ def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
     
     if block_type not in block2render or block_type == 'unsupported':
         block_type = 'unsupported'
-        parent_block, *ignored  = get_page_current(block, ctx)
+        parent_block = get_page_current(block, ctx)
         print('UNSUPPORTED block: block_type=[{block_type}] block_id=[{block_id}] block_type_parent=[{block_type_parent}] block_id_parent=[{block_id_parent}] title_parent=[{title_parent}]'.format(block_type = block.get('type', '') or block.get('object', ''), block_id = block.get('id', ''), block_type_parent = parent_block.get('type', '') or parent_block.get('object', ''), block_id_parent = parent_block.get('id', ''), title_parent = get_page_title(parent_block)), file = sys.stderr)
 
     return block2render[block_type](block, ctx, **kwargs)
@@ -626,6 +617,16 @@ def extract8html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_f
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract8html(page_dir, ctx = ctx, page_ids = [child_page['id'] for child_page in child_pages], notion_pages_flat = notion_pages_flat, child_pages_by_parent_id = child_pages_by_parent_id, index_html = index_html, extract_assets = extract_assets, sitepages2html = sitepages2html, mode = mode)
 
+def get_block_index(ctx):
+    id2block = {}
+    stack = list(ctx['pages'].values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id', '')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+    id2block_no_dashes = {block_id.replace('-', '') : block for block_id, block in id2block.items()}
+    return id2block | id2block_no_dashes
+
 def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
     page_parent_paths = {}
     id2block = {}
@@ -731,6 +732,7 @@ def main(
     ctx['page_ids'] = page_ids
     ctx['child_pages_by_parent_id'] = child_pages_by_parent_id
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = child_pages_by_id)
+    ctx['id2block'] = get_block_index(ctx)
 
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
