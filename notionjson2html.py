@@ -1,17 +1,12 @@
 # TODO: for a single or nested mode, what to do with unresolved link_to_pages? extend slug.json info? or scan the current directory?
-# TODO: support recursive conversion of all json to html? or maybe example with find -exec?
 # TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 # TODO: image: fixup url from assets; when to embed image
-# TODO: main: nested: update only a single page on disk? or all nested dirs as well? in general, can there be a nested page with multi-page? add extra switch? fix page_ids = to include all child_pages recursively?
 
 # TODO: htmlescape for captions
 # TODO: bookmark or link_preview: generate social media card: title, maybe description, favicon
-# TODO: for more than one page in html, use full slugs
 # TODO: add cmdline option for pages/headings links to notion ✏️
 # TODO: move emoji's to CSS
 
-# https://jeroensormani.com/automatically-add-ids-to-your-headings/
-# https://github.com/themightymo/auto-anchor-header-links/blob/master/auto-header-anchor-links.php
 # https://docs.super.so/super-css-classes
 
 import os
@@ -154,9 +149,13 @@ def get_page_current(block, ctx):
 def get_page_slug(page_id, ctx):
     return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id.replace('-', '')) or page_id.replace('-', '')
 
-def get_heading_slug(block, ctx, space = '_', lower = False):
+def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
     block_type = block.get('type') or block.get('object') or ''
     s = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx, title_mode = True)
+    if ctx['extract_html'] == 'single':
+        parent_block = get_page_current(block, ctx)
+        page_slug = get_page_slug(parent_block.get('id', ''), ctx)
+        prefix = page_slug + '-'
     
     s = unicodedata.normalize('NFKC', s)
     s = s.strip()
@@ -164,8 +163,8 @@ def get_heading_slug(block, ctx, space = '_', lower = False):
     s = re.sub(r'[^-_.\w]', space, s, flags = re.U)
     s = s.lower() if lower else s
     s = s.strip(space)
-    for k in range(8, 2, -1):
-        s = s.replace(space * k, space)
+    s = re.sub(space + '+', space, s)
+    s = prefix + s
     return s
 
 def get_page_relative_url(block, ctx):
@@ -511,7 +510,7 @@ def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
     if block_type not in block2render or block_type == 'unsupported':
         block_type = 'unsupported'
         parent_block = get_page_current(block, ctx)
-        print('UNSUPPORTED block: block_type=[{block_type}] block_id=[{block_id}] block_type_parent=[{block_type_parent}] block_id_parent=[{block_id_parent}] title_parent=[{title_parent}]'.format(block_type = block.get('type', '') or block.get('object', ''), block_id = block.get('id', ''), block_type_parent = parent_block.get('type', '') or parent_block.get('object', ''), block_id_parent = parent_block.get('id', ''), title_parent = get_page_title(parent_block)), file = sys.stderr)
+        print('UNSUPPORTED block: block_type=[{block_type}] block_id=[{block_id}] block_type_parent=[{block_type_parent}] block_id_parent=[{block_id_parent}] title_parent=[{title_parent}]'.format(block_type = block.get('type', '') or block.get('object', ''), block_id = block.get('id', ''), block_type_parent = parent_block.get('type', '') or parent_block.get('object', ''), block_id_parent = parent_block.get('id', ''), title_parent = get_page_title(parent_block)), file = ctx['log_unsupported_blocks'])
 
     return block2render[block_type](block, ctx, **kwargs)
 
@@ -577,9 +576,9 @@ def discover_assets(blocks, asset_urls = [], include_image = True, include_file 
         asset_urls.extend(url for url in urls if url and not url.startswith('data:'))
     return asset_urls
 
-def prepare_and_extract_assets(notion_pages, assets_dir, notion_assets = {}, extract_assets = False):
+def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}, extract_assets = False):
     urls = discover_assets(notion_pages.values(), [])
-    print('\n'.join('URL ' + url for url in urls), file = sys.stderr)
+    print('\n'.join('URL ' + url for url in urls), file = ctx['log_urls'])
     assets = {url : notion_assets[url] for url in urls}
     if extract_assets and assets:
         os.makedirs(assets_dir, exist_ok = True)
@@ -595,7 +594,7 @@ def extract8html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_f
     notion_assets = ctx.get('assets', {})
 
     if mode == 'single':
-        ctx['assets'] = prepare_and_extract_assets(notion_pages = ctx['pages'], assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
+        ctx['assets'] = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
         with open(output_path, 'w', encoding = 'utf-8') as f:
             f.write(sitepages2html(page_ids, ctx = ctx, notion_pages = notion_pages_flat))
         return print(output_path)
@@ -609,7 +608,7 @@ def extract8html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_f
         os.makedirs(page_dir, exist_ok = True)
         html_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + '.html')
         assets_dir = os.path.join(page_dir, page_slug + '_files')
-        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
+        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         ctx['assets'] = notion_assets_for_block
         with open(html_path, 'w', encoding = 'utf-8') as f:
             f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages_flat))
@@ -669,6 +668,10 @@ def main(
         config_html_article_header_html,
         config_html_article_footer_html,
         config_base_url,
+        config_edit_url,
+
+        log_unsupported_blocks,
+        log_urls,
     ):
     config = json.load(open(config_json)) if config_json else {}
     if config_html_details_open:
@@ -734,6 +737,9 @@ def main(
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = child_pages_by_id)
     ctx['id2block'] = get_block_index(ctx)
 
+    ctx['log_unsupported_blocks'] = open(log_unsupported_blocks if log_unsupported_blocks else os.devnull , 'w')
+    ctx['log_urls'] = open(log_urls if log_urls else os.devnull , 'w')
+
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
     except:
@@ -766,7 +772,26 @@ if __name__ == '__main__':
     parser.add_argument('--config-html-article-header-html')
     parser.add_argument('--config-html-article-footer-html')
     parser.add_argument('--config-base-url')
+    parser.add_argument('--config-edit-url')
+
+    parser.add_argument('--log-unsupported-blocks')
+    parser.add_argument('--log-urls')
 
     args = parser.parse_args()
     print(args)
-    main(**vars(args))
+    
+    if os.path.exists(args.input_json) and os.path.isfile(args.input_json):
+        main(**vars(args))
+
+    elif os.path.exists(args.input_json) and os.path.isdir(args.input_json):
+        file_paths_recursive_json = [os.path.join(dirpath, basename) for dirpath, dirnames, filenames in os.walk(args.input_json) for basename in filenames if basename.endswith('.json')]
+        for file_path in file_paths_recursive_json:
+            try:
+                with open(file_path) as f:
+                    j = json.load(f)
+                if 'pages' not in j:
+                    continue
+                print(file_path)
+                main(**dict(vars(args), input_json = file_path))
+            except:
+                continue
