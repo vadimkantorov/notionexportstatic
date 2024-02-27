@@ -1,4 +1,4 @@
-# TODO: for a single or nested mode, what to do with unresolved link_to_pages? extend slug.json info? or scan the current directory?
+# TODO: use sitemap for resolving urls
 # TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 # TODO: image: fixup url from assets; when to embed image
 
@@ -282,11 +282,9 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     
     page_url_base = get_page_relative_url(page_block, ctx)
     page_url_target = get_page_relative_url(block, ctx)
-
     href = get_page_relative_link(page_url_base = page_url_base, page_url_target = page_url_target)
     
     page_block = ctx['id2block'].get(page_id_no_dashes)
-    
     page_emoji = get_page_emoji(page_block, ctx)
     page_title = get_page_title(page_block, ctx) or block.get('plain_text', '') or untitled
     
