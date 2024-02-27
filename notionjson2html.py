@@ -2,7 +2,6 @@
 # TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 # TODO: image: fixup url from assets; when to embed image
 
-# TODO: htmlescape for captions
 # TODO: bookmark or link_preview: generate social media card: title, maybe description, favicon
 # TODO: add cmdline option for pages/headings links to notion ✏️
 # TODO: move emoji's to CSS
@@ -112,10 +111,12 @@ def link_like(block, ctx, tag = 'a', class_name = '', full_url_as_caption = Fals
     html_text = richtext2html(block[block_type].get('caption', []), ctx) or block[block_type].get('name') or block.get('plain_text') or (src if full_url_as_caption else os.path.basename(urllib.parse.urlparse(src).path))
     return open_block(block, ctx, tag = tag, attrs = dict(href = src, title = tooltip), class_name = class_name, set_html_contents_and_close = html_icon + html_text) + '<br/>' * line_break
 
-def get_page_url(block, base_url = 'https://www.notion.so'):
+def get_page_url(block, ctx, base_url = 'https://www.notion.so'):
     return block.get('url', os.path.join(base_url, block.get('id', '').replace('-', '')))
 
-def get_page_title(block, untitled = 'Untitled'):
+def get_page_title(block, ctx, untitled = 'Untitled'):
+    if not block:
+        return ''
     page_title = ' '.join(t['plain_text'] for t in block.get('properties', {}).get('title', {}).get('title', [])).strip() or block.get('child_page', {}).get('title', '').strip() or block.get('title', '').strip() or ' '.join(t['plain_text'] for t in block.get('properties', {}).get('Name', {}).get('title', [])).strip() or block.get('plain_text') or untitled
     
     #page_emoji, page_title = '', (block.get('plain_text', '') or untitled)
@@ -124,7 +125,9 @@ def get_page_title(block, untitled = 'Untitled'):
     
     return page_title
    
-def get_page_emoji(block):
+def get_page_emoji(block, ctx):
+    if not block:
+        return ''
     payload_icon = block.get('icon') or {}
     icon_emoji = payload_icon.get(payload_icon.get('type'), '')
     children = block.get('children', []) or block.get('blocks', [])
@@ -153,8 +156,8 @@ def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
     block_type = block.get('type') or block.get('object') or ''
     s = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx, title_mode = True)
     if ctx['extract_html'] == 'single':
-        parent_block = get_page_current(block, ctx)
-        page_slug = get_page_slug(parent_block.get('id', ''), ctx)
+        page_block = get_page_current(block, ctx)
+        page_slug = get_page_slug(page_block.get('id', ''), ctx)
         prefix = page_slug + '-'
     
     s = unicodedata.normalize('NFKC', s)
@@ -235,9 +238,9 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     page_id = block.get('id', '')
     page_id_no_dashes = page_id.replace('-', '')
 
-    page_title = html.escape(get_page_title(block))
-    page_emoji = get_page_emoji(block)
-    page_url = get_page_url(block)
+    page_title = html.escape(get_page_title(block, ctx))
+    page_emoji = get_page_emoji(block, ctx)
+    page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx) 
     
     return open_block(block, ctx, tag = tag, attrs = {'id': page_slug, 'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header id="{page_id_no_dashes}" class="{class_name_header}"><img src="{src}"></img><h1 class="notion-record-icon">{page_emoji}</h1><h1 class="{class_name} {class_name_page_title}">{page_title}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
@@ -252,8 +255,8 @@ def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_cont
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return '<div class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr /></div>\n'
 
-    parent_block = get_page_current(block, ctx)
-    headings = get_page_headings(parent_block, ctx)
+    page_block = get_page_current(block, ctx)
+    headings = get_page_headings(page_block, ctx)
     
     color = block['table_of_contents'].get('color', '')
     html = open_block(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}')
@@ -275,21 +278,20 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     page_id_no_dashes = page_id.replace('-', '') or (block.get('href', '').lstrip('/') if block.get('href', '').startswith('/') else '') 
     page_ids_no_dashes = set(page_id.replace('-', '') for page_id in ctx['page_ids'])
     page_slug = get_page_slug(page_id_no_dashes, ctx) 
-    parent_block = get_page_current(block, ctx)
+    page_block = get_page_current(block, ctx)
     
-    page_url_base = get_page_relative_url(parent_block, ctx)
+    page_url_base = get_page_relative_url(page_block, ctx)
     page_url_target = get_page_relative_url(block, ctx)
 
     href = get_page_relative_link(page_url_base = page_url_base, page_url_target = page_url_target)
     
-    page_emoji, page_title = '', (block.get('plain_text', '') or untitled)
-    if subblock := ctx['id2block'].get(page_id_no_dashes):
-        page_emoji, page_title = get_page_emoji(subblock), html.escape(get_page_title(subblock))
-    html_caption = f'{html_icon}{page_emoji} {page_title}'
+    page_block = ctx['id2block'].get(page_id_no_dashes)
+    
+    page_emoji = get_page_emoji(page_block, ctx)
+    page_title = get_page_title(page_block, ctx) or block.get('plain_text', '') or untitled
+    
+    html_caption = f'{html_icon}{page_emoji} ' + html.escape(page_title)
    
-    base_title = get_page_title(parent_block)
-    #print('RELATIVE_URL', 'base: [', base_title, '](', page_url_base, ') target: [', page_title, '](',  page_url_target, ')')
-
     return open_block(block, ctx, tag = tag, attrs = dict(href = href), class_name = class_name, set_html_contents_and_close = html_caption) + html_suffix + '\n'
 
 def table(block, ctx, tag = 'table', class_name = 'notion-table-block'):
@@ -406,16 +408,16 @@ def code(block, ctx, tag = 'code', class_name = 'notion-code-block'):
     return open_block(block, ctx, tag = 'figure', attrs = {'data-language' : language}, class_name = class_name, set_html_contents_and_close = f'<figcaption>{html_caption}</figcaption>\n<pre><{tag}>' + richtext2html(block['code'].get('rich_text', []), ctx) + f'</{tag}></pre>')
 
 def equation(block, ctx, tag = 'code', class_name = 'notion-equation-block'):
-    html_expression = block['equation'].get('expression', '') or block.get('plain_text', '')
+    html_expression = html.escape(block['equation'].get('expression', '') or block.get('plain_text', ''))
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_expression)
 
 def child_database(block, ctx, tag = 'figure', class_name = 'notion-child_database-block', html_icon = '📚', untitled = '???'):
-    html_child_database_title = block['child_database'].get('title') or untitled
+    html_child_database_title = html.escape(block['child_database'].get('title') or untitled)
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = f'<figcaption>{html_icon}<strong>{html_child_database_title}</strong>{html_icon}</figcaption>')
 
 def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
-    parent_block = get_page_current(block, ctx)
-    page_id = parent_block['id']
+    page_block = get_page_current(block, ctx)
+    page_id = page_block['id']
     return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(subblock, ctx).replace('<br/>', '') for subblock in reversed(ctx['page_parent_paths'][page_id])))
 
 def mention(block, ctx, tag = 'div', class_name = 'notion-text-mention-token', untitled = 'Untitled'):
