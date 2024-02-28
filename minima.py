@@ -82,7 +82,7 @@ css_notion = '''
 
 .notion-table_of_contents-block { margin-top: 10px !important; margin-left: 0 !important; }
 .notion-table_of_contents-block { list-style-type: none !important; }
-.notion-table_of_contents-heading > a { color: rgb(120, 119, 116) !important;}
+.notion-table_of_contents-heading > a { display: block; width: inherit; color: rgb(120, 119, 116) !important; }
 .notion-table_of_contents-heading:hover { background: rgba(55, 53, 47, 0.08) !important;}
 .notion-table_of_contents-heading_1 { padding-left: 10px }
 .notion-table_of_contents-heading_2 { padding-left: 20px }

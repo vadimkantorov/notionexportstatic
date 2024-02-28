@@ -3,6 +3,13 @@
 # TODO: image: fixup url from assets; when to embed image
 
 # https://docs.super.so/super-css-classes
+    
+# TODO notionjson2markdown: rstrip all <br /> at page end
+# TODO notionjson2markdown: delete plain_text: ' ' empty text blocks
+# TODO notionjson2markdown: optional frontmatter gen
+# TODO notionjson2markdown: delete useless "> \n" in callout, ex https://github.com/vadimkantorov/notionfun/edit/gh-pages/_markdown/visa-c.md
+# TODO notionjson2markdown: can deploy pre-generated html?
+
 
 import os
 import re
@@ -376,16 +383,20 @@ def prepare_notion_content(raw_notion: dict, config_json, output_path) -> dict:
 
     slug = (json.load(open(config_json)) if config_json else {}).get('slugs', {})
     
-    raw_notion = raw_notion['pages']
-    raw_notion = raw_notion.copy()
-    child_pages = {block['id'] : block for page in raw_notion.values() for parent_id, blocks in ____pop_and_replace_child_pages_recursively(page).items() for block in blocks}
-    for page in child_pages.values():
+    notion_pages_flat = raw_notion['pages'].copy()
+    child_pages_by_parent_id = {}
+    for page_id, page in notion_pages_flat.items():
+        pop_and_replace_child_pages_recursively(page, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = page_id)
+    child_pages_by_id = {child_page['id'] : child_page for parent_id, pages in child_pages_by_parent_id.items() for child_page in pages}
+    for page in child_pages_by_id.values():
         page['url'] = page.get('url', 'https://www.notion.so/' + page.get('id', '').replace('-', ''))
-    print('Child pages:', len(child_pages))
-    raw_notion.update(child_pages)
+    print('Child pages:', len(child_pages_id))
+    notion_pages_flat.update(child_pages_by_id)
+    
+    raw_notion = notion_pages_flat
 
     pages = {}
-    for page_id, page in raw_notion.items():
+    for page_id, page in notion_pages_flat.items():
         pages[page_id] = {}
         pages[page_id]["assets_to_download"] = []
 
@@ -630,6 +641,42 @@ def get_page_relative_url(block, ctx):
         
     return ''
 
+def get_block_index(ctx):
+    id2block = {}
+    stack = list(ctx['pages'].values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id', '')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+    id2block_no_dashes = {block_id.replace('-', '') : block for block_id, block in id2block.items()}
+   
+    return id2block | id2block_no_dashes
+
+def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
+    id2block = {}
+    stack = list(ctx['pages'].values()) + list(child_pages_by_id.values())
+    while stack:
+        top = stack.pop()
+        id2block[top.get('id')] = top
+        stack.extend(top.get('blocks', []) + top.get('children', []))
+    
+    page_parent_paths = {}
+    for page_id in notion_pages_flat.keys() | child_pages_by_id.keys():
+        block_id = page_id
+        parent_path = []
+        header_parent_page_id = page_id
+        while True:
+            block = id2block[block_id]
+            if (block.get('type') or block.get('object')) in ['page', 'child_page']:
+                parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id), plain_text = get_page_title(block, ctx, untitled = '')))
+            parent_id = block['parent'].get(block['parent'].get('type'))
+            if parent_id not in id2block:
+                break
+            block_id = parent_id
+        page_parent_paths[page_id] = parent_path
+    return page_parent_paths
+
+
 def get_page_relative_link(page_url_base, page_url_target):
     base_path, base_fragment = page_url_base.split('#') if '#' in page_url_base else (page_url_base, None)
     target_path, target_fragment = page_url_target.split('#') if '#' in page_url_target else (page_url_target, None)
@@ -640,12 +687,7 @@ def get_page_relative_link(page_url_base, page_url_target):
     base_path_splitted = base_path.split('/')
     target_path_splitted = target_path.split('/')
 
-    num_common_parts = 0
-    for i, (part_base, part_target) in enumerate(zip(base_path_splitted, target_path_splitted)):
-        if part_base == part_target:
-            num_common_parts += 1
-        else:
-            break
+    num_common_parts = ([i for i, (part_base, part_target) in enumerate(zip(base_path_splitted, target_path_splitted)) if part_base != part_target] or [min(len(base_path_splitted), len(target_path_splitted))])[0]
 
     num_cd_parent = len(base_path_splitted) - num_common_parts - 1
 
@@ -726,9 +768,9 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     
     page_block = ctx['id2block'].get(page_id_no_dashes)
     page_emoji = get_page_emoji(page_block, ctx)
-    page_title = get_page_title(page_block, ctx) or block.get('plain_text', '') or untitled
+    page_title = html.escape(get_page_title(page_block, ctx) or block.get('plain_text', '') or untitled)
     
-    html_caption = f'{html_icon}{page_emoji} ' + html.escape(page_title)
+    html_caption = f'{html_icon}{page_emoji} {page_title}'
    
     return open_block(block, ctx, tag = tag, attrs = dict(href = href), class_name = class_name, set_html_contents_and_close = html_caption) + html_suffix + '\n'
 
@@ -1009,74 +1051,6 @@ def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}
             else:
                 pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = parent_id)
 
-def __pop_and_replace_child_pages_recursively(block, parent_id = None):
-    child_pages = {}
-    for keys in ['children', 'blocks']:
-        for i in reversed(range(len(block[keys]) if block.get(keys, []) else 0)):
-            if block[keys][i]['type'] == 'child_page':
-                child_page = block[keys][i]
-                if (not child_page.get('icon')) and child_page['has_children'] and child_page['children']:
-                    for subblock in child_page['children']:
-                        if subblock['type'] == 'callout':
-                            child_page['icon'] = dict(emoji = subblock.get('callout', {}).get('icon', {})).get('emoji')
-                            break
-                block[keys][i] = {
-                    'object' : 'block', 
-                    'has_children' : False,
-                    'type' : 'link_to_page',
-                    'link_to_page' : {'type' : 'page_id', 'page_id' : child_page['id']} 
-                }
-                child_page['title'] = child_page['child_page']['title']
-                child_page['url'] = child_page.get('url', 'https://www.notion.so/' + child_page.get('id', '').replace('-', ''))
-                if parent_id not in child_pages:
-                    child_pages[parent_id] = []
-                child_pages[parent_id].append(child_page)
-                for k, l in __pop_and_replace_child_pages_recursively(block[keys][i], parent_id = child_page['id']).items():
-                    if k not in child_pages:
-                        child_pages[k] = []
-                    child_pages[k].extend(l)
-            else:
-                for k, l in __pop_and_replace_child_pages_recursively(block[keys][i], parent_id = parent_id).items():
-                    if k not in child_pages:
-                        child_pages[k] = []
-                    child_pages[k].extend(l)
-    return child_pages
-
-def ____pop_and_replace_child_pages_recursively(block, parent_id = None):
-    child_pages = {}
-    for keys in ['children', 'blocks']:
-        for i in reversed(range(len(block[keys]) if block.get(keys, []) else 0)):
-            if block[keys][i]['type'] == 'child_page':
-                child_page = block[keys][i]
-                if (not child_page.get('icon')) and child_page['has_children'] and child_page['children']:
-                    for subblock in child_page['children']:
-                        if subblock['type'] == 'callout':
-                            child_page['icon'] = dict(emoji = subblock.get('callout', {}).get('icon', {})).get('emoji')
-                            break
-                block[keys][i] = {
-                    'object' : 'block', 
-                    'has_children' : False,
-                    'type' : 'link_to_page',
-                    'link_to_page' : {'type' : 'page_id', 'page_id' : child_page['id']} 
-                }
-                child_page['title'] = child_page['child_page']['title']
-                child_page['url'] = child_page.get('url', 'https://www.notion.so/' + child_page.get('id', '').replace('-', ''))
-                if parent_id not in child_pages:
-                    child_pages[parent_id] = []
-                child_pages[parent_id].append(child_page)
-
-                for k, l in ____pop_and_replace_child_pages_recursively(block[keys][i], parent_id = child_page['id']).items():
-                    if k not in child_pages:
-                        child_pages[k] = []
-                    child_pages[k].extend(l)
-            else:
-                for k, l in ____pop_and_replace_child_pages_recursively(block[keys][i], parent_id = parent_id).items():
-                    if k not in child_pages:
-                        child_pages[k] = []
-                    child_pages[k].extend(l)
-    return child_pages
-
-
 def discover_assets(blocks, asset_urls = [], include_image = True, include_file = False, include_pdf = False, exclude_datauri = True):
     for block in blocks:
         for key in ['children', 'blocks']:
@@ -1095,6 +1069,48 @@ def discover_assets(blocks, asset_urls = [], include_image = True, include_file 
             urls.append(url)
         asset_urls.extend( url for url in urls if url and (exclude_datauri is False or not url.startswith('data:')) )
     return asset_urls
+
+def download_assets_to_dict(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}):
+    urls = discover_assets(blocks, [], exclude_datauri = False)
+    notion_assets = {} 
+    for url in urls:
+        ok = True
+        if url.startswith('data:'):
+            ext = ([k for k, v in mimedb.items() if url.startswith('data:' + v)] or ['.' + url.split(';', maxsplit = 1)[0].replace('/', '_')])[0]
+            basename = 'datauri'
+            path = url
+            datauri = url
+        else:
+            # url sanitizatoin is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
+            urlparsed = urllib.parse.urlparse(url)
+            try:
+                urlparsed.query.encode('ascii')
+                urlparsed_query = urlparsed.query
+            except UnicodeEncodeError:
+                urlparsed_query = urllib.parse.quote(urlparsed.query)
+            urlparsed_unicode_sanitized_query = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urlparsed_query, urlparsed.fragment)
+            urlopen_url = urllib.parse.urlunparse(urlparsed_unicode_sanitized_query)
+            ext = os.path.splitext(urlparsed.path.lower())[-1]
+            basename = os.path.basename(urlparsed.path)
+            path = urlparsed.scheme + '://' + urlparsed.netloc + urlparsed.path
+            mime = mimedb.get(ext, 'text/plain')
+            file_bytes = b''
+            try:
+                print(url, urlopen_url)
+                file_bytes = urllib.request.urlopen(urlopen_url).read()
+            except Exception as exc: # urllib.error.HTTPError is first effort, but url encoding is UnicodeEncodeError
+                print(f'cannot download [{basename}] from link {url}, unparsed {urlopen_url}', exc)
+                file_bytes = str(exc).encode()
+                mime = 'text/plain'
+                ok = False
+            datauri = f'data:{mime};base64,' + base64.b64encode(file_bytes).decode()
+        sha1 = hashlib.sha1()
+        sha1.update(path.encode())
+        url_hash = sha1.hexdigest()
+        file_name = basename + '.' + url_hash + ext
+        notion_assets[url] = dict(basename = basename, uri = datauri, ok = ok)
+        print(url, file_name, ok)
+    return notion_assets
 
 def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}, extract_assets = False):
     urls = discover_assets(notion_pages.values(), [])
@@ -1185,121 +1201,45 @@ def extract_json(
             notion_cache = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
             json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
         print(json_path)
-        if children := child_pages_by_parent_id.pop(page_id, []):
+        if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract_json(
                 os.path.join(output_path, slug),
                 ctx,
                 notion_assets = notion_assets, 
-                notion_pages = {child['id'] : child for child in children}, 
+                notion_pages = {child['id'] : child for child in child_pages}, 
                 notion_slugs = notion_slugs, 
                 child_pages_by_parent_id = child_pages_by_parent_id, 
                 extract_assets = extract_assets, 
                 extract_mode = extract_mode, 
             )
             
-def get_block_index(ctx):
-    id2block = {}
-    stack = list(ctx['pages'].values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id', '')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-    id2block_no_dashes = {block_id.replace('-', '') : block for block_id, block in id2block.items()}
-    return id2block | id2block_no_dashes
-
-def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
-    id2block = {}
-    stack = list(ctx['pages'].values()) + list(child_pages_by_id.values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-    page_parent_paths = {}
-    for page_id in notion_pages_flat.keys() | child_pages_by_id.keys():
-        block_id = page_id
-        parent_path = []
-        header_parent_page_id = page_id
-        while True:
-            block = id2block[block_id]
-            if (block.get('type') or block.get('object')) in ['page', 'child_page']:
-                parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id), plain_text = get_page_title(block, ctx, untitled = '')))
-            parent_id = block['parent'].get(block['parent'].get('type'))
-            if parent_id not in id2block:
-                break
-            block_id = parent_id
-        page_parent_paths[page_id] = parent_path
-    return page_parent_paths
-
-
-def download_assets_to_dict(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}):
-    urls = discover_assets(blocks, [], exclude_datauri = False)
-    notion_assets = {} 
-    for url in urls:
-        ok = True
-        if url.startswith('data:'):
-            ext = ([k for k, v in mimedb.items() if url.startswith('data:' + v)] or ['.' + url.split(';', maxsplit = 1)[0].replace('/', '_')])[0]
-            basename = 'datauri'
-            path = url
-            datauri = url
-        else:
-            # url sanitizatoin is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
-            urlparsed = urllib.parse.urlparse(url)
-            try:
-                urlparsed.query.encode('ascii')
-                urlparsed_query = urlparsed.query
-            except UnicodeEncodeError:
-                urlparsed_query = urllib.parse.quote(urlparsed.query)
-            urlparsed_unicode_sanitized_query = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urlparsed_query, urlparsed.fragment)
-            urlopen_url = urllib.parse.urlunparse(urlparsed_unicode_sanitized_query)
-            ext = os.path.splitext(urlparsed.path.lower())[-1]
-            basename = os.path.basename(urlparsed.path)
-            path = urlparsed.scheme + '://' + urlparsed.netloc + urlparsed.path
-            mime = mimedb.get(ext, 'text/plain')
-            file_bytes = b''
-            try:
-                print(url, urlopen_url)
-                file_bytes = urllib.request.urlopen(urlopen_url).read()
-            except Exception as exc: # urllib.error.HTTPError is first effort, but url encoding is UnicodeEncodeError
-                print(f'cannot download [{basename}] from link {url}, unparsed {urlopen_url}', exc)
-                file_bytes = str(exc).encode()
-                mime = 'text/plain'
-                ok = False
-            datauri = f'data:{mime};base64,' + base64.b64encode(file_bytes).decode()
-        sha1 = hashlib.sha1()
-        sha1.update(path.encode())
-        url_hash = sha1.hexdigest()
-        file_name = basename + '.' + url_hash + ext
-        notion_assets[url] = dict(basename = basename, uri = datauri, ok = ok)
-        print(url, file_name, ok)
-    return notion_assets
-
 
 
 def notionjson2html(
-        config_json,
-        input_json,
-        output_path,
-        notion_page_id,
-        extract_assets,
-        extract_mode,
-        theme_py,
-        sitemap_xml,
+    config_json,
+    input_json,
+    output_path,
+    notion_page_id,
+    extract_assets,
+    extract_mode,
+    theme_py,
+    sitemap_xml,
 
-        config_html_toc,
-        config_html_details_open,
-        config_html_columnlist_disable,
-        config_html_link_to_page_index_html,
-        config_html_body_header_html,
-        config_html_body_footer_html,
-        config_html_article_header_html,
-        config_html_article_footer_html,
-        config_base_url,
-        config_edit_url,
+    config_html_toc,
+    config_html_details_open,
+    config_html_columnlist_disable,
+    config_html_link_to_page_index_html,
+    config_html_body_header_html,
+    config_html_body_footer_html,
+    config_html_article_header_html,
+    config_html_article_footer_html,
+    config_base_url,
+    config_edit_url,
 
-        log_unsupported_blocks,
-        log_urls,
-        **ignored
-    ):
+    log_unsupported_blocks,
+    log_urls,
+    **ignored
+):
     config = json.load(open(config_json)) if config_json else {}
     if config_html_details_open:
         config['html_details_open'] = config_html_details_open
@@ -1405,7 +1345,6 @@ def notionapi2notionjson(
         **ignored
     ):
     import notion_client
-
     notionapi = notion_client.Client(auth = notion_token)
 
     config = json.load(open(config_json)) if config_json else {}
@@ -1419,7 +1358,9 @@ def notionapi2notionjson(
     #notion_pages = {block_id : block for block_id, block in notion_pages_and_databases.items() if (block.get('object') or block.get('type')) in ['page', 'child_page']}
     #notion_databases = {block_id : block for block_id, block in notion_pages_and_databases.items() if (block.get('object') or block.get('type')) in ['database', 'child_database']}
     notion_pages_flat = copy.deepcopy(notion_pages)
-    child_pages_by_parent_id = {k: v for page_id, page in notion_pages_flat.items() for k, v in __pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
+    child_pages_by_parent_id = {}
+    for page_id, page in notion_pages_flat.items():
+        pop_and_replace_child_pages_recursively(page, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = page_id)
     child_pages_by_id = {child_page['id'] : child_page for parent_id, pages in child_pages_by_parent_id.items() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
     notion_assets = download_assets_to_dict(notion_pages.values()) if download_assets else {}
@@ -1452,12 +1393,6 @@ def notionjson2markdown(
     output_path,
     **ignored
 ):
-    # TODO: rstrip all <br /> at page end
-    # TODO: delete plain_text: ' ' empty text blocks
-    # TODO: optional frontmatter gen
-    # TODO: delete useless "> \n" in callout, ex https://github.com/vadimkantorov/notionfun/edit/gh-pages/_markdown/visa-c.md
-    # TODO: can deploy pre-generated html?
-
     with open(input_json, "r") as f:
         notion_cache = json.load(f)
    
@@ -1524,6 +1459,7 @@ if __name__ == '__main__':
         assert args.input_json
         if os.path.exists(args.input_json) and os.path.isfile(args.input_json):
             notionjson2html(**vars(args))
+
         elif os.path.exists(args.input_json) and os.path.isdir(args.input_json):
             file_paths_recursive_json = [os.path.join(dirpath, basename) for dirpath, dirnames, filenames in os.walk(args.input_json) for basename in filenames if basename.endswith('.json')]
             for file_path in file_paths_recursive_json:
