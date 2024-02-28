@@ -305,7 +305,7 @@ def prepare_notion_content(raw_notion: dict, args) -> dict:
    
     ##########################
 
-    slug = json.load(open(args.pages_json)) if args.pages_json else {}
+    slug = (json.load(open(args.config_json)) if args.config_json else {}).get('slugs', {})
     
     raw_notion = raw_notion['pages']
     raw_notion = raw_notion.copy()
@@ -451,9 +451,9 @@ if __name__ == "__main__":
     parser.add_argument('--input-path', '-i')
     parser.add_argument('--output-dir', '-o')
     parser.add_argument('--assets-dir', default = './_assets')
-    parser.add_argument('--pages-json')
-    parser.add_argument('--html-details-open', action = 'store_true')
-    parser.add_argument('--extract-markdown', choices = ['flat', 'single'], default = 'flat')
+    parser.add_argument('--config-json')
+    parser.add_argument('--config-html-details-open', action = 'store_true')
+    parser.add_argument('--extract-mode', choices = ['flat', 'single'], default = 'flat')
     args = parser.parse_args()
     print(args)
     main(args)

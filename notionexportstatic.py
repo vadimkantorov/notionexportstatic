@@ -691,23 +691,9 @@ def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}
             asset_path = os.path.join(assets_dir, asset['name'])
             with open(asset_path, 'wb') as f:
                 f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
-            asset['uri'] = 'file:///' + asset_path
+            asset['uri'] = 'file:///' +  '/'.join(asset_path.split(os.path.sep))
             print(asset_path)
     return assets
-
-def __prepare_and_extract_assets(notion_pages, assets_dir, notion_assets = {}, extract_assets = False):
-    urls = discover_assets(notion_pages.values(), [])
-    assets = {url : notion_assets[url] for url in urls}
-    if extract_assets and assets:
-        os.makedirs(assets_dir, exist_ok = True)
-        for asset in assets.values():
-            asset_path = os.path.join(assets_dir, asset['name'])
-            with open(asset_path, 'wb') as f:
-                f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
-            asset['uri'] = 'file:///' + '/'.join(asset_path.split(os.path.sep))
-            print(asset_path)
-    return assets
-
 
 def extract8html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_flat = {}, extract_assets = False, child_pages_by_parent_id = {}, index_html = False, mode = ''):
     notion_assets = ctx.get('assets', {})
@@ -733,11 +719,11 @@ def extract8html(output_path, ctx, sitepages2html, page_ids = [], notion_pages_f
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract8html(page_dir, ctx = ctx, page_ids = [child_page['id'] for child_page in child_pages], notion_pages_flat = notion_pages_flat, child_pages_by_parent_id = child_pages_by_parent_id, index_html = index_html, extract_assets = extract_assets, sitepages2html = sitepages2html, mode = mode)
 
-def extract8json(output_path, notion_assets = {}, notion_pages = {}, child_pages_by_id = {}, extract_assets = False, unix_seconds_begin = 0, unix_seconds_end = 0, notion_slugs = {}, child_pages_by_parent_id = {}, extract_json_use_page_title_for_missing_slug = False, mode = ''):
+def extract8json(output_path, ctx, notion_assets = {}, notion_pages = {}, child_pages_by_id = {}, extract_assets = False, notion_slugs = {}, child_pages_by_parent_id = {}, extract_json_use_page_title_for_missing_slug = False, extract_mode = ''):
     notion_pages |= child_pages_by_id
-    if mode in ['single', 'singleflat']:
-        notion_cache = dict(pages = notion_pages, assets = notion_assets, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
-        notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], assets_dir = output_path + '_files', notion_assets = notion_cache['assets'], extract_assets = extract_assets)
+    if extract_mode in ['single', 'singleflat']:
+        notion_cache = dict(pages = notion_pages, assets = notion_assets, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
+        notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_cache['assets'], extract_assets = extract_assets)
         with open(output_path, 'w', encoding = 'utf-8') as f:
             json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
         return print(output_path)
@@ -749,21 +735,20 @@ def extract8json(output_path, notion_assets = {}, notion_pages = {}, child_pages
         json_path = os.path.join(output_path, slug + '.json')
         with open(json_path, 'w', encoding = 'utf-8') as f:
             assets_dir = os.path.join(output_path, slug + '_files')
-            notion_assets_for_block = prepare_and_extract_assets({block['id'] : block}, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
-            notion_cache = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = unix_seconds_begin, unix_seconds_end = unix_seconds_end)
+            notion_assets_for_block = prepare_and_extract_assets({block['id'] : block}, ctx = ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
+            notion_cache = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
             json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
         print(json_path)
         if children := child_pages_by_parent_id.pop(page_id, []):
             extract8json(
-                os.path.join(output_path, slug), 
+                os.path.join(output_path, slug),
+                ctx,
                 notion_assets = notion_assets, 
                 notion_pages = {child['id'] : child for child in children}, 
                 notion_slugs = notion_slugs, 
                 child_pages_by_parent_id = child_pages_by_parent_id, 
                 extract_assets = extract_assets, 
-                mode = mode, 
-                unix_seconds_begin = unix_seconds_begin, 
-                unix_seconds_end = unix_seconds_end
+                extract_mode = extract_mode, 
             )
             
 def get_block_index(ctx):
@@ -969,7 +954,8 @@ def notionapi2notionjson(
         extract_mode,
         extract_json_use_page_title_for_missing_slug,
         extract_assets,
-        download_assets
+        download_assets,
+        log_urls,
         **ignored
     ):
     import notion_client
@@ -994,13 +980,19 @@ def notionapi2notionjson(
     unix_seconds_end = int(time.time())
     output_path = output_path if output_path else '_'.join(notion_page_id)
     output_path = output_path if output_path or extract_mode not in ['single', 'singleflat'] else (output_path + '.json')
+    
+    ctx = {}
+    ctx['log_urls'] = open(log_urls if log_urls else os.devnull , 'w')
+    ctx['output_path'] = output_path
+    ctx['unix_seconds_begin'] = unix_seconds_begin
+    ctx['unix_seconds_end'] = unix_seconds_end
+    
     extract8json(
-        output_path, 
+        ctx['output_path'], 
+        ctx = ctx,
         notion_assets = notion_assets, 
         extract_assets = extract_assets, 
-        unix_seconds_begin = unix_seconds_begin, 
-        unix_seconds_end = unix_seconds_end, 
-        mode = extract_extract, 
+        extract_mode = extract_mode, 
         notion_slugs = notion_slugs, 
         notion_pages = notion_pages if extract_mode == 'single' else notion_pages_flat,
         child_pages_by_id = child_pages_by_id if extract_mode == 'flat' else {}, 
@@ -1011,7 +1003,7 @@ def notionapi2notionjson(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argumnet('--action', default = 'notionjson2html' choices = ['notionjson2html', 'notionapi2notionjson'])
+    parser.add_argument('--action', default = 'notionjson2html', choices = ['notionjson2html', 'notionapi2notionjson'])
     parser.add_argument('--input-json', '-i')
     parser.add_argument('--output-path', '-o')
     parser.add_argument('--notion-token', default = os.getenv('NOTION_TOKEN', ''))
