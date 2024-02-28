@@ -2,8 +2,6 @@
 # TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 # TODO: image: fixup url from assets; when to embed image
 
-# TODO: bookmark or link_preview: generate social media card: title, maybe description, favicon
-
 # https://docs.super.so/super-css-classes
 
 import os
