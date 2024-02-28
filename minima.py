@@ -9,7 +9,7 @@
 # TODO: add hover style fof breadcrumb
 # TODO: make whole TOC links clickable
 
-def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2html = (lambda page, ctx: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
+def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cookies = True, block2html = (lambda page, ctx: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
     page_id = page_ids[0]
     
     html_header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx)
@@ -20,10 +20,10 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, bloc
 
     css_style = css_notion + css_notion_colors + css_notion_colors_classic + css_twitter_emoji_font + css_minimacss_classic 
     
-    return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html)
+    return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html, html_cookies_notice = html_cookies_notice if cookies else '')
 
 html_cookies_notice = '''
-<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">cookies</div>
+<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice</div>
 '''
 
 layout_page =  '''
@@ -36,6 +36,7 @@ layout_page =  '''
         </style>
     </head>
     <body>
+        {html_cookies_notice}
         {html_body_header_html}
         <header class="site-header notion-topbar">
             {html_header}
@@ -72,7 +73,7 @@ css_notion = '''
 .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block {scroll-margin-top: 60px !important}
 
 .notion-column-block { display:flex; flex-direction: column; }
-.notion-column_list-block { display:flex; flex-direction: row; }
+.notion-column_list-block { display:flex; flex-direction: row; justify-content: space-between; }
 .notion_column_list-block-vertical { flex-direction: column!important;}
 
 .notion-callout-block { display:flex; }

@@ -679,8 +679,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx)
 
-    src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug)
-    html_edit_link = src_edit if ctx.get('edit_url') else page_url
+    src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else page_url
     
     html_anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a><a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
     
