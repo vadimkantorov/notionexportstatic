@@ -1484,7 +1484,7 @@ def notionjson2markdown(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--action', default = 'notionjson2html', choices = ['notionjson2html', 'notionapi2notionjson'])
+    parser.add_argument('--action', default = 'notionjson2html', choices = ['notionjson2html', 'notionapi2notionjson', 'notionjson2markdown'])
     parser.add_argument('--input-json', '-i')
     parser.add_argument('--output-path', '-o')
     parser.add_argument('--notion-token', default = os.getenv('NOTION_TOKEN', ''))
