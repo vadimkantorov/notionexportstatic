@@ -363,8 +363,17 @@ def file(block, ctx, tag = 'a', class_name = 'notion-file-block'):
     return link_like(block, ctx, tag = tag, class_name = class_name, line_break = True)
 
 def bookmark(block, ctx, tag = 'a', class_name = 'notion-bookmark-block'):
-    # TODO: div and domain name on top: www.ofii.fr, all clickable
-    return link_like(block, ctx, tag = tag, class_name = class_name, full_url_as_caption = True, line_break = True)
+    block_type = block.get('type', '')
+    src = block[block_type].get('url') or block[block_type].get('file', {}).get('url') or block[block_type].get('external', {}).get('url') or block[block_type].get('url') or block.get('href') or ''
+    html_text = richtext2html(block[block_type].get('caption', []), ctx) or block[block_type].get('name') or block.get('plain_text') or src
+    
+    try:
+        netloc = urllib.parse.urlparse(src).netloc
+    except:
+        netloc = ''
+
+    html = f'<figure>{netloc}<br/><figcaption>{html_text}</figcaption></figure>'
+    return open_block(block, ctx, tag = tag, attrs = dict(href = src), class_name = class_name, set_html_contents_and_close = html)
 
 def link_preview(block, ctx, tag = 'a', class_name = 'notion-link_preview-block'):
     return link_like(block, ctx, tag = tag, class_name = class_name, line_break = True)

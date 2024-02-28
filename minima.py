@@ -89,7 +89,7 @@ css_notion = '''
 
 .notion-bookmark-block { border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
 
-.notion-bookmark-block::before { content: "🔖" }
+.notion-bookmark-block figcaption::before { content: "🔖" }
 .notion-link_preview-block::before { content: "🌐" }
 .notion-file-block::before { content: "📎" }
 .notion-pdf-block figcaption::before { content: "📄" }
