@@ -3,7 +3,6 @@
 # TODO: image: fixup url from assets; when to embed image
 
 # TODO: bookmark or link_preview: generate social media card: title, maybe description, favicon
-# TODO: add cmdline option for pages/headings links to notion ✏️
 
 # https://docs.super.so/super-css-classes
 
@@ -25,7 +24,7 @@ import unicodedata
 
 def open_block(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
-    notion_attrs = ' data-block-id="{id}" '.format(id = block.get('id', '')) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
+    notion_attrs = (' data-block-id="{id}" '.format(id = block.get('id', ''))) * bool(block.get('id')) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
     return (f'<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>' if set_html_contents_and_close else '')) if tag else ''
 
 def close_block(tag = ''):
@@ -235,9 +234,14 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     page_title = html.escape(get_page_title(block, ctx))
     page_emoji = get_page_emoji(block, ctx)
     page_url = get_page_url(block, ctx)
-    page_slug = get_page_slug(page_id, ctx) 
+    page_slug = get_page_slug(page_id, ctx)
+
+    src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug)
+    html_edit_link = src_edit if ctx.get('edit_url') else page_url
     
-    return open_block(block, ctx, tag = tag, attrs = {'id': page_slug, 'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header id="{page_id_no_dashes}" class="{class_name_header}"><img src="{src}"></img><h1 class="notion-record-icon">{page_emoji}</h1><h1 class="{class_name} {class_name_page_title}">{page_title}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
+    html_anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a><a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
+    
+    return open_block(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header class="{class_name_header}"><img src="{src}" alt="{page_title}"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{html_anchor}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
@@ -685,6 +689,8 @@ def main(
         config['html_article_header_html'] = config_html_article_header_html
     if config_html_article_footer_html:
         config['html_article_footer_html'] = config_html_article_footer_html
+    if config_edit_url:
+        config['edit_url'] = config_edit_url
 
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
 
@@ -717,6 +723,7 @@ def main(
     ctx['html_details_open'] = config.get('html_details_open', False)
     ctx['html_columnlist_disable'] = config.get('html_columnlist_disable', False)
     ctx['html_link_to_page_index_html'] = config.get('html_link_to_page_index_html', False)
+    ctx['edit_url'] = config.get('edit_url', '')
     ctx['slugs'] = config.get('slugs', {})
    
     ctx['sitemap'] = sitemap

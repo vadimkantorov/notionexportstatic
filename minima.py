@@ -53,14 +53,16 @@ layout_page =  '''
 
 css_notion = '''
 
-.notion-heading-like-icon::after { content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath d='m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z'%3E%3C/path%3E%3C/svg%3E") }
+.notion-page-like-icon::after, .notion-heading-like-icon::after { content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath d='m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z'%3E%3C/path%3E%3C/svg%3E") }
+.notion-page-like-edit-icon::after { content: "✏️"; font-size: 0.4em; }
+
+.notion-page-like-icon, .notion-page-like-edit-icon , .notion-heading-like-icon { visibility : hidden; }
+
+.notion-page-block:hover > .notion-page-like-icon, .notion-page-block:hover > .notion-page-like-edit-icon, .notion-heading-like:hover > .notion-heading-like-icon { visibility : visible !important; }
+
+.notion-heading-like:hover > summary .notion-heading-like-icon { visibility : visible !important; }
 
 .notion-table_of_contents-site-header::after { content: "#" }
-
-.notion-heading-like-icon { visibility : hidden; }
-
-.notion-heading-like:hover > .notion-heading-like-icon { visibility : visible !important; }
-.notion-heading-like:hover > summary .notion-heading-like-icon { visibility : visible !important; }
 
 .notion-topbar                 { font-family: 'Twemoji Country Flags', sans-serif !important; position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
 .notion-record-icon            { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 78px  !important; line-height: 1.1 !important; margin-left: 0 !important; }
@@ -99,7 +101,9 @@ css_notion = '''
 
 .notion-pdf-block iframe, .notion-embed-block iframe { width: 100% !important; height: 500px; border: 0!important}
 
-.notion-page { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
+.notion-page { page-break-after: always; page-break-inside: avoid; }
+
+.notion-page-block, .notion-page { scroll-margin-top: 60px !important  }
 
 .notion-toggle-block>summary>h1, .notion-toggle-block>summary>h2, .notion-toggle-block>summary>h3 { display:inline !important; }
 
