@@ -1110,7 +1110,7 @@ def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}
             print(asset_path)
     return assets
 
-def extract8html(
+def extract_html(
     output_path, 
     ctx, 
     sitepages2html, 
@@ -1142,7 +1142,7 @@ def extract8html(
             f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages_flat))
         print(html_path)
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
-            extract8html(
+            extract_html(
                 page_dir, 
                 ctx = ctx, 
                 page_ids = [child_page['id'] for child_page in child_pages], 
@@ -1154,7 +1154,7 @@ def extract8html(
                 mode = mode
             )
 
-def extract8json(
+def extract_json(
     output_path, 
     ctx, 
     notion_assets = {}, 
@@ -1186,7 +1186,7 @@ def extract8json(
             json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
         print(json_path)
         if children := child_pages_by_parent_id.pop(page_id, []):
-            extract8json(
+            extract_json(
                 os.path.join(output_path, slug),
                 ctx,
                 notion_assets = notion_assets, 
@@ -1231,7 +1231,7 @@ def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
     return page_parent_paths
 
 
-def download8assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}):
+def download_assets_to_dict(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}):
     urls = discover_assets(blocks, [], exclude_datauri = False)
     notion_assets = {} 
     for url in urls:
@@ -1380,7 +1380,7 @@ def notionjson2html(
 
     read_html_snippet = lambda path: open(path).read() if path and os.path.exists(path) else ''
     sitepages2html = functools.partial(theme.sitepages2html, block2html = block2html, toc = config.get('html_toc', False), html_body_header_html = read_html_snippet(config.get('html_body_header_html', '')), html_body_footer_html = read_html_snippet(config.get('html_body_footer_html', '')), html_article_header_html = read_html_snippet(config.get('html_article_header_html', '')), html_article_footer_html = read_html_snippet(config.get('html_article_footer_html', '')))
-    extract8html(
+    extract_html(
         ctx['output_path'], 
         ctx, 
         sitepages2html = sitepages2html, 
@@ -1422,7 +1422,7 @@ def notionapi2notionjson(
     child_pages_by_parent_id = {k: v for page_id, page in notion_pages_flat.items() for k, v in __pop_and_replace_child_pages_recursively(page, parent_id = page_id).items()}
     child_pages_by_id = {child_page['id'] : child_page for parent_id, pages in child_pages_by_parent_id.items() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
-    notion_assets = download8assets(notion_pages.values()) if download_assets else {}
+    notion_assets = download_assets_to_dict(notion_pages.values()) if download_assets else {}
     unix_seconds_end = int(time.time())
     output_path = output_path if output_path else '_'.join(notion_page_id)
     output_path = output_path if output_path or extract_mode not in ['single', 'singleflat'] else (output_path + '.json')
@@ -1433,7 +1433,7 @@ def notionapi2notionjson(
     ctx['unix_seconds_begin'] = unix_seconds_begin
     ctx['unix_seconds_end'] = unix_seconds_end
     
-    extract8json(
+    extract_json(
         ctx['output_path'], 
         ctx = ctx,
         notion_assets = notion_assets, 
