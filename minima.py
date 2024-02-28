@@ -87,6 +87,12 @@ css_notion = '''
 
 .notion-bookmark-block { border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
 
+.notion-bookmark-block::before { content: "🔖" }
+.notion-link_preview-block::before { content: "🌐" }
+.notion-file-block::before { content: "📎" }
+.notion-pdf-block figcaption::before { content: "📄" }
+.notion-child_database-block figcaption::before { content: "📚" }
+
 .notion-pdf-block iframe, .notion-embed-block iframe { width: 100% !important; height: 500px; border: 0!important}
 
 .notion-page { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
