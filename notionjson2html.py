@@ -4,7 +4,6 @@
 
 # TODO: bookmark or link_preview: generate social media card: title, maybe description, favicon
 # TODO: add cmdline option for pages/headings links to notion ✏️
-# TODO: move emoji's to CSS
 
 # https://docs.super.so/super-css-classes
 
@@ -419,10 +418,10 @@ def mention(block, ctx, tag = 'div', class_name = dict(page = 'notion-page-menti
   
     if mention_type == 'page':
         page_id = mention_payload.get('id', '')
-        return link_to_page(dict(block, type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, html_icon = '📄⤷', class_name = class_name[mention_type])
+        return link_to_page(dict(block, type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, class_name = class_name[mention_type])
 
     if mention_type == 'database':
-        return link_like(block, ctx, html_icon = '🗃️⤷', class_name = class_name[mention_type])
+        return link_like(block, ctx, class_name = class_name[mention_type])
 
     if mention_type == 'link_preview':
         return link_preview(block, ctx, class_name = class_name[mention_type])
@@ -433,8 +432,8 @@ def mention(block, ctx, tag = 'div', class_name = dict(page = 'notion-page-menti
         return open_block(block, ctx, tag = 'strong', class_name = class_name[mention_type], set_html_contents_and_close = f'@{user_name}#{user_id}')
 
     if mention_type == 'date':
-        date_text = block.get('plain_text', '')
-        return open_block(block, ctx, tag = 'strong', class_name = class_name[mention_type], set_html_contents_and_close = f'@{date_text}⏰')
+        date_text = html.escape(block.get('plain_text', ''))
+        return open_block(block, ctx, tag = 'strong', class_name = class_name[mention_type], set_html_contents_and_close = f'@{date_text}')
     
     return unsupported(block, ctx)
 

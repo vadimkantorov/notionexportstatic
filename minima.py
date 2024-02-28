@@ -93,6 +93,10 @@ css_notion = '''
 .notion-pdf-block figcaption::before { content: "📄" }
 .notion-child_database-block figcaption::before { content: "📚" }
 
+.notion-database-mention-token::before { content: "🗃️⤷" }
+.notion-page-mention-token::before { content: "📄⤷" }
+.notion-date-mention-token::after { content: "⏰" }
+
 .notion-pdf-block iframe, .notion-embed-block iframe { width: 100% !important; height: 500px; border: 0!important}
 
 .notion-page { page-break-after: always; page-break-inside: avoid; scroll-margin-top: 60px !important }
