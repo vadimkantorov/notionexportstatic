@@ -480,9 +480,9 @@ def open_block(block = {}, ctx = {}, class_name = '', tag = '', selfclose = Fals
 def close_block(tag = ''):
     return f'</{tag}>\n' if tag else ''
 
-def children_like(block, ctx, key = 'children', tag = ''):
+def children_like(block, ctx, key = ['children', 'blocks'], tag = ''):
     html = ''
-    subblocks = block.get(key, []) or block.get(block.get('type'), {}).get(key, [])
+    subblocks = sum([block.get(k, []) or block.get(block.get('type'), {}).get(k, []) for k in key], [])
     for i, subblock in enumerate(subblocks):
         same_block_type_as_prev = i > 0 and subblock.get('type') == subblocks[i - 1].get('type')
         same_block_type_as_next = i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type')
@@ -676,6 +676,23 @@ def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
         page_parent_paths[page_id] = parent_path
     return page_parent_paths
 
+def get_page_parent_paths_2(notion_pages_flat, ctx):
+    page_parent_paths = {}
+    for page_id in notion_pages_flat:
+        block_id = page_id
+        parent_path = []
+        header_parent_page_id = page_id
+        while True:
+            block = ctx['id2block'][block_id]
+            if (block.get('type') or block.get('object')) in ['page', 'child_page']:
+                parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id), plain_text = get_page_title(block, ctx, untitled = '')))
+            parent_id = block['parent'].get(block['parent'].get('type'))
+            if parent_id not in ctx['id2block']:
+                break
+            block_id = parent_id
+        page_parent_paths[page_id] = parent_path
+    return page_parent_paths
+
 
 def get_page_relative_link(page_url_base, page_url_target):
     base_path, base_fragment = page_url_base.split('#') if '#' in page_url_base else (page_url_base, None)
@@ -710,8 +727,8 @@ def get_page_headings(block, ctx):
 def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
     dt_modified = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_end', 0)).strftime(strftime) if ctx.get('unix_seconds_end', 0) else ''
     dt_published = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
-    src = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
-    src = ctx['assets'].get(src, {}).get('uri', src)
+    src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
+    src_cover = ctx['assets'].get(src_cover, {}).get('uri', src_cover)
 
     page_id = block.get('id', '')
     page_id_no_dashes = page_id.replace('-', '')
@@ -725,7 +742,7 @@ def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     
     html_anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a><a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
     
-    return open_block(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header class="{class_name_header}"><img src="{src}"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{html_anchor}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="downloaded @{dt_modified or dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx, key = 'blocks' if 'blocks' in block else 'children') + f'\n</div>{html_suffix}' + close_block(tag)
+    return open_block(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page) + f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{html_anchor}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} -> @{dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + children_like(block, ctx) + f'\n</div>{html_suffix}' + close_block(tag)
 
 
 def table_of_contents(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
@@ -907,7 +924,7 @@ def child_database(block, ctx, tag = 'figure', class_name = 'notion-child_databa
 def breadcrumb(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'):
     page_block = get_page_current(block, ctx)
     page_id = page_block['id']
-    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(block2html(subblock, ctx).replace('<br/>', '') for subblock in reversed(ctx['page_parent_paths'][page_id])))
+    return open_block(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(link_to_page(subblock, ctx, html_suffix = '') for subblock in reversed(ctx['page_parent_paths'][page_id])))
 
 def mention(block, ctx, tag = 'div', class_name = dict(page = 'notion-page-mention-token', database = 'notion-database-mention-token', link_preview = 'notion-link-mention-token', user = 'notion-user-mention-token', date = 'notion-date-mention-token'), untitled = 'Untitled'):
     mention_type = block['mention'].get('type')
@@ -1030,7 +1047,6 @@ def sitemap_urlset_write(urlset, path):
     
     with open(path, 'w') as fp:
         node_doc.writexml(fp, addindent = '  ', newl = '\n')
-
 
 def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}, parent_id = None):
     block_type = block.get('type') or block.get('object')
@@ -1306,7 +1322,8 @@ def notionjson2html(
     ctx['page_ids'] = page_ids
     ctx['child_pages_by_parent_id'] = child_pages_by_parent_id
     ctx['id2block'] = get_block_index(ctx)
-    ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = child_pages_by_id)
+    ctx['page_parent_paths'] = get_page_parent_paths_2(notion_pages_flat, ctx)
+    #ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = child_pages_by_id)
 
     ctx['log_unsupported_blocks'] = open(log_unsupported_blocks if log_unsupported_blocks else os.devnull , 'w')
     ctx['log_urls'] = open(log_urls if log_urls else os.devnull , 'w')
@@ -1393,7 +1410,7 @@ def notionjson2markdown(
     output_path,
     **ignored
 ):
-    with open(input_json, "r") as f:
+    with open(input_json) as f:
         notion_cache = json.load(f)
    
     output_dir = output_path
