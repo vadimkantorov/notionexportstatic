@@ -492,6 +492,7 @@ def children_like(block, ctx, key = ['children', 'blocks'], tag = ''):
 def richtext2html(block, ctx = {}, title_mode = False, html_escape = html.escape):
     # https://www.notion.so/help/customize-and-style-your-content#markdown
     # https://developers.notion.com/reference/rich-text
+    #default_annotations = dict(bold = False, italic = False, strikethrough = False, underline = False, code = False, color = "default")
 
     if isinstance(block, list):
         return ''.join(richtext2html(subblock, ctx, title_mode = title_mode) for subblock in block).strip()
@@ -499,8 +500,6 @@ def richtext2html(block, ctx = {}, title_mode = False, html_escape = html.escape
     plain_text = block['plain_text']
     anno = block['annotations']
     href = block.get('href', '')
-    
-    #default_annotations = dict(bold = False, italic = False, strikethrough = False, underline = False, code = False, color = "default")
     
     if block['type'] == 'mention':
         return mention(block, ctx)
@@ -593,8 +592,9 @@ def get_page_current(block, ctx):
         parent_block = ctx['id2block'][parent_id]
     return parent_block
 
-def get_page_slug(page_id, ctx):
-    return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id.replace('-', '')) or page_id.replace('-', '')
+def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False):
+    page_id_no_dashes = page_id.replace('-', '')
+    return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id_no_dashes) or page_id_no_dashes
 
 def get_slug(s, space = '_', lower = True):
     s = unicodedata.normalize('NFKC', s)
@@ -652,31 +652,7 @@ def get_block_index(ctx):
    
     return id2block | id2block_no_dashes
 
-def get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = {}):
-    id2block = {}
-    stack = list(ctx['pages'].values()) + list(child_pages_by_id.values())
-    while stack:
-        top = stack.pop()
-        id2block[top.get('id')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
-    
-    page_parent_paths = {}
-    for page_id in notion_pages_flat.keys() | child_pages_by_id.keys():
-        block_id = page_id
-        parent_path = []
-        header_parent_page_id = page_id
-        while True:
-            block = id2block[block_id]
-            if (block.get('type') or block.get('object')) in ['page', 'child_page']:
-                parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id), plain_text = get_page_title(block, ctx, untitled = '')))
-            parent_id = block['parent'].get(block['parent'].get('type'))
-            if parent_id not in id2block:
-                break
-            block_id = parent_id
-        page_parent_paths[page_id] = parent_path
-    return page_parent_paths
-
-def get_page_parent_paths_2(notion_pages_flat, ctx):
+def get_page_parent_paths(notion_pages_flat, ctx):
     page_parent_paths = {}
     for page_id in notion_pages_flat:
         block_id = page_id
@@ -1035,6 +1011,7 @@ def sitemap_urlset_read(path):
     return [{n.nodeName : ''.join(nn.nodeValue for nn in n.childNodes if nn.nodeType == nn.TEXT_NODE) for n in node_url.childNodes if n.nodeType == n.ELEMENT_NODE} for node_url in node_doc.documentElement.getElementsByTagName('url')]
     
 def sitemap_urlset_write(urlset, path):
+    # https://sitemaps.org/protocol.html
     node_doc = xml.dom.minidom.Document()
     node_root = node_doc.appendChild(node_doc.createElement('urlset'))
     node_root.setAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
@@ -1193,37 +1170,34 @@ def extract_json(
     notion_pages = {}, 
     child_pages_by_id = {}, 
     extract_assets = False, 
-    notion_slugs = {}, 
     child_pages_by_parent_id = {}, 
     extract_json_use_page_title_for_missing_slug = False, 
     extract_mode = ''
 ):
     notion_pages |= child_pages_by_id
     if extract_mode in ['single', 'singleflat']:
-        notion_cache = dict(pages = notion_pages, assets = notion_assets, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
-        notion_cache['assets'] = prepare_and_extract_assets(notion_pages = notion_cache['pages'], ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_cache['assets'], extract_assets = extract_assets)
+        notionjson = dict(pages = notion_pages, assets = notion_assets, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
+        notionjson['assets'] = prepare_and_extract_assets(notion_pages = notionjson['pages'], ctx = ctx, assets_dir = output_path + '_files', notion_assets = notionjson['assets'], extract_assets = extract_assets)
         with open(output_path, 'w', encoding = 'utf-8') as f:
-            json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
+            json.dump(notionjson, f, ensure_ascii = False, indent = 4)
         return print(output_path)
     os.makedirs(output_path, exist_ok = True)
     for page_id, block in notion_pages.items():
         os.makedirs(output_path, exist_ok = True)
-        page_title = ' '.join(t['plain_text'] for t in block.get("properties", {}).get("title", {}).get("title", [])) if len(block.get("properties",{}).get('title', {}).get('title', [])) > 0 else (block.get('child_page', {}).get('title') or block.get('title', ''))
-        slug = notion_slugs.get(page_id) or notion_slugs.get(page_id.replace('-', '')) or (get_slug(page_title, space = '_') if extract_json_use_page_title_for_missing_slug else None) or page_id.replace('-', '')
-        json_path = os.path.join(output_path, slug + '.json')
+        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = extract_json_use_page_title_for_missing_slug)
+        json_path = os.path.join(output_path, page_slug + '.json')
         with open(json_path, 'w', encoding = 'utf-8') as f:
-            assets_dir = os.path.join(output_path, slug + '_files')
+            assets_dir = os.path.join(output_path, page_slug + '_files')
             notion_assets_for_block = prepare_and_extract_assets({block['id'] : block}, ctx = ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
-            notion_cache = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
-            json.dump(notion_cache, f, ensure_ascii = False, indent = 4)
+            notionjson = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
+            json.dump(notionjson, f, ensure_ascii = False, indent = 4)
         print(json_path)
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract_json(
-                os.path.join(output_path, slug),
+                os.path.join(output_path, page_slug),
                 ctx,
                 notion_assets = notion_assets, 
                 notion_pages = {child['id'] : child for child in child_pages}, 
-                notion_slugs = notion_slugs, 
                 child_pages_by_parent_id = child_pages_by_parent_id, 
                 extract_assets = extract_assets, 
                 extract_mode = extract_mode, 
@@ -1278,9 +1252,9 @@ def notionjson2html(
 
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
 
-    notion_cache = json.load(open(input_json)) if input_json else {}
-    notion_assets = notion_cache.get('assets', {})
-    notion_pages = notion_cache.get('pages', {})
+    notionjson = json.load(open(input_json)) if input_json else {}
+    notion_assets = notionjson.get('assets', {})
+    notion_pages = notionjson.get('pages', {})
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
     notion_slugs = config.get('slugs', {})
 
@@ -1315,15 +1289,14 @@ def notionjson2html(
     ctx['output_path'] = output_path if output_path else '_'.join(notion_page_id) if extract_mode != 'single' else (input_json.removesuffix('.json') + '.html')
     ctx['extract_mode'] = extract_mode
     ctx['assets'] = notion_assets
-    ctx['unix_seconds_begin'] = notion_cache.get('unix_seconds_begin', 0)
-    ctx['unix_seconds_end'] = notion_cache.get('unix_seconds_end', 0)
+    ctx['unix_seconds_begin'] = notionjson.get('unix_seconds_begin', 0)
+    ctx['unix_seconds_end'] = notionjson.get('unix_seconds_end', 0)
     ctx['unix_seconds_generated'] = int(time.time())
     ctx['pages'] = notion_pages_flat
     ctx['page_ids'] = page_ids
     ctx['child_pages_by_parent_id'] = child_pages_by_parent_id
     ctx['id2block'] = get_block_index(ctx)
-    ctx['page_parent_paths'] = get_page_parent_paths_2(notion_pages_flat, ctx)
-    #ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx, child_pages_by_id = child_pages_by_id)
+    ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx)
 
     ctx['log_unsupported_blocks'] = open(log_unsupported_blocks if log_unsupported_blocks else os.devnull , 'w')
     ctx['log_urls'] = open(log_urls if log_urls else os.devnull , 'w')
@@ -1390,6 +1363,7 @@ def notionapi2notionjson(
     ctx['output_path'] = output_path
     ctx['unix_seconds_begin'] = unix_seconds_begin
     ctx['unix_seconds_end'] = unix_seconds_end
+    ctx['slugs'] = notion_slugs
     
     extract_json(
         ctx['output_path'], 
@@ -1397,7 +1371,6 @@ def notionapi2notionjson(
         notion_assets = notion_assets, 
         extract_assets = extract_assets, 
         extract_mode = extract_mode, 
-        notion_slugs = notion_slugs, 
         notion_pages = notion_pages if extract_mode == 'single' else notion_pages_flat,
         child_pages_by_id = child_pages_by_id if extract_mode == 'flat' else {}, 
         child_pages_by_parent_id = child_pages_by_parent_id if extract_mode == 'nested' else {}, 
@@ -1411,11 +1384,11 @@ def notionjson2markdown(
     **ignored
 ):
     with open(input_json) as f:
-        notion_cache = json.load(f)
+        notionjson = json.load(f)
    
     output_dir = output_path
     isoparse = "%Y-%m-%dT%H:%M:%S.%fZ"
-    ctx = prepare_notion_content(notion_cache, config_json = config_json, output_path = output_path)
+    ctx = prepare_notion_content(notionjson, config_json = config_json, output_path = output_path)
     ctx['base_url'] = output_dir
     ctx['archive_url'] = 'N/A'
     for page_id, page in ctx["pages"].items():
