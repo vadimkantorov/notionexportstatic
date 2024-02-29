@@ -1,6 +1,6 @@
-# TODO: use sitemap for resolving urls
 # TODO: prepare_and_extract_assets: first load in memory? or copy directly to target dir?
 # TODO: image: fixup url from assets; when to embed image
+# TODO: get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False):
 
 # https://docs.super.so/super-css-classes
     
@@ -480,9 +480,9 @@ def open_block(block = {}, ctx = {}, class_name = '', tag = '', selfclose = Fals
 def close_block(tag = ''):
     return f'</{tag}>\n' if tag else ''
 
-def children_like(block, ctx, key = ['children', 'blocks'], tag = ''):
+def children_like(block, ctx, tag = ''):
     html = ''
-    subblocks = sum([block.get(k, []) or block.get(block.get('type'), {}).get(k, []) for k in key], [])
+    subblocks = sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], [])
     for i, subblock in enumerate(subblocks):
         same_block_type_as_prev = i > 0 and subblock.get('type') == subblocks[i - 1].get('type')
         same_block_type_as_next = i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type')
@@ -592,9 +592,10 @@ def get_page_current(block, ctx):
         parent_block = ctx['id2block'][parent_id]
     return parent_block
 
-def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False):
+def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_slug = False):
     page_id_no_dashes = page_id.replace('-', '')
-    return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id_no_dashes) or page_id_no_dashes
+    page_title_slug = get_slug(get_page_title(ctx.get('id2block', {}).get(page_id), ctx)) or page_id_no_dashes
+    return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id_no_dashes) or (None if only_slug else (page_title_slug if use_page_title_for_missing_slug else page_id_no_dashes))
 
 def get_slug(s, space = '_', lower = True):
     s = unicodedata.normalize('NFKC', s)
@@ -618,10 +619,15 @@ def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
     s = prefix + s
     return s
 
-def get_page_relative_url(block, ctx):
-    page_id = block.get('link_to_page', {}).get('page_id', '') or (block.get('href', '').removeprefix('/') if block.get('href', '').startswith('/') else '') or block.get('id', '')
+def get_page_url_absolute(page_url_relative, ctx):
+    return (ctx['base_url'].rstrip('/') + page_url_relative.removeprefix('./')) if ctx.get('base_url') else ('file:///' + page_url_relative)
 
+def get_page_url_relative(block, ctx):
+    page_id = block.get('link_to_page', {}).get('page_id', '') or (block.get('href', '').removeprefix('/') if block.get('href', '').startswith('/') else '') or block.get('id', '')
+    page_id_no_dashes = page_id.replace('-', '')
+    
     page_slug = get_page_slug(page_id, ctx)
+    page_slug_only = get_page_slug(page_id, ctx, only_slug = True)
     is_index_page = page_slug == 'index'
     page_suffix = '/index.html'.removeprefix('/' if is_index_page else '') if ctx['html_link_to_page_index_html'] else ''
     
@@ -632,11 +638,22 @@ def get_page_relative_url(block, ctx):
         return './' + (page_suffix if is_index_page else page_slug + '.html')
     
     elif ctx['extract_mode'] == 'single':
-        #TODO: what to do for a single page generation but in fact some nested?
-        # maybe still retrieve from pages.json? or from sitemap.xml?
-        return './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
+        page_url_relative = './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
+
+        if page_slug_only:
+            return './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug_only)
+        
+        if (k := sitemap_urlset_find(ctx['sitemap'], page_id)) != -1:
+            return ctx['sitemap'][k].get('locrel') or page_url_relative
+
+        return page_url_relative 
+            
 
     elif ctx['extract_mode'] == 'nested':
+        if (k := sitemap_urlset_find(ctx['sitemap'], page_id)) != -1:
+            return ctx['sitemap'][k]['locrel']
+       
+        # TODO: check sitemap, check parent_path?
         return ''
         
     return ''
@@ -755,8 +772,8 @@ def link_to_page(block, ctx, tag = 'a', html_suffix = '<br/>', class_name = 'not
     page_slug = get_page_slug(page_id_no_dashes, ctx) 
     page_block = get_page_current(block, ctx)
     
-    page_url_base = get_page_relative_url(page_block, ctx)
-    page_url_target = get_page_relative_url(block, ctx)
+    page_url_base = get_page_url_relative(page_block, ctx)
+    page_url_target = get_page_url_relative(block, ctx)
     href = get_page_relative_link(page_url_base = page_url_base, page_url_target = page_url_target)
     
     page_block = ctx['id2block'].get(page_id_no_dashes)
@@ -999,16 +1016,16 @@ def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
     return block2render[block_type](block, ctx, **kwargs)
 
 def sitemap_urlset_read(path):
-    xml = ''
+    xmlstr = ''
     if path and os.path.exists(path):
         with open(path, 'r') as fp:
-            xml = f.read()
-    if not xml.strip():
+            xmlstr = fp.read()
+    if not xmlstr.strip():
         return []
 
-    node_doc = xml.dom.minidom.parseString(xml)
+    node_doc = xml.dom.minidom.parseString(xmlstr)
     assert node_doc.documentElement.nodeName == 'urlset'
-    return [{n.nodeName : ''.join(nn.nodeValue for nn in n.childNodes if nn.nodeType == nn.TEXT_NODE) for n in node_url.childNodes if n.nodeType == n.ELEMENT_NODE} for node_url in node_doc.documentElement.getElementsByTagName('url')]
+    return [dict({n.nodeName : ''.join(nn.nodeValue for nn in n.childNodes if nn.nodeType == nn.TEXT_NODE) for n in node_url.childNodes if n.nodeType == n.ELEMENT_NODE}, id = node_url.getAttribute('id')) for node_url in node_doc.documentElement.getElementsByTagName('url')]
     
 def sitemap_urlset_write(urlset, path):
     # https://sitemaps.org/protocol.html
@@ -1018,12 +1035,25 @@ def sitemap_urlset_write(urlset, path):
     node_root.setAttribute('xsi:schemaLocation', 'http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd')
     node_root.setAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9')
     for entry in urlset:
+        entry = entry.copy()
         node_url = node_root.appendChild(node_doc.createElement('url'))
+        if entry.get('id'):
+            node_url.setAttribute('id', entry.pop('id'))
         for field, value in entry.items():
             node_url.appendChild(node_doc.createElement(field)).appendChild(node_doc.createTextNode(str(value)))
     
     with open(path, 'w') as fp:
         node_doc.writexml(fp, addindent = '  ', newl = '\n')
+
+def sitemap_urlset_find(urlset, id):
+    return ([i for i, u in enumerate(urlset) if u['id'] == id or u['id'].replace('-', '') == id] or [-1])[0]
+
+def sitemap_urlset_update(urlset, id, loc, locrel = ''):
+    k = sitemap_urlset_find(urlset, id)
+    if k == -1:
+        urlset.append({})
+    urlset[k].update(dict(id = id, loc = loc, locrel = locrel))
+    return urlset
 
 def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}, parent_id = None):
     block_type = block.get('type') or block.get('object')
@@ -1074,7 +1104,7 @@ def download_assets_to_dict(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'im
             path = url
             datauri = url
         else:
-            # url sanitizatoin is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
+            # url sanitization is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
             urlparsed = urllib.parse.urlparse(url)
             try:
                 urlparsed.query.encode('ascii')
@@ -1128,7 +1158,8 @@ def extract_html(
     extract_assets = False, 
     child_pages_by_parent_id = {}, 
     index_html = False, 
-    mode = ''
+    mode = '',
+    use_page_title_for_missing_slug = False, 
 ):
     notion_assets = ctx.get('assets', {})
     if mode == 'single':
@@ -1136,20 +1167,30 @@ def extract_html(
         with open(output_path, 'w', encoding = 'utf-8') as f:
             f.write(sitepages2html(page_ids, ctx = ctx, notion_pages = notion_pages_flat))
         return print(output_path)
+
     os.makedirs(output_path, exist_ok = True)
     for page_id in page_ids:
         page_block = notion_pages_flat[page_id]
-        os.makedirs(output_path, exist_ok = True)
-        page_slug = get_page_slug(page_id, ctx)
+        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = use_page_title_for_missing_slug))
+        
         page_dir = os.path.join(output_path, page_slug) if index_html and page_slug != 'index' else output_path
         os.makedirs(page_dir, exist_ok = True)
         html_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + '.html')
+        
         assets_dir = os.path.join(page_dir, page_slug + '_files')
         notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         ctx['assets'] = notion_assets_for_block
+
+        if ctx['sitemap_xml']:
+            page_url_relative = get_page_url_relative(page_block, ctx)
+            page_url_absolute = get_page_url_absolute(page_url_relative, ctx)
+            sitemap_urlset_update(ctx['sitemap'], page_id, loc = page_url_absolute, locrel = page_url_relative)
+            sitemap_urlset_write(ctx['sitemap'], ctx['sitemap_xml'])
+        
         with open(html_path, 'w', encoding = 'utf-8') as f:
             f.write(sitepages2html([page_id], ctx = ctx, notion_pages = notion_pages_flat))
         print(html_path)
+        
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract_html(
                 page_dir, 
@@ -1160,7 +1201,8 @@ def extract_html(
                 index_html = index_html, 
                 extract_assets = extract_assets, 
                 sitepages2html = sitepages2html, 
-                mode = mode
+                mode = mode,
+                use_page_title_for_missing_slug = use_page_title_for_missing_slug
             )
 
 def extract_json(
@@ -1171,7 +1213,7 @@ def extract_json(
     child_pages_by_id = {}, 
     extract_assets = False, 
     child_pages_by_parent_id = {}, 
-    extract_json_use_page_title_for_missing_slug = False, 
+    use_page_title_for_missing_slug = False, 
     extract_mode = ''
 ):
     notion_pages |= child_pages_by_id
@@ -1181,20 +1223,27 @@ def extract_json(
         with open(output_path, 'w', encoding = 'utf-8') as f:
             json.dump(notionjson, f, ensure_ascii = False, indent = 4)
         return print(output_path)
+    
     os.makedirs(output_path, exist_ok = True)
-    for page_id, block in notion_pages.items():
+    for page_id in notion_pages:
+        page_block = notion_pages[page_id]
+        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = use_page_title_for_missing_slug)
+        
+        page_dir = os.path.join(output_path, page_slug)
         os.makedirs(output_path, exist_ok = True)
-        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = extract_json_use_page_title_for_missing_slug)
         json_path = os.path.join(output_path, page_slug + '.json')
+        
+        assets_dir = os.path.join(output_path, page_slug + '_files')
+        notion_assets_for_block = prepare_and_extract_assets({page_block['id'] : page_block}, ctx = ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
+        notionjson = dict(pages = {page_id : page_block}, assets = notion_assets_for_block, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
+        
         with open(json_path, 'w', encoding = 'utf-8') as f:
-            assets_dir = os.path.join(output_path, page_slug + '_files')
-            notion_assets_for_block = prepare_and_extract_assets({block['id'] : block}, ctx = ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
-            notionjson = dict(pages = {page_id : block}, assets = notion_assets_for_block, unix_seconds_begin = ctx.get('unix_seconds_begin', 0), unix_seconds_end = ctx.get('unix_seconds_end', 0))
             json.dump(notionjson, f, ensure_ascii = False, indent = 4)
         print(json_path)
+        
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extract_json(
-                os.path.join(output_path, page_slug),
+                page_dir,
                 ctx,
                 notion_assets = notion_assets, 
                 notion_pages = {child['id'] : child for child in child_pages}, 
@@ -1249,6 +1298,8 @@ def notionjson2html(
         config['html_article_footer_html'] = config_html_article_footer_html
     if config_edit_url:
         config['edit_url'] = config_edit_url
+    if config_base_url:
+        config['base_url'] = config_base_url
 
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
 
@@ -1282,10 +1333,12 @@ def notionjson2html(
     ctx['html_details_open'] = config.get('html_details_open', False)
     ctx['html_columnlist_disable'] = config.get('html_columnlist_disable', False)
     ctx['html_link_to_page_index_html'] = config.get('html_link_to_page_index_html', False)
+    ctx['base_url'] = config.get('base_url', '')
     ctx['edit_url'] = config.get('edit_url', '')
     ctx['slugs'] = notion_slugs
    
     ctx['sitemap'] = sitemap
+    ctx['sitemap_xml'] = sitemap_xml
     ctx['output_path'] = output_path if output_path else '_'.join(notion_page_id) if extract_mode != 'single' else (input_json.removesuffix('.json') + '.html')
     ctx['extract_mode'] = extract_mode
     ctx['assets'] = notion_assets
@@ -1417,7 +1470,7 @@ if __name__ == '__main__':
     parser.add_argument('--download-assets', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--extract-mode', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested', 'singleflat'])
-    parser.add_argument('--extract-json-use-page-title-for-missing-slug', action = 'store_true')
+    parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
     parser.add_argument('--theme-py', default = 'minima.py')
     parser.add_argument('--sitemap-xml')
     parser.add_argument('--log-unsupported-blocks')
