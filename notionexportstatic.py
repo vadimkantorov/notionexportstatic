@@ -1172,7 +1172,6 @@ def extractall(
         if ext == '.json':
             notionjson = dict(
                 pages = notion_pages, 
-                assets = notion_assets, 
                 unix_seconds_begin = ctx.get('unix_seconds_begin', 0), 
                 unix_seconds_end = ctx.get('unix_seconds_end', 0),
                 assets = prepare_and_extract_assets(notion_pages = notion_pages, ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
@@ -1187,7 +1186,7 @@ def extractall(
     os.makedirs(output_path, exist_ok = True)
     for page_id in page_ids:
         page_block = notion_pages_flat[page_id]
-        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = use_page_title_for_missing_slug))
+        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = use_page_title_for_missing_slug)
 
         if ctx['sitemap_xml']:
             page_url_relative = get_page_url_relative(page_block, ctx)
@@ -1207,7 +1206,7 @@ def extractall(
         notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
     
-        if ext == '.html'
+        if ext == '.html':
             notionstr = sitepages2html([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat)
 
         if ext == '.json':
