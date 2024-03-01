@@ -30,8 +30,25 @@ import urllib.error
 import urllib.request
 import xml.dom.minidom
 
+def slugify(s, space = '_', lower = True):
+    s = unicodedata.normalize('NFKC', s)
+    s = s.strip()
+    s = re.sub(r'\s', space, s, flags = re.U)
+    s = re.sub(r'[^-_.\w]', space, s, flags = re.U)
+    s = s.lower() if lower else s
+    return s
 
-def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id, notion_pages_and_databases = {}):
+def notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes):
+    import notion_client
+    notionapi = notion_client.Client(auth = notion_token)
+    notion_pages_and_databases = {}
+    for notion_page_id_no_dashes in notion_page_ids_no_dashes:
+        notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_dashes, notion_pages_and_databases = notion_pages_and_databases)
+    notionjson = dict(pages = notion_pages_and_databases, unix_seconds_downloaded = int(time.time()))
+    return notionjson
+
+
+def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_dashes, notion_pages_and_databases = {}):
     # https://developers.notion.com/reference/retrieve-a-page
     # https://developers.notion.com/reference/retrieve-a-page-property
     # https://developers.notion.com/reference/retrieve-a-block
@@ -52,11 +69,11 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id, not
                 notionapi_blocks_children_list(subblock, notionapi)
         return block
     try:
-        page_type, page = 'page', notionapi.pages.retrieve(notion_page_id)
+        page_type, page = 'page', notionapi.pages.retrieve(notion_page_id_no_dashes)
     except notion_client.APIResponseError as exc:
-        page_type, page = 'database', notionapi.databases.retrieve(notion_page_id)
+        page_type, page = 'database', notionapi.databases.retrieve(notion_page_id_no_dashes)
     except notion_client.APIResponseError as exc:
-        page_type, page = 'child_page', notionapi.blocks.retrieve(notion_page_id)
+        page_type, page = 'child_page', notionapi.blocks.retrieve(notion_page_id_no_dashes)
     except Exception as exc:
         page_type, page = None, {}
         print(exc)
@@ -67,9 +84,9 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id, not
     notion_pages_and_databases[page['id']]['blocks'] = []
     while True:
         if page_type == 'page' or page_type == 'child_page':
-            blocks = notionapi.blocks.children.list(notion_page_id, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+            blocks = notionapi.blocks.children.list(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
         elif page_type == 'database':
-            blocks = notionapi.databases.query(notion_page_id, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+            blocks = notionapi.databases.query(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
         start_cursor = blocks['next_cursor']
         notion_pages_and_databases[page['id']]['blocks'].extend(blocks['results'])
         if start_cursor is None or blocks['has_more'] is False:
@@ -86,7 +103,6 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id, not
             notion_pages_and_databases[page['id']]['blocks'][i_block] = block
             if block['object'] in ['page', 'child_page', 'child_database']:
                 notionapi_retrieve_recursively(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
-
 
 ##############################
 
@@ -594,16 +610,18 @@ def get_page_current(block, ctx):
 
 def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_slug = False):
     page_id_no_dashes = page_id.replace('-', '')
-    page_title_slug = get_slug(get_page_title(ctx.get('id2block', {}).get(page_id), ctx)) or page_id_no_dashes
+    page_title_slug = slugify(get_page_title(ctx.get('id2block', {}).get(page_id), ctx)) or page_id_no_dashes
     return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id_no_dashes) or (None if only_slug else (page_title_slug if use_page_title_for_missing_slug else page_id_no_dashes))
 
-def get_slug(s, space = '_', lower = True):
-    s = unicodedata.normalize('NFKC', s)
-    s = s.strip()
-    s = re.sub(r'\s', space, s, flags = re.U)
-    s = re.sub(r'[^-_.\w]', space, s, flags = re.U)
-    s = s.lower() if lower else s
-    return s
+def get_page_ids_normalized(root_page_ids, all_page_and_child_page_ids, notion_slugs):
+    for i in range(len(root_page_ids)):
+        for k, v in notion_slugs.items():
+            if root_page_ids[i] == v:
+                root_page_ids[i] = k
+        for k in all_page_and_child_page_ids:
+            if root_page_ids[i] == k.replace('-', ''):
+                root_page_ids[i] = k
+    return root_page_ids
 
 def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
     block_type = block.get('type') or block.get('object') or ''
@@ -613,7 +631,7 @@ def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
         page_slug = get_page_slug(page_block.get('id', ''), ctx)
         prefix = page_slug + '-'
     
-    s = get_slug(s, space = space, lower = lower)
+    s = slugify(s, space = space, lower = lower)
     s = s.strip(space)
     s = re.sub(space + '+', space, s)
     s = prefix + s
@@ -718,7 +736,7 @@ def get_page_headings(block, ctx):
     return headings
 
 def page_like(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
-    dt_modified = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_end', 0)).strftime(strftime) if ctx.get('unix_seconds_end', 0) else ''
+    dt_modified = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_downloaded', 0)).strftime(strftime) if ctx.get('unix_seconds_downloaded', 0) else ''
     dt_published = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
     src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
     src_cover = ctx['assets'].get(src_cover, {}).get('uri', src_cover)
@@ -1172,8 +1190,7 @@ def extractall(
         if ext == '.json':
             notionjson = dict(
                 pages = notion_pages, 
-                unix_seconds_begin = ctx.get('unix_seconds_begin', 0), 
-                unix_seconds_end = ctx.get('unix_seconds_end', 0),
+                unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0),
                 assets = prepare_and_extract_assets(notion_pages = notion_pages, ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
             )
             notionstr = json.dumps(notionjson, ensure_ascii = False, indent = 4)
@@ -1213,15 +1230,13 @@ def extractall(
             notionjson = dict(
                 pages = {page_id : page_block}, 
                 assets = notion_assets_for_block, 
-                unix_seconds_begin = ctx.get('unix_seconds_begin', 0), 
-                unix_seconds_end = ctx.get('unix_seconds_end', 0)
+                unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0)
             )
             notionstr = json.dumps(notionjson, ensure_ascii = False, indent = 4)
 
         with open(dump_path, 'w', encoding = 'utf-8') as f:
             f.write(notionstr)
         print(dump_path)
-        
 
         if child_pages := child_pages_by_parent_id.pop(page_id, []):
             extractall(
@@ -1238,12 +1253,13 @@ def extractall(
                 ext = ext
             )
 
-def notionjson2html(
+def notion2static(
     config_json,
     input_json,
     output_path,
     notion_page_id,
     extract_assets,
+    download_assets,
     extract_mode,
     theme_py,
     sitemap_xml,
@@ -1261,6 +1277,8 @@ def notionjson2html(
 
     log_unsupported_blocks,
     log_urls,
+
+    ext,
     **ignored
 ):
     config = json.load(open(config_json)) if config_json else {}
@@ -1287,9 +1305,14 @@ def notionjson2html(
 
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
 
-    notionjson = json.load(open(input_json)) if input_json else {}
-    notion_assets = notionjson.get('assets', {})
+    if input_json:
+        notionjson = json.load(open(input_json)) if input_json else {}
+    else:
+        notion_page_ids_no_dashes = [([k for k, v in config.get('slugs', {}).items() if v.lower() == notion_page_id.lower()] or [notion_page_id])[0].replace('-', '') for notion_page_id in notion_page_id]
+        notionjson = notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes)
+    notion_assets = download_assets_to_dict(notion_pages.values()) if download_assets else notionjson.get('assets', {})
     notion_pages = notionjson.get('pages', {})
+
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
     notion_slugs = config.get('slugs', {})
 
@@ -1299,19 +1322,10 @@ def notionjson2html(
         pop_and_replace_child_pages_recursively(page, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = page_id)
     child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
-
-    root_page_ids = notion_page_id or list(notion_pages.keys())
-    for i in range(len(root_page_ids)):
-        for k, v in config.get('slugs', {}).items():
-            if root_page_ids[i] == v:
-                root_page_ids[i] = k
-        for k in notion_pages.keys():
-            if root_page_ids[i] == k.replace('-', ''):
-                root_page_ids[i] = k
-    assert all(page_id in notion_pages_flat for page_id in root_page_ids)
-
+        
+    root_page_ids = get_page_ids_normalized(notion_page_id or list(notion_pages.keys()), notion_pages_flat.keys(), notion_slugs)
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if child_page['id'] not in root_page_ids]
-    #page_ids = page_ids # child_pages_by_id = child_pages_by_id if extract_mode in ['flat', 'flat.html'] else {}
+    assert all(page_id in notion_pages_flat for page_id in root_page_ids)
 
     ctx = {}
     ctx['html_details_open'] = config.get('html_details_open', False)
@@ -1326,8 +1340,7 @@ def notionjson2html(
     ctx['output_path'] = output_path if output_path else '_'.join(notion_page_id) if extract_mode != 'single' else (input_json.removesuffix('.json') + '.html')
     ctx['extract_mode'] = extract_mode
     ctx['assets'] = notion_assets
-    ctx['unix_seconds_begin'] = notionjson.get('unix_seconds_begin', 0)
-    ctx['unix_seconds_end'] = notionjson.get('unix_seconds_end', 0)
+    ctx['unix_seconds_downloaded'] = notionjson.get('unix_seconds_downloaded', 0)
     ctx['unix_seconds_generated'] = int(time.time())
     ctx['pages'] = notion_pages_flat
     ctx['page_ids'] = page_ids
@@ -1358,69 +1371,9 @@ def notionjson2html(
         index_html = extract_mode in ['flat', 'nested'], 
         extract_mode = extract_mode,
         use_page_title_for_missing_slug = False,
-        ext = '.html'
+        ext = ext
     )
-
-def notionapi2notionjson(
-        config_json,
-        notion_token,
-        notion_page_id,
-        output_path,
-        extract_mode,
-        use_page_title_for_missing_slug,
-        extract_assets,
-        download_assets,
-        log_urls,
-        **ignored
-    ):
-    import notion_client
-    notionapi = notion_client.Client(auth = notion_token)
-
-    config = json.load(open(config_json)) if config_json else {}
-    notion_slugs = config.get('slugs', {})
-    notion_page_ids = [([k for k, v in notion_slugs.items() if v.lower() == notion_page_id.lower()] or [notion_page_id])[0].replace('-', '') for notion_page_id in notion_page_id]
-    page_ids = notion_page_ids
-    unix_seconds_begin = int(time.time())
-    notion_pages_and_databases = {}
-    for notion_page_id in notion_page_ids:
-        notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id, notion_pages_and_databases = notion_pages_and_databases)
-    notion_pages = notion_pages_and_databases
-    #notion_pages = {block_id : block for block_id, block in notion_pages_and_databases.items() if (block.get('object') or block.get('type')) in ['page', 'child_page']}
-    #notion_databases = {block_id : block for block_id, block in notion_pages_and_databases.items() if (block.get('object') or block.get('type')) in ['database', 'child_database']}
-    notion_pages_flat = copy.deepcopy(notion_pages)
-    child_pages_by_parent_id = {}
-    for page_id, page in notion_pages_flat.items():
-        pop_and_replace_child_pages_recursively(page, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = page_id)
-    child_pages_by_id = {child_page['id'] : child_page for parent_id, pages in child_pages_by_parent_id.items() for child_page in pages}
-    notion_pages_flat |= child_pages_by_id
-    notion_assets = download_assets_to_dict(notion_pages.values()) if download_assets else {}
-    unix_seconds_end = int(time.time())
-    output_path = output_path if output_path else '_'.join(notion_page_id)
-    output_path = output_path if output_path or extract_mode not in ['single', 'singleflat'] else (output_path + '.json')
     
-    ctx = {}
-    ctx['log_urls'] = open(log_urls if log_urls else os.devnull , 'w')
-    ctx['output_path'] = output_path
-    ctx['unix_seconds_begin'] = unix_seconds_begin
-    ctx['unix_seconds_end'] = unix_seconds_end
-    ctx['slugs'] = notion_slugs
-    ctx['assets'] = notion_assets
-       
-    page_ids = notion_page_ids if extract_mode == 'single' else list(notion_pages_flat)
-    
-    extractall(
-        ctx['output_path'], 
-        ctx, 
-        sitepages2html = sitepages2html, 
-        page_ids = page_ids, 
-        notion_pages_flat = notion_pages_flat, 
-        extract_assets = extract_assets, 
-        child_pages_by_parent_id = child_pages_by_parent_id if extract_mode == 'nested' else {}, 
-        index_html = extract_mode in ['flat', 'nested'], 
-        extract_mode = extract_mode,
-        use_page_title_for_missing_slug = use_page_title_for_missing_slug,
-        ext = '.json'
-    )
 
 def notionjson2markdown(
     input_json,
@@ -1485,7 +1438,7 @@ if __name__ == '__main__':
     
     if args.action == 'notionapi2notionjson':
         assert args.notion_page_id
-        notionapi2notionjson(**vars(args))
+        notion2static(**vars(args), ext = '.json')
 
     elif args.action == 'notionjson2markdown':
         notionjson2markdown(**vars(args))
@@ -1493,7 +1446,7 @@ if __name__ == '__main__':
     elif args.action == 'notionjson2html':
         assert args.input_json
         if os.path.exists(args.input_json) and os.path.isfile(args.input_json):
-            notionjson2html(**vars(args))
+            notion2static(**vars(args), ext = '.html')
 
         elif os.path.exists(args.input_json) and os.path.isdir(args.input_json):
             file_paths_recursive_json = [os.path.join(dirpath, basename) for dirpath, dirnames, filenames in os.walk(args.input_json) for basename in filenames if basename.endswith('.json')]
@@ -1504,6 +1457,6 @@ if __name__ == '__main__':
                     if 'pages' not in j:
                         continue
                     print(file_path)
-                    notionjson2html(**dict(vars(args), input_json = file_path))
+                    notionjson2html(**dict(vars(args), input_json = file_path), ext = '.html')
                 except:
                     continue
