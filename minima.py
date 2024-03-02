@@ -7,7 +7,6 @@
 # TODO: margin between blocks, except empty block
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 # TODO: add hover style fof breadcrumb
-# TODO: make whole TOC links clickable
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cookies = True, block2html = (lambda page, ctx: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
     page_id = page_ids[0]
@@ -21,6 +20,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cook
     css_style = css_notion + css_notion_colors + css_notion_colors_classic + css_twitter_emoji_font + css_minimacss_classic 
     
     return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html, html_cookies_notice = html_cookies_notice if cookies else '')
+
 
 html_cookies_notice = '''
 <div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice</div>
