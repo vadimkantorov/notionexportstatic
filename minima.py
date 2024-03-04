@@ -21,6 +21,10 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cook
     
     return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html, html_cookies_notice = html_cookies_notice if cookies else '')
 
+def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx: '')):
+    markdown_main = '\n<hr />\n'.join(block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+    return markdown_main
+
 
 html_cookies_notice = '''
 <div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice</div>
