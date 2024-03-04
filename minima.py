@@ -23,6 +23,11 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cook
 
 def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx: '')):
     markdown_main = '\n<hr />\n'.join(block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+
+    # pip install mdx_truly_sane_lists
+    # pip install markdown-captions, pip install markdown-checklist
+    # pip install pymdown-extensions
+    #html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
     return markdown_main
 
 

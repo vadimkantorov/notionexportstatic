@@ -1,13 +1,12 @@
 # TODO: do not download if everything already downloaded, otherwise download assets by default (at least images)
 # TODO: refactor _config.json / to allow not just slug but a full path | use parent path to determine link
-
-# https://docs.super.so/super-css-classes
-    
 # TODO notion2markdown: rstrip all <br /> at page end
 # TODO notion2markdown: delete plain_text: ' ' empty text blocks
 # TODO notion2markdown: optional frontmatter gen
 # TODO notion2markdown: delete useless "> \n" in callout, ex https://github.com/vadimkantorov/notionfun/edit/gh-pages/_markdown/visa-c.md
 # TODO notion2markdown: can deploy pre-generated html?
+
+# https://docs.super.so/super-css-classes
 
 
 import os
@@ -127,10 +126,9 @@ def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
         toggle = toggle2html,
         video = video2html,
 
-        unsupported = unsupported2html,
-        
-        page = page2html,
         link_to_page = link_to_page2html,
+        page = page2html,
+        unsupported = unsupported2html,
     )
     block2render_with_begin_end = dict(
         numbered_list_item = numbered_list_item2html, 
@@ -174,18 +172,14 @@ def richtext2html(block, ctx = {}, title_mode = False, html_escape = html.escape
     plain_text = block['plain_text']
     anno = block['annotations']
     href = block.get('href', '')
-    
+    if title_mode:
+        return plain_text
     if block['type'] == 'mention':
         return mention2html(block, ctx)
-
     if block['type'] == 'equation':
         return equation2html(block, ctx, class_name = 'notion-equation-inline')
     
-    if title_mode:
-        return plain_text
-    
     html = html_escape(plain_text)
-    
     if href:
         html = link_to_page2html(block, ctx) if href.startswith('/') else linklike2html(block, ctx)
     if anno['bold']:
@@ -200,9 +194,7 @@ def richtext2html(block, ctx = {}, title_mode = False, html_escape = html.escape
         html = f'<code class="notion-code-inline">{html}</code>'
     if (color := anno['color']) != 'default':
         html = f'<span style="color:{color}">{html}</span>'
-    
     return html
-
 
 def textlike2html(block, ctx, block_type, tag = 'span', attrs = {}, class_name = '', html_icon = '', checked = None):
     html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx)
@@ -409,7 +401,7 @@ def callout2html(block, ctx, tag = 'p', class_name = 'notion-callout-block'): re
 ##############################
 
 def block2markdown(block, ctx, depth=0, page_id=''):
-    def render_block_kwargs(payload, ctx, page_id, block_type = None):
+    def block2render_kwargs(payload, ctx, page_id, block_type = None):
         kwargs = {}
         if 'checked' in payload:
             kwargs['checked'] = payload['checked']
@@ -443,34 +435,99 @@ def block2markdown(block, ctx, depth=0, page_id=''):
         #        ctx['pages'][page_id]['assets_to_download'].append(kwargs['url'])
         return kwargs
 
-    paragraph = lambda kwargs: kwargs['text']
-    heading_1 = lambda kwargs: "# {text}".format(**kwargs)
-    heading_2 = lambda kwargs: "## {text}".format(**kwargs)
-    heading_3 = lambda kwargs: "### {text}".format(**kwargs)
-    quote = lambda kwargs: "> {text}".format(**kwargs)
-    bulleted_list_item = lambda kwargs: "* {text}".format(**kwargs)
-    numbered_list_item = lambda kwargs: "1. {text}".format(**kwargs) # numbering is not supported
-    toggle = lambda kwargs: "* {text}".format(**kwargs) # toggle item will be changed as bulleted list item
-    callout = lambda kwargs: "\n> {icon} {text}".format(**kwargs) # "\n> [!IMPORTANT]\n> {icon} {text}".format(**kwargs)
-    to_do = lambda kwargs: "- [{x}] {text}".format(x = 'x' if kwargs['checked'] else ' ', text = kwargs['text'])
-    code = lambda kwargs: f"```{lang}\n{text}\n```".format(lang = kwargs['language'].replace(' ', '_'), text = kwargs['text'])
-    embed = lambda kwargs, width = 640, height = 480: '<p><div class="res_emb_block"><iframe width="{width}" height="{height}" src="{url}" frameborder="0" allowfullscreen></iframe></div></p>'.format(width = width, height = height, **kwargs)
-    image = lambda kwargs: "![{caption}]({url})".format(caption = kwargs['caption'] or '', url = kwargs['url'])
-    bookmark = lambda kwargs: "[🔖 {caption}]({url})".format(caption = kwargs['caption'] or kwargs.get('url', ''), url = kwargs['url'])
-    link_to_page = lambda kwargs: '[{emoji} {caption}]({url})'.format(**kwargs)
-    file = lambda kwargs: "[{emoji} {caption}]({url})".format(emoji = '📎', url = kwargs['url'], caption = urllib.parse.unquote(os.path.basename(urllib.parse.urljoin(kwargs['url'], urllib.parse.urlparse(kwargs['url']).path))))
-    equation = lambda kwargs: "$$ {text} $$".format(**kwargs)
-    divider = lambda kwargs: "---"
-    blank = lambda *args, **kwargs: "<br/>"
-    table = lambda kwargs: ''
-    pdf = lambda kwargs: "![{caption}]({url})".format(caption = kwargs['caption'] or os.path.basename(kwargs['url']), url = kwargs['url'])
-    table_row = lambda kwargs: [richtext2markdown(column) for column in kwargs['cells']]
-    video = lambda kwargs: ('<p><video playsinline autoplay muted loop controls src="{url}"></video></p>' if urllib.parse.urljoin(kwargs["url"], urllib.parse.urlparse(kwargs["url"]).path).endswith(".webm") else '<p><div class="res_emb_block"><iframe width="640" height="480" src="{url}" frameborder="0" allowfullscreen></iframe></div></p>').format(url = kwargs["url"].replace("http://", "https://").replace('/watch?v=', '/embed/').split('&')[0])
-    column_list = lambda kwargs: '' # '\n\n> [!IMPORTANT]\n> **column_list** will be added here\n\n'
-    column = lambda kwargs: '' # '\n\n> [!NOTE]\n> **column** starts here\n\n'
-    table_of_contents = lambda kwargs: '\n\n{:toc}\n\n'
+    paragraph2markdown = lambda kwargs: kwargs['text']
+    heading_12markdown = lambda kwargs: "# {text}".format(**kwargs)
+    heading_22markdown = lambda kwargs: "## {text}".format(**kwargs)
+    heading_32markdown = lambda kwargs: "### {text}".format(**kwargs)
+    quote2markdown = lambda kwargs: "> {text}".format(**kwargs)
+    bulleted_list_item2markdown = lambda kwargs: "* {text}".format(**kwargs)
+    numbered_list_item2markdown = lambda kwargs: "1. {text}".format(**kwargs) # numbering is not supported
+    toggle2markdown = lambda kwargs: "* {text}".format(**kwargs) # toggle item will be changed as bulleted list item
+    callout2markdown = lambda kwargs: "\n> {icon} {text}".format(**kwargs) # "\n> [!IMPORTANT]\n> {icon} {text}".format(**kwargs)
+    to_do2markdown = lambda kwargs: "- [{x}] {text}".format(x = 'x' if kwargs['checked'] else ' ', text = kwargs['text'])
+    code2markdown = lambda kwargs: f"```{lang}\n{text}\n```".format(lang = kwargs['language'].replace(' ', '_'), text = kwargs['text'])
+    embed2markdown = lambda kwargs, width = 640, height = 480: '<p><div class="res_emb_block"><iframe width="{width}" height="{height}" src="{url}" frameborder="0" allowfullscreen></iframe></div></p>'.format(width = width, height = height, **kwargs)
+    image2markdown = lambda kwargs: "![{caption}]({url})".format(caption = kwargs['caption'] or '', url = kwargs['url'])
+    bookmark2markdown = lambda kwargs: "[🔖 {caption}]({url})".format(caption = kwargs['caption'] or kwargs.get('url', ''), url = kwargs['url'])
+    link_to_page2markdown = lambda kwargs: '[{emoji} {caption}]({url})'.format(**kwargs)
+    file2markdown = lambda kwargs: "[{emoji} {caption}]({url})".format(emoji = '📎', url = kwargs['url'], caption = urllib.parse.unquote(os.path.basename(urllib.parse.urljoin(kwargs['url'], urllib.parse.urlparse(kwargs['url']).path))))
+    equation2markdown = lambda kwargs: "$$ {text} $$".format(**kwargs)
+    divider2markdown = lambda kwargs: "---"
+    blank2markdown = lambda *args, **kwargs: "<br/>"
+    table2markdown = lambda kwargs: ''
+    pdf2markdown = lambda kwargs: "![{caption}]({url})".format(caption = kwargs['caption'] or os.path.basename(kwargs['url']), url = kwargs['url'])
+    video2markdown = lambda kwargs: ('<p><video playsinline autoplay muted loop controls src="{url}"></video></p>' if urllib.parse.urljoin(kwargs["url"], urllib.parse.urlparse(kwargs["url"]).path).endswith(".webm") else '<p><div class="res_emb_block"><iframe width="640" height="480" src="{url}" frameborder="0" allowfullscreen></iframe></div></p>').format(url = kwargs["url"].replace("http://", "https://").replace('/watch?v=', '/embed/').split('&')[0])
+    column_list2markdown = lambda kwargs: '' # '\n\n> [!IMPORTANT]\n> **column_list** will be added here\n\n'
+    column2markdown = lambda kwargs: '' # '\n\n> [!NOTE]\n> **column** starts here\n\n'
+    table_of_contents2markdown = lambda kwargs: '\n\n{:toc}\n\n'
+    
+    table_row2markdown = lambda kwargs: [richtext2markdown(column) for column in kwargs['cells']]
 
-    render_block = dict(paragraph = paragraph, heading_1 = heading_1, heading_2 = heading_2, heading_3 = heading_3, callout = callout, toggle = toggle, quote = quote, bulleted_list_item = bulleted_list_item, numbered_list_item = numbered_list_item, to_do = to_do, code = code, embed = embed, image = image, bookmark = bookmark, equation = equation, divider = divider, file = file, table = table, table_row = table_row, video = video, pdf = pdf, table_of_contents = table_of_contents, link_to_page = link_to_page, column = column, column_list = column_list) # "child_page": child_page,
+    def page2markdown(page, ctx):
+        page_md_content = ''.join(block2markdown(block, ctx) for block in (page.get('blocks', []) or page.get('children', [])))
+        #page_md_fixed_lines = []
+        #prev_line_type = ''
+        #for line in page_md_content.splitlines():
+        #    line_type = ''
+        #    norm_line = line.lstrip('\t').lstrip()
+        #    if norm_line.startswith('- [ ]') or norm_line.startswith('- [x]'):
+        #        line_type = 'checkbox'
+        #    elif norm_line.startswith('* '):
+        #        line_type = 'bullet'
+        #    elif norm_line.startswith('1. '):
+        #        line_type = 'numbered'
+        #    if prev_line_type != '':
+        #        if line == '':
+        #            continue
+        #    if line_type != prev_line_type:
+        #        page_md_fixed_lines.append('')
+        #    page_md_fixed_lines.append(line)
+        #    prev_line_type = line_type
+        #page_md_content = '\n'.join(page_md_fixed_lines)
+        page_md_content = page_md_content.replace('\n\n\n', '\n\n')
+        # page_md = code_aligner(page_md)
+        #for k in page.keys() & ['date', 'date_end', 'last_edited_time']: page[k] = datetime.datetime.strptime(page[k], "%Y-%m-%dT%H:%M:%S.%fZ")
+        metadata = '''---\ntitle: "{title}"\ncover: {cover}\nemoji: {emoji}\n{properties}\n---\n\n'''.format(properties = '\n'.join(f'{k}: {v}' for k, v in page.get('properties_md', {}).items()), title = page.get('title', ''), cover = page.get('cover', ''), emoji = page.get('emoji', ''))
+        page_md_content = '[#](../) / {emoji} {title}\n<hr/>\n\n'.format(emoji = page.get('emoji', ''), title = page.get('title', '')) + ('![cover]({cover})\n\n' if page.get('cover') else '').format(**page) + '# {emoji} {title}\n\n'.format(emoji = page.get('emoji', ''), title = page.get('title', '')) + page_md_content
+        return page_md_content
+
+
+
+    block2render = dict(
+        bookmark = bookmark2markdown, 
+        #breadcrumb
+        bulleted_list_item = bulleted_list_item2markdown, 
+        callout = callout2markdown, 
+        #child_database
+        #child_page
+        code = code2markdown, 
+        column_list = column_list2markdown, column = column2markdown, 
+        divider = divider2markdown, 
+        embed = embed2markdown, 
+        equation = equation2markdown, 
+        file = file2markdown, 
+        heading_1 = heading_12markdown, heading_2 = heading_22markdown, heading_3 = heading_32markdown, 
+        image = image2markdown,
+        #link_preview
+        #mention
+        numbered_list_item = numbered_list_item2markdown, 
+        paragraph = paragraph2markdown, 
+        pdf = pdf2markdown, 
+        quote = quote2markdown, 
+        #synced_block
+        table = table2markdown, 
+        table_of_contents = table_of_contents2markdown, 
+        #template
+        to_do = to_do2markdown, 
+        toggle = toggle2markdown, 
+        video = video2markdown, 
+        
+        link_to_page = link_to_page2markdown, 
+        #page = page2html,
+        #unsupported = unsupported2html,
+        #"child_page": child_page,
+        table_row = table_row2markdown, 
+    )
 
     outcome_block = ""
     block_type = block.get('type') or block.get('object')
@@ -496,10 +553,10 @@ def block2markdown(block, ctx, depth=0, page_id=''):
     if block_type == "paragraph" and not block['has_children'] and not (block[block_type].get('text') or block[block_type].get('rich_text')):
         return blank() + "\n\n"
 
-    if block_type in render_block:
+    if block_type in block2render:
         if block_type in ["embed", "video"]:
             block[block_type]["dont_download"] = True
-        outcome_block = render_block[block_type](render_block_kwargs(block[block_type], ctx, page_id, block_type = block_type)) + "\n\n"
+        outcome_block = block2render[block_type](block2render_kwargs(block[block_type], ctx, page_id, block_type = block_type)) + "\n\n"
     else:
         outcome_block = f'''block [type="{block_type}", id="{block.get('id')}"] is unsupported at page="{page_id}", has_children: {block['has_children']}]\n\n'''
         print(outcome_block)
@@ -510,7 +567,7 @@ def block2markdown(block, ctx, depth=0, page_id=''):
 
     if block['has_children'] and block_type == 'table':
         depth += 1
-        table_list = [render_block[cell_block['type']](render_block_kwargs(cell_block[cell_block['type']], ctx, page_id, block_type = cell_block['type'])) for cell_block in block["children"]]
+        table_list = [block2render[cell_block['type']](block2render_kwargs(cell_block[cell_block['type']], ctx, page_id, block_type = cell_block['type'])) for cell_block in block["children"]]
         sanitize_table_cell = lambda md: md.replace('\n', ' ')
         for index,value in enumerate(table_list):
             if index == 0:
@@ -597,35 +654,6 @@ def richtext2markdown(richtext, title_mode=False):
         if annot["color"] != "default":
             outcome_word = color(outcome_word,annot["color"])
     return outcome_word
-
-def page2markdown(page, ctx):
-    page_md_content = ''.join(block2markdown(block, ctx) for block in (page.get('blocks', []) or page.get('children', [])))
-    page_md_fixed_lines = []
-    prev_line_type = ''
-    for line in page_md_content.splitlines():
-        line_type = ''
-        norm_line = line.lstrip('\t').lstrip()
-        if norm_line.startswith('- [ ]') or norm_line.startswith('- [x]'):
-            line_type = 'checkbox'
-        elif norm_line.startswith('* '):
-            line_type = 'bullet'
-        elif norm_line.startswith('1. '):
-            line_type = 'numbered'
-        if prev_line_type != '':
-            if line == '':
-                continue
-        if line_type != prev_line_type:
-            page_md_fixed_lines.append('')
-        page_md_fixed_lines.append(line)
-        prev_line_type = line_type
-    page_md_content = '\n'.join(page_md_fixed_lines)
-    page_md_content = page_md_content.replace('\n\n\n', '\n\n')
-    # page_md = code_aligner(page_md)
-    #for k in page.keys() & ['date', 'date_end', 'last_edited_time']: page[k] = datetime.datetime.strptime(page[k], "%Y-%m-%dT%H:%M:%S.%fZ")
-    metadata = '''---\ntitle: "{title}"\ncover: {cover}\nemoji: {emoji}\n{properties}\n---\n\n'''.format(properties = '\n'.join(f'{k}: {v}' for k, v in page.get('properties_md', {}).items()), title = page.get('title', ''), cover = page.get('cover', ''), emoji = page.get('emoji', ''))
-    page_md_content = '[#](../) / {emoji} {title}\n<hr/>\n\n'.format(emoji = page.get('emoji', ''), title = page.get('title', '')) + ('![cover]({cover})\n\n' if page.get('cover') else '').format(**page) + '# {emoji} {title}\n\n'.format(emoji = page.get('emoji', ''), title = page.get('title', '')) + page_md_content
-    return page_md_content
-
 
 
 ##############################
