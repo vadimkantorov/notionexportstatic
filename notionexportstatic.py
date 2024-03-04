@@ -551,7 +551,7 @@ def block2markdown(block, ctx, depth=0, page_id=''):
 
     #Special Case: Block is blank
     if block_type == "paragraph" and not block['has_children'] and not (block[block_type].get('text') or block[block_type].get('rich_text')):
-        return blank() + "\n\n"
+        return blank2markdown() + "\n\n"
 
     if block_type in block2render:
         if block_type in ["embed", "video"]:
@@ -604,9 +604,9 @@ def block2markdown(block, ctx, depth=0, page_id=''):
 
     return outcome_block
 
-def richtext2markdown(richtext, title_mode=False):
+def richtext2markdown(richtext, title_mode = False):
     if isinstance(richtext, list):
-        return "".join(richtext2markdown(r, title_mode) for r in richtext)
+        return "".join(richtext2markdown(r, title_mode = title_mode) for r in richtext)
     code = lambda content: f"`{content}`"
     color = lambda content, color: f"<span style='color:{color}'>{content}</span>"
     equation = lambda content: f"$ {content} $"
@@ -1083,28 +1083,9 @@ def notion2static(
     **ignored
 ):
     config = json.load(open(config_json)) if config_json else {}
-    if config_html_details_open:
-        config['html_details_open'] = config_html_details_open
-    if config_html_columnlist_disable:
-        config['html_columnlist_disable'] = config_html_columnlist_disable
-    if config_html_link_to_page_index_html:
-        config['html_link_to_page_index_html'] = config_html_link_to_page_index_html
-    if config_html_toc:
-       config['html_toc'] = config_html_toc
-    if config_html_cookies:
-       config['html_cookies'] = config_html_cookies
-    if config_html_body_header_html:
-        config['html_body_header_html'] = config_html_body_header_html
-    if config_html_body_footer_html:
-        config['html_body_footer_html'] = config_html_body_footer_html
-    if config_html_article_header_html:
-        config['html_article_header_html'] = config_html_article_header_html
-    if config_html_article_footer_html:
-        config['html_article_footer_html'] = config_html_article_footer_html
-    if config_edit_url:
-        config['edit_url'] = config_edit_url
-    if config_base_url:
-        config['base_url'] = config_base_url
+    for k, v in locals().items():
+        if k.startswith('config_') and v:
+            config[k.removeprefix('config_')] = v
 
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
 
