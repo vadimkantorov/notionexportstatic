@@ -1,10 +1,13 @@
 # TODO: do not download if everything already downloaded, otherwise download assets by default (at least images)
 # TODO: refactor _config.json / to allow not just slug but a full path | use parent path to determine link
-# TODO notion2markdown: rstrip all <br /> at page end
-# TODO notion2markdown: delete plain_text: ' ' empty text blocks
-# TODO notion2markdown: optional frontmatter gen
-# TODO notion2markdown: delete useless "> \n" in callout, ex https://github.com/vadimkantorov/notionfun/edit/gh-pages/_markdown/visa-c.md
-# TODO notion2markdown: can deploy pre-generated html?
+# TODO  notion2markdown: rstrip all <br /> at page end
+# TODO  notion2markdown: delete plain_text: ' ' empty text blocks
+# TODO  notion2markdown: optional frontmatter gen
+# TODO  notion2markdown: delete useless "> \n" in callout, ex https://github.com/vadimkantorov/notionfun/edit/gh-pages/_markdown/visa-c.md
+# TODO  notion2markdown: can deploy pre-generated html?
+# TODO: delete newlines from markdown functions
+# TODO: notionjson2html: allow prefix and suffix html to individual pages and site to allow google anaylitics, code highlighting, equation rendering
+# TODO: notionjson2html: add sticky footer for gdpr - or maybe another sticky header?
 
 # https://docs.super.so/super-css-classes
 
@@ -170,7 +173,7 @@ def linklike2html(block, ctx, tag = 'a', class_name = '', full_url_as_caption = 
     html_text = richtext2html(block[block_type].get('caption', []), ctx) or html.escape(block[block_type].get('name') or block.get('plain_text') or (src if full_url_as_caption else os.path.basename(urllib.parse.urlparse(src).path)))
     return blocktag2html(block, ctx, tag = tag, attrs = dict(href = src), class_name = class_name, set_html_contents_and_close = html_icon + html_text) + '<br/>' * line_break
 
-def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = '', **kwargs):
+def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
     dt_modified = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_downloaded', 0)).strftime(strftime) if ctx.get('unix_seconds_downloaded', 0) else ''
     dt_published = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
     
@@ -316,7 +319,7 @@ def mention2html(block, ctx, tag = 'div', class_name = dict(page = 'notion-page-
     if mention_type == 'link_preview':
         return link_preview2html(block, ctx, class_name = class_name[mention_type])
     if mention_type == 'user':
-        return blocktag2html(block, ctx, tag = 'strong', class_name = class_name[mention_type], set_html_contents_and_close = '@{user_name}#{user_id}'.format(user_id = mention_payload.get('id', ''), user_name = block['plain_text'].removeprefix('@')))
+        return blocktag2html(block, ctx, tag = 'strong', class_name = class_name[mention_type], set_html_contents_and_close = '@{user_name}#{user_id}'.format(user_id = mention_payload.get('id', ''), user_name = block.get('plain_text', '').removeprefix('@')))
     if mention_type == 'date':
         return blocktag2html(block, ctx, tag = 'strong', class_name = class_name[mention_type], set_html_contents_and_close = '@{date_text}'.format(date_text = html.escape(block.get('plain_text', ''))))
     return unsupported2html(block, ctx)
@@ -423,11 +426,10 @@ def mention2markdown(block, ctx):
         return linklike2markdown(block, ctx)
     if mention_type == 'link_preview':
         return link_preview2markdown(block, ctx)
-    
-    #if mention_type == 'user':
-    #    return blocktag2html(block, ctx, tag = 'strong', set_html_contents_and_close = '@{user_name}#{user_id}'.format(user_id = mention_payload.get('id', ''), user_name = block['plain_text'].removeprefix('@')))
-    #if mention_type == 'date':
-    #    return blocktag2html(block, ctx, tag = 'strong', set_html_contents_and_close = '@{date_text}'.format(date_text = html.escape(block.get('plain_text', ''))))
+    if mention_type == 'user':
+        return ' **@{user_name}#{user_id}** '.format(user_id = mention_payload.get('id', ''), user_name = block.get('plain_text', '').removeprefix('@'))
+    if mention_type == 'date':
+        return return ' **@{date_text}** '.format(date_text = html.escape(block.get('plain_text', '')))
     
     return unsupported2markdown(block, ctx)
 
