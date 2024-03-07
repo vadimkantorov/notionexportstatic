@@ -270,7 +270,6 @@ def image2html(block, ctx, tag = 'img', class_name = 'notion-image-block'):
     src = ctx['assets'].get(src, {}).get('uri', src)
     if src.startswith('file:///'):
         src = src.split('file:///', maxsplit = 1)[-1]
-    
     html_text = richtext2html(block['image']['caption'], ctx, title_mode = False)
     html_text_alt = richtext2html(block['image']['caption'], ctx, title_mode = True)
     return blocktag2html(block, ctx, tag = 'figure', class_name = class_name, set_html_contents_and_close = f'<{tag} src="{src}" alt="{html_text_alt}"></{tag}><figcaption>{html_text}</figcaption>')
@@ -478,8 +477,9 @@ def column2markdown(block, ctx):      return childrenlike2markdown(block, ctx, n
 def bulleted_list_item2markdown(block, ctx, tag = '* '): return tag + textlike2markdown(block, ctx)
 def numbered_list_item2markdown(block, ctx, tag = '1. '): return tag + textlike2markdown(block, ctx)
 def quote2markdown(block, ctx, tag = '> '): return  tag + textlike2markdown(block, ctx)
+
 def code2markdown(block, ctx): return '\n{markdown_caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), markdown_caption = richtext2html(block['code'].get('caption', []), ctx)) + richtext2markdown(block['code'].get('rich_text', []), ctx) + '\n```\n\n'
-#        outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
+# outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
 
 def to_do2markdown(block, ctx, tag = '- [{x}] '): return textlike2markdown(block, ctx, tag = tag.format(x = 'x' if block.get('checked', '') else ' '), checked = block[block_type].get('checked', False))
 def synced_block2markdown(block, ctx): return '\n\n---\n**{synced_from_block_id}**\n{markdown_children}\n---\n\n'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), markdown_children = childrenlike2markdown(block, ctx))
@@ -499,7 +499,8 @@ def video2markdown(block, ctx): return video2html(block, ctx)
 def embed2markdown(block, ctx): return embed2html(block, ctx)
 
 def callout2markdown(block, ctx):
-    return '\n> {icon_emoji} '.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2markdown(block, ctx).rstrip() + '\n' #outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block2markdown(subblock, ctx, page_id = page_id).splitlines()) + '>\n' for subblock in block["children"])
+    return '\n> {icon_emoji} '.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2markdown(block, ctx).rstrip() + '\n' 
+    #outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block2markdown(subblock, ctx, page_id = page_id).splitlines()) + '>\n' for subblock in block["children"])
 
 def image2markdown(block, ctx): 
     assert block['image']['type'] in ['file', 'external']
@@ -510,7 +511,6 @@ def image2markdown(block, ctx):
     markdown_text = richtext2markdown(block['image']['caption'], ctx, title_mode = False)
     markdown_text_alt = richtext2markdown(block['image']['caption'], ctx, title_mode = True)
     return f'![{markdown_text_alt}]({src})\n' + f'{markdown_text}\n' * bool(markdown_text)
-
 
 def link_to_page2markdown(block, ctx, line_break = True):
     link_to_page_info  = get_page_link_info(block, ctx)
