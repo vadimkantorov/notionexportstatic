@@ -429,7 +429,7 @@ def mention2markdown(block, ctx):
     if mention_type == 'user':
         return ' **@{user_name}#{user_id}** '.format(user_id = mention_payload.get('id', ''), user_name = block.get('plain_text', '').removeprefix('@'))
     if mention_type == 'date':
-        return return ' **@{date_text}** '.format(date_text = html.escape(block.get('plain_text', '')))
+        return ' **@{date_text}** '.format(date_text = html.escape(block.get('plain_text', '')))
     
     return unsupported2markdown(block, ctx)
 
@@ -492,7 +492,7 @@ def page2markdown(block, ctx):
 
 def child_page2markdown(block, ctx): return page2markdown(block, ctx)
 def unsupported2markdown(block, ctx): return '\n> [!IMPORTANT]\n> unsupported ' + (block.get('type', '') or block.get('object', ''))
-def divider2markdown(block, ctx, tag = '---'): return "\n\n{tag}\n\n"
+def divider2markdown(block, ctx, tag = '---'): return f"\n\n{tag}\n\n"
 def heading_12markdown(block, ctx, tag = '\n\n# '  ): return headinglike2markdown(block, ctx, tag = tag) 
 def heading_22markdown(block, ctx, tag = '\n\n## ' ): return headinglike2markdown(block, ctx, tag = tag) 
 def heading_32markdown(block, ctx, tag = '\n\n### '): return headinglike2markdown(block, ctx, tag = tag) 
@@ -562,7 +562,7 @@ def richtext2markdown(richtext, title_mode = False):
             return outcome_word
         if "href" in richtext:
             if richtext["href"]:
-                outcome_word = text_link(richtext["text"]
+                outcome_word = text_link(richtext["text"])
             else:
                 outcome_word = plain_text
         else:
