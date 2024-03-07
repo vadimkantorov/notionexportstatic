@@ -19,16 +19,26 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cook
 
     css_style = css_notion + css_notion_colors + css_notion_colors_classic + css_twitter_emoji_font + css_minimacss_classic 
     
-    return layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html, html_cookies_notice = html_cookies_notice if cookies else '')
+    html = layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html, html_cookies_notice = html_cookies_notice if cookies else '')
+    
+    return html
 
-def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx: '')):
+def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2markdown = (lambda page, ctx: '')):
+    page_id = page_ids[0]
+    
+    markdown_header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx)
+    
+    markdown_main_toc = '' if not toc or len(page_ids) <= 1 else block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx)
+    
     markdown_main = '\n<hr />\n'.join(block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+
+    markdown = '\n\n'.join([markdown_header_breadcrumb, markdown_main_toc, markdown_main])
 
     # pip install mdx_truly_sane_lists
     # pip install markdown-captions, pip install markdown-checklist
     # pip install pymdown-extensions
     #html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
-    return markdown_main
+    return markdown
 
 
 html_cookies_notice = '''
