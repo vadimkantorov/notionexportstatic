@@ -696,7 +696,7 @@ def get_page_url_relative(block, ctx):
     elif ctx['extract_mode'] == 'flat.html':
         return './' + (page_suffix if is_index_page else page_slug + '.html')
     
-    elif ctx['extract_mode'] == 'single':
+    elif ctx['extract_mode'] in ['single', 'singleflat']:
         page_url_relative = './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
 
         if page_slug_only:
@@ -725,7 +725,7 @@ def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_sl
 def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
     block_type = block.get('type') or block.get('object') or ''
     s = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx, title_mode = True)
-    if ctx['extract_mode'] == 'single':
+    if ctx['extract_mode'] in ['single', 'singleflat']:
         page_block = get_page_current(block, ctx)
         page_slug = get_page_slug(page_block.get('id', ''), ctx)
         prefix = page_slug + '-'
@@ -954,6 +954,7 @@ def extractall(
     sitepages2html, 
     sitepages2markdown, 
     page_ids = [], 
+    notion_pages = {}, 
     notion_pages_flat = {}, 
     child_pages_by_parent_id = {}, 
     index_html = False, 
@@ -964,14 +965,14 @@ def extractall(
     ext = '.html'
 ):
     notion_assets = ctx.get('assets', {})
-    if extract_mode == 'single':
+    if extract_mode == 'single' or extract_mode == 'singleflat':
         if ext == '.md':
            notionstr = sitepages2markdown(page_ids, ctx = dict(ctx, assets = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)), notion_pages = notion_pages_flat)
         if ext == '.html':
            notionstr = sitepages2html(page_ids, ctx = dict(ctx, assets = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)), notion_pages = notion_pages_flat)
         if ext == '.json':
             notionjson = dict(
-                pages = notion_pages, 
+                pages = {page_id : page for page_id, page in (notion_pages if extract_mode == 'single' else notion_pages_flat).items() if page_id in page_ids}, 
                 unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0),
                 assets = prepare_and_extract_assets(notion_pages = notion_pages, ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
             )
@@ -1030,6 +1031,7 @@ def extractall(
                 sitepages2html = sitepages2html,
                 sitepages2markdown = sitepages2markdown,
                 page_ids = [child_page['id'] for child_page in child_pages], 
+                notion_pages = notion_pages,
                 notion_pages_flat = notion_pages_flat, 
                 child_pages_by_parent_id = child_pages_by_parent_id, 
                 index_html = index_html, 
@@ -1152,6 +1154,7 @@ def notion2static(
         sitepages2html = sitepages2html,
         sitepages2markdown = sitepages2markdown,
         page_ids = page_ids, 
+        notion_pages = notion_pages,
         notion_pages_flat = notion_pages_flat, 
         child_pages_by_parent_id = child_pages_by_parent_id if extract_mode == 'nested' else {}, 
         index_html = extract_mode in ['flat', 'nested'], 
@@ -1254,7 +1257,7 @@ if __name__ == '__main__':
     parser.add_argument('--assets-dir', default = './_assets')
     parser.add_argument('--download-assets', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
-    parser.add_argument('--extract-mode', default = 'single', choices = ['single', 'flat', 'flat.html', 'nested'])
+    parser.add_argument('--extract-mode', default = 'single', choices = ['single', 'singleflat', 'flat', 'flat.html', 'nested'])
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
     parser.add_argument('--theme-py', default = 'minima.py')
     parser.add_argument('--sitemap-xml')
