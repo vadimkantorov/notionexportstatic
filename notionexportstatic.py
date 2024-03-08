@@ -433,11 +433,14 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     
     page_md_content = f'![cover]({src_cover})\n\n' * bool(src_cover)
     page_md_content += f'# {page_emoji} {page_title}\n\n'
+    # <h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1>
+    # <h1 id="{page_slug}">{page_title}{html_anchor}</h1>
+    # <a href="#{page_slug}" class="notion-page-like-icon"></a>
+    # <a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
+
+    page_md_content += '**@' + ' -> '.join([dt_modified, dt_published]) + '**\n\n'
     page_md_content += childrenlike2markdown(block, ctx)
     page_md_content += '\n\n---\n\n'
-    #<time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} -> @{dt_published}">@{dt_published}</time> 
-    #html_anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a><a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
-    #<h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{html_anchor}</h1>
     
     #page_md_fixed_lines = []
     #prev_line_type = ''
@@ -1277,7 +1280,7 @@ if __name__ == '__main__':
     
     #notionjson2html : assert args.input_json
     #notionapi2notionjson: assert args.notion_page_id
-    if os.path.exists(args.input_json) and os.path.isfile(args.input_json):
+    if args.action == 'notionapi2notionjson' or (os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
         notion2static(**vars(args), ext = ext)
 
     elif os.path.exists(args.input_json) and os.path.isdir(args.input_json):
