@@ -1043,6 +1043,7 @@ def notion2static(
     config_json,
     input_json,
     output_path,
+    notion_token,
     notion_page_id,
     extract_assets,
     download_assets,
