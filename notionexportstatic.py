@@ -9,6 +9,8 @@
 # TODO: notionjson2html: allow prefix and suffix html to individual pages and site to allow google anaylitics, code highlighting, equation rendering
 # TODO: notionjson2html: add sticky footer for gdpr - or maybe another sticky header?
 # TODO: for single mode add breadcrumbs into page2html/page2markdown
+# TODO: flat assets dir support
+# TODO: notionjson2markdown: add dividers before and after toc
 
 # https://docs.super.so/super-css-classes
 
@@ -219,7 +221,7 @@ def table_of_contents2html(block, ctx, tag = 'ul', class_name = 'notion-table_of
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
-        return '<div class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr /></div>\n'
+        return '<div class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr/></div>\n'
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
     color = block['table_of_contents'].get('color', '')
@@ -381,14 +383,14 @@ def table2markdown(block, ctx, sanitize_table_cell = lambda md: md.replace('\n',
     markdown_children += '\n'
     return markdown_children
 
-def table_of_contents2markdown(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
+def table_of_contents2markdown(block, ctx, tag = '* '):
     #return '\n\n{:toc}\n\n'
     if block.get('site_table_of_contents_page_ids'):
-        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '<ul class="notion-table_of_contents-site-page-list">\n' + '\n'.join('<li class="notion-table_of_contents-site-page-item">\n{html_link_to_page}\n{html_child_pages}\n</li>'.format(html_link_to_page = link_to_page2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx), html_child_pages = table_of_contents_page_tree(page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, []))) for page_id in page_ids) + '\n</ul>'
+        table_of_contents_page_tree = lambda page_ids, depth = 0: '' if not page_ids else '\n'.join(depth * 4 * ' ' + '{tag}{markdown_link_to_page}\n{markdown_child_pages}\n'.format(tag = tag, markdown_link_to_page = link_to_page2markdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx), markdown_child_pages = table_of_contents_page_tree([page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, [])], depth + 1)) for page_id in page_ids)
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
-        return '<div class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr /></div>\n'
+        return table_of_contents_page_tree(root_page_ids, depth = 0) + '\n---\n'
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
     color = block['table_of_contents'].get('color', '')
@@ -401,7 +403,7 @@ def table_of_contents2markdown(block, ctx, tag = 'ul', class_name = 'notion-tabl
         heading_type = block.get('type', '')
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         markdown_text = richtext2markdown(block[block.get('type')].get('text') or block[block.get('type')].get('rich_text') or [], ctx, title_mode = True)
-        markdown_children += max(0, heading_type2depth[effective_heading_type] - 1) * 4 * ' ' + f'* [{markdown_text}](#{block_id_no_dashes})\n'
+        markdown_children += max(0, heading_type2depth[effective_heading_type] - 1) * 4 * ' ' + f'{tag}[{markdown_text}](#{block_id_no_dashes})\n'
     return markdown_children
 
 def mention2markdown(block, ctx):
@@ -417,23 +419,19 @@ def mention2markdown(block, ctx):
         return ' **@{user_name}#{user_id}** '.format(user_id = mention_payload.get('id', ''), user_name = block.get('plain_text', '').removeprefix('@'))
     if mention_type == 'date':
         return ' **@{date_text}** '.format(date_text = html.escape(block.get('plain_text', '')))
-    
     return unsupported2markdown(block, ctx)
 
 def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     dt_modified = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_downloaded', 0)).strftime(strftime) if ctx.get('unix_seconds_downloaded', 0) else ''
     dt_published = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
-    
     src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
     src_cover = ctx['assets'].get(src_cover, {}).get('uri', src_cover)
     page_id = block.get('id', '')
     page_id_no_dashes = page_id.replace('-', '')
-
     page_title = (get_page_title(block, ctx))
     page_emoji = get_page_emoji(block, ctx)
     page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx)
-
     src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else page_url
     
     page_md_content = f'![cover]({src_cover})\n\n' * bool(src_cover)
@@ -441,9 +439,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     page_md_content += ''.join(block2markdown(subblock, ctx) for subblock in (block.get('blocks', []) or block.get('children', [])))
     page_md_content += '\n\n---\n\n'
     #<time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} -> @{dt_published}">@{dt_published}</time> 
-    #
     #html_anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a><a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
-    #
     #<h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{html_anchor}</h1>
     
     #page_md_fixed_lines = []
@@ -467,9 +463,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     #page_md_content = '\n'.join(page_md_fixed_lines)
     #page_md_content = page_md_content.replace('\n\n\n', '\n\n')
     # page_md = code_aligner(page_md)
-    #for k in page.keys() & ['date', 'date_end', 'last_edited_time']: page[k] = datetime.datetime.strptime(page[k], "%Y-%m-%dT%H:%M:%S.%fZ")
     #metadata = '''---\ntitle: "{title}"\ncover: {cover}\nemoji: {emoji}\n{properties}\n---\n\n'''.format(properties = '\n'.join(f'{k}: {v}' for k, v in page.get('properties_md', {}).items()), title = page.get('title', ''), cover = page.get('cover', ''), emoji = page.get('emoji', ''))
-    #page_md_content = '[#](../) / {emoji} {title}\n<hr/>\n\n'.format(emoji = page.get('emoji', ''), title = page.get('title', '')) + ('![cover]({cover})\n\n' if page.get('cover') else '').format(**page) + '# {emoji} {title}\n\n'.format(emoji = page.get('emoji', ''), title = page.get('title', '')) + page_md_content
     return page_md_content
 
 #def block2markdown(block, ctx, depth=0, page_id=''):
@@ -896,7 +890,7 @@ def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}
     if extract_assets and assets:
         os.makedirs(assets_dir, exist_ok = True)
         for asset in assets.values():
-            asset_path = os.path.join(assets_dir, asset['name'])
+            asset_path = os.path.join(assets_dir, asset['basename'])
             with open(asset_path, 'wb') as f:
                 f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
             asset['uri'] = 'file:///' +  '/'.join(asset_path.split(os.path.sep))
@@ -983,6 +977,9 @@ def extractall(
     
         if ext == '.html':
             notionstr = sitepages2html([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat)
+
+        if ext == '.md':
+            notionstr = sitepages2markdown([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat)
 
         if ext == '.json':
             notionjson = dict(

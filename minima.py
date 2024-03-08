@@ -11,6 +11,8 @@
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cookies = True, block2html = (lambda page, ctx: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
     page_id = page_ids[0]
     
+    markdown_divider = block2html(dict(type = 'divider'), ctx)
+
     html_header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx)
     
     html_main_toc = '' if not toc or len(page_ids) <= 1 else block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx)
@@ -26,7 +28,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cook
 def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2markdown = (lambda page, ctx: '')):
     page_id = page_ids[0]
     
-    markdown_divider = block2markdown(dict(type = 'divider'))
+    markdown_divider = block2markdown(dict(type = 'divider'), ctx)
 
     markdown_header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx)
     
