@@ -34,9 +34,9 @@ def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, toc = False, 
     
     markdown_main_toc = '' if not toc or len(page_ids) <= 1 else block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx)
     
-    markdown_main = f'\n{markdown_divider}\n'.join(block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+    markdown_main = f'\n{markdown_divider}\n'.join(block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
 
-    markdown = '\n\n'.join([markdown_header_breadcrumb, markdown_divider, markdown_main_toc, markdown_main])
+    markdown = '\n\n'.join([markdown_header_breadcrumb, markdown_divider, markdown_main_toc, markdown_divider, markdown_main])
 
     # pip install mdx_truly_sane_lists
     # pip install markdown-captions, pip install markdown-checklist
