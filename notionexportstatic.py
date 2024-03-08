@@ -1081,8 +1081,8 @@ def notion2static(
     else:
         notion_page_ids_no_dashes = [([k for k, v in config.get('slugs', {}).items() if v.lower() == notion_page_id.lower()] or [notion_page_id])[0].replace('-', '') for notion_page_id in notion_page_id]
         notionjson = notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes)
-    notion_assets = download_assets_to_memory(notion_pages.values()) if download_assets else notionjson.get('assets', {})
     notion_pages = notionjson.get('pages', {})
+    notion_assets = download_assets_to_memory(notion_pages.values()) if download_assets else notionjson.get('assets', {})
 
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
     notion_slugs = config.get('slugs', {})
