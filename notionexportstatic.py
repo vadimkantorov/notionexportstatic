@@ -973,8 +973,8 @@ def extractall(
         if ext == '.json':
             notionjson = dict(
                 pages = {page_id : page for page_id, page in (notion_pages if extract_mode == 'single' else notion_pages_flat).items() if page_id in page_ids}, 
+                assets = prepare_and_extract_assets(notion_pages = notion_pages, ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets),
                 unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0),
-                assets = prepare_and_extract_assets(notion_pages = notion_pages, ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)
             )
             notionstr = json.dumps(notionjson, ensure_ascii = False, indent = 4)
         
