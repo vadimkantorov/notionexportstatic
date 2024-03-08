@@ -26,13 +26,15 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cook
 def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2markdown = (lambda page, ctx: '')):
     page_id = page_ids[0]
     
+    markdown_divider = block2markdown(dict(type = 'divider'))
+
     markdown_header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx)
     
     markdown_main_toc = '' if not toc or len(page_ids) <= 1 else block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx)
     
-    markdown_main = '\n<hr />\n'.join(block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+    markdown_main = f'\n{markdown_divider}\n'.join(block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
 
-    markdown = '\n\n'.join([markdown_header_breadcrumb, markdown_main_toc, markdown_main])
+    markdown = '\n\n'.join([markdown_header_breadcrumb, markdown_divider, markdown_main_toc, markdown_main])
 
     # pip install mdx_truly_sane_lists
     # pip install markdown-captions, pip install markdown-checklist
