@@ -383,11 +383,11 @@ def table2markdown(block, ctx, sanitize_table_cell = lambda md: md.replace('\n',
 def table_of_contents2markdown(block, ctx, tag = '* '):
     #return '\n\n{:toc}\n\n'
     if block.get('site_table_of_contents_page_ids'):
-        table_of_contents_page_tree = lambda page_ids, depth = 0: '' if not page_ids else '\n'.join(depth * 4 * ' ' + '{tag}{markdown_link_to_page}\n{markdown_child_pages}\n'.format(tag = tag, markdown_link_to_page = link_to_page2markdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx), markdown_child_pages = table_of_contents_page_tree([page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, [])], depth + 1)) for page_id in page_ids)
+        table_of_contents_page_tree = lambda page_ids, depth = 0: '' if not page_ids else ''.join(depth * 4 * ' ' + '{tag}{markdown_link_to_page}\n{markdown_child_pages}'.format(tag = tag, markdown_link_to_page = link_to_page2markdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), markdown_child_pages = table_of_contents_page_tree([page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, [])], depth + 1)) for page_id in page_ids)
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
-        return table_of_contents_page_tree(root_page_ids, depth = 0) + '\n---\n'
+        return table_of_contents_page_tree(root_page_ids, depth = 0)
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
     color = block['table_of_contents'].get('color', '')
@@ -535,84 +535,36 @@ def link_to_page2markdown(block, ctx, line_break = True):
     markdown_caption = '{page_emoji} {page_title}'.format(page_title = (link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
     return '[{markdown_caption}]({href})'.format(markdown_caption = markdown_caption, href = link_to_page_info['href'])# + '\n\n' * line_break
 
-def richtext2markdown(richtext, ctx, title_mode = False):
-    if isinstance(richtext, list):
-        return ''.join(richtext2markdown(r, ctx, title_mode = title_mode) for r in richtext)
+def richtext2markdown(block, ctx, title_mode = False):
+    if isinstance(block, list):
+        return ''.join(richtext2markdown(subblock, ctx, title_mode = title_mode) for subblock in block).strip()
     
-    #plain_text = block['plain_text']
-    #anno = block['annotations']
-    #href = block.get('href', '')
-    #if title_mode:
-    #    return plain_text
-    #if block['type'] == 'mention':
-    #    return mention2markdown(block, ctx)
-    #if block['type'] == 'equation':
-    #    return equation2markdown(block, ctx)
-    #html = (plain_text)
-    #if href:
-    #    html = link_to_page2markdown(block, ctx, line_break = False) if href.startswith('/') else linklike2markdown(block, ctx)
-    #if anno['bold']:
-    #   html = f'<b>{html}</b> ' 
-    #if anno['italic']:
-    #    html = f'<i>{html}</i>'
-    #if anno['strikethrough']:
-    #    html = f'<s>{html}</s>'
-    #if anno['underline']:
-    #    html = f'<u>{html}</u>'
-    #if anno['code']:
-    #    html = f'<code class="notion-code-inline">{html}</code>'
-    #if (color := anno['color']) != 'default':
-    #    html = f'<span style="color:{color}">{html}</span>'
-    
-
-    code = lambda content: f"`{content}`"
-    color = lambda content, color: f"<span style='color:{color}'>{content}</span>"
-    equation = lambda content: f"$ {content} $"
-    user = lambda kwargs: f"({kwargs['content']})"
-    date = lambda kwargs: f"({kwargs['content']})"
-    italic = lambda content: f"*{content}*"
-    strikethrough = lambda content: f"~~{content}~~"
-    underline = lambda content: f"<u>{content}</u>"
-    bold = lambda content: content if ((not content) or content.isspace()) else  (content[0] * (bool(content) and content[0].isspace())) + f" **{content.strip()}** "
-    _mention_link = lambda content, url: ('<a href="{url}" target="_blank"> <i class="fa fa-lg fa-github"> </i> {repo} </a>' if "https://github.com/" in url else "[{content}]({url})").format(repo = os.path.basename(url), url = url, content = content)
-    page = lambda kwargs: _mention_link(kwargs['content'], kwargs['url'])
-    link_preview = lambda kwargs: _mention_link(kwargs['content'], kwargs['url'])
-    mention_kwargs = lambda payload: {'content' : payload['plain_text']} if not payload['href'] else {'url': payload['href'], 'content': payload['plain_text'] if payload['plain_text'] != "Untitled" else payload['href']}
-    text_link = lambda kwargs: "[{caption}]({url})".format(caption = kwargs['content'], url = kwargs['link']['url'])
-    database = lambda kwargs: _mention_link(kwargs['content'], kwargs['url'])
-
-    annotation_map = { "bold": bold, "italic": italic, "strikethrough": strikethrough, "underline": underline, "code": code}
-    mention_map = { "user": user, "page": page, "database": database, "date": date, "link_preview": link_preview}
-
-    markdown = ""
-    plain_text = richtext["plain_text"]
-    if richtext['type'] == "equation":
-        markdown = equation(plain_text)
-        if title_mode:
-            return markdown
-    elif richtext['type'] == "mention":
-        mention_type = richtext['mention']['type']
-        if mention_type in mention_map:
-            markdown = mention_map[mention_type](mention_kwargs(richtext))
-    else:
-        if title_mode:
-            markdown = plain_text
-            return markdown
-        if "href" in richtext:
-            if richtext["href"]:
-                markdown = text_link(richtext["text"])
-            else:
-                markdown = plain_text
-        else:
-            markdown = plain_text
-        annot = richtext["annotations"]
-        for key,transfer in annotation_map.items():
-            if richtext["annotations"][key]:
-                markdown = transfer(markdown)
-        if annot["color"] != "default":
-            markdown = color(markdown,annot["color"])
+    plain_text = block['plain_text']
+    anno = block['annotations']
+    href = block.get('href', '')
+    if title_mode:
+        return plain_text
+    if block['type'] == 'mention':
+        return mention2markdown(block, ctx)
+    if block['type'] == 'equation':
+        return equation2markdown(block, ctx) # TODO: inline? f"$ {content} $"
+        
+    markdown = (plain_text)
+    if href:
+        markdown = link_to_page2markdown(block, ctx, line_break = False) if href.startswith('/') else linklike2markdown(block, ctx)
+    if anno['bold']:
+       markdown = f'**{markdown}**' 
+    if anno['italic']:
+        markdown = f'*{markdown}*'
+    if anno['strikethrough']:
+        markdown = f'~~~{markdown}~~~'
+    if anno['underline']:
+        markdown = f'<u>{markdown}</u>'
+    if anno['code']:
+        markdown = f'`{markdown}`'
+    if (color := anno['color']) != 'default':
+        markdown = f'<span style="color:{color}">{markdown}</span>'
     return markdown
-    
 
 
 ##############################
@@ -961,19 +913,22 @@ def extractall(
     use_page_title_for_missing_slug = False, 
     extract_assets = False, 
     extract_mode = '',
+    assets_dir = None,
     
     ext = '.html'
 ):
     notion_assets = ctx.get('assets', {})
     if extract_mode == 'single' or extract_mode == 'singleflat':
+        assets_dir = output_path + '_files'
+        notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
         if ext == '.md':
-           notionstr = sitepages2markdown(page_ids, ctx = dict(ctx, assets = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)), notion_pages = notion_pages_flat)
+           notionstr = sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat)
         if ext == '.html':
-           notionstr = sitepages2html(page_ids, ctx = dict(ctx, assets = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets)), notion_pages = notion_pages_flat)
+           notionstr = sitepages2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat)
         if ext == '.json':
             notionjson = dict(
                 pages = {page_id : page for page_id, page in (notion_pages if extract_mode == 'single' else notion_pages_flat).items() if page_id in page_ids}, 
-                assets = prepare_and_extract_assets(notion_pages = notion_pages, ctx = ctx, assets_dir = output_path + '_files', notion_assets = notion_assets, extract_assets = extract_assets),
+                assets = notion_assets_for_blocks,
                 unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0),
             )
             notionstr = json.dumps(notionjson, ensure_ascii = False, indent = 4)
@@ -1052,6 +1007,7 @@ def notion2static(
     extract_mode,
     theme_py,
     sitemap_xml,
+    assets_dir,
 
     config_html_toc,
     config_html_cookies,
@@ -1113,6 +1069,7 @@ def notion2static(
     ctx['output_path'] = output_path if output_path else '_'.join(notion_page_id) if extract_mode != 'single' else (input_json.removesuffix('.json') + '.html')
     ctx['extract_mode'] = extract_mode
     ctx['assets'] = notion_assets
+    ctx['assets_dir'] = assets_dir
     ctx['unix_seconds_downloaded'] = notionjson.get('unix_seconds_downloaded', 0)
     ctx['unix_seconds_generated'] = int(time.time())
     ctx['pages'] = notion_pages_flat
@@ -1161,6 +1118,7 @@ def notion2static(
         use_page_title_for_missing_slug = ctx['use_page_title_for_missing_slug'],
         extract_assets = extract_assets, 
         extract_mode = extract_mode,
+        assets_dir = ctx['assets_dir'],
         ext = ext
     )
 
