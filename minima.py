@@ -8,7 +8,14 @@
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 # TODO: add hover style fof breadcrumb
 
-def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cookies = True, block2html = (lambda page, ctx: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
+def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), html_body_header_html = '', html_body_footer_html = '', html_article_header_html = '', html_article_footer_html = ''):
+    toc = ctx.get('html_toc', False), 
+    cookies = ctx.get('html_cookies', False), 
+    #html_body_header_html = read_snippet(config.get('html_body_header_html', '')), 
+    #html_body_footer_html = read_snippet(config.get('html_body_footer_html', '')), 
+    #html_article_header_html = read_snippet(config.get('html_article_header_html', '')), 
+    #html_article_footer_html = read_snippet(config.get('html_article_footer_html', ''))
+    
     page_id_first = page_ids[0]
     
     html_divider = block2html(dict(type = 'divider'), ctx) # TODO: delete class_name
@@ -25,7 +32,9 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, toc = False, cook
     
     return html
 
-def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, toc = False, block2markdown = (lambda page, ctx: '')):
+def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx, **kwargs: '')):
+    toc = config.get('html_toc', False)
+
     page_id_first = page_ids[0]
     
     markdown_divider = block2markdown(dict(type = 'divider'), ctx)
