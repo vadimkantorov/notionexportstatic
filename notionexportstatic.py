@@ -996,6 +996,32 @@ def read_and_write_config(config_json, config):
             json.dump(config, f, ensure_ascii = False, indent = 4, sort_keys = True)
     return config
 
+def read_snippets(snippets_dir, snippets_extra_paths = {}):
+    snippets = {}
+    if snippets_dir and os.path.exists(snippets_dir):
+        for basename in os.listdir(snippets_dir):
+            k = basename.replace('.', '_')
+            with open(os.path.join(snippets_dir, basename)) as f:
+                snippets[k] = f.read()
+    for k, v in snippets_extra_paths.items():
+        if v and os.path.exists(v):
+            with open(v) as f:
+                snippets[k] = f.read()
+        elif v and snippets_dir and os.path.exists(snippets_dir) and os.path.exists(os.path.join(snippets_dir, v)):
+            with open(os.path.join(snippets_dir, v)) as f:
+                snippets[k] = f.read()
+    return snippets
+
+def write_snippets(snippets_dir, snippets, skip = []):
+    if snippets_dir:
+        os.makedirs(snippets_dir, exist_ok = True)
+        for k, v in snippets.items():
+            basename = k.replace('_css', '.css').replace('_html', '.html')
+            if k in skip or basename in skip:
+                continue
+            with open(os.path.join(snippets_dir, basename), 'w') as f:
+                f.write(v)
+
 def notion2static(
     config_json,
     input_json,
@@ -1011,21 +1037,22 @@ def notion2static(
     snippets_dir,
     base_url,
     edit_url,
+    markdown_frontmatter,
+    use_page_title_for_missing_slug,
+    log_unsupported_blocks,
+    log_urls,
+
 
     html_toc,
     html_cookies,
     html_details_open,
     html_columnlist_disable,
     html_link_to_page_index_html,
+    
     html_body_header_html,
     html_body_footer_html,
     html_article_header_html,
     html_article_footer_html,
-    markdown_frontmatter,
-    use_page_title_for_missing_slug,
-
-    log_unsupported_blocks,
-    log_urls,
 
     action,
 ):
@@ -1077,7 +1104,13 @@ def notion2static(
         sys.path.append(os.path.dirname(theme_py))
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
-    snippets = read_snippets(snippets_dir)
+    snippets = read_snippets(snippets_dir, snippets_extra_paths = dict(
+        html_body_header_html    = html_body_header_html    ,
+        html_body_footer_html    = html_body_footer_html    ,
+        html_article_header_html = html_article_header_html ,
+        html_article_footer_html = html_article_footer_html ,
+    ))
+    snippets_read = list(snippets.keys())
 
     extractall(
         ctx['output_path'], 
@@ -1090,26 +1123,7 @@ def notion2static(
         ext = ext,
         snippets = snippets
     )
-    write_snippets(snippets_dir, snippets)
-
-def read_snippets(snippets_dir):
-    snippets = {}
-    if snippets_dir and os.path.exists(snippets_dir):
-        for basename in os.listdir(snippets_dir):
-            k = basename.replace('.', '_')
-            with open(os.path.join(snippets_dir, basename)) as f:
-                snippets[k] = f.read()
-    return snippets
-
-def write_snippets(snippets_dir, snippets, skip = []):
-    if snippets_dir:
-        os.makedirs(snippets_dir, exist_ok = True)
-        for k, v in snippets.items():
-            if k in skip:
-                continue
-            basename = k.replace('_css', '.css').replace('_html', '.html')
-            with open(os.path.join(snippets_dir, basename), 'w') as f:
-                f.write(v)
+    write_snippets(snippets_dir, snippets, skip = snippets_read)
     
 
 ##############################

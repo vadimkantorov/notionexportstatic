@@ -13,24 +13,21 @@
 #html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
+    snippets_default = dict(
+        css_notion_css = notion_css,
+        css_notion_colors_css = notion_colors_css,
+        css_notion_colors_classic_css = notion_colors_classic_css,
+        css_twitter_emoji_font_css = twitter_emoji_font_css,
+        css_minimacss_classic_css = minimacss_classic_css,
+        html_page_layout_html = page_html,
+        html_cookies_notice_html = cookies_notice_html
+    )
+    for k, v in snippets_default.items():
+        if k not in snippets:
+            snippets[k] = v
+
     toc = ctx.get('html_toc', False)
     cookies = ctx.get('html_cookies', False)
-    
-    if 'css_notion_css' not in snippets:
-        snippets['css_notion_css'] = css_notion
-    if 'css_notion_colors_css' not in snippets:
-        snippets['css_notion_colors_css'] = css_notion_colors
-    if 'css_notion_colors_classic_css' not in snippets:
-        snippets['css_notion_colors_classic_css'] = css_notion_colors_classic
-    if 'css_twitter_emoji_font_css' not in snippets:
-        snippets['css_twitter_emoji_font_css'] = css_twitter_emoji_font
-    if 'css_minimacss_classic_css' not in snippets:
-        snippets['css_minimacss_classic_css'] = css_minimacss_classic
-    if 'html_page_layout_html' not in snippets:
-        snippets['html_page_layout_html' ] = layout_page
-    if 'html_cookies_notice_html' not in snippets:
-        snippets['html_cookies_notice_html'] = html_cookies_notice
-
     html_body_header_html = snippets.get('html_body_header_html', '') 
     html_body_footer_html = snippets.get('html_body_footer_html', '')
     html_article_header_html = snippets.get('html_article_header_html', '')
@@ -65,12 +62,11 @@ def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdow
     return res
 
 
-
-html_cookies_notice = '''
+cookies_notice_html = '''
 <div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice</div>
 '''
 
-layout_page =  '''
+page_html =  '''
 <!DOCTYPE html>
 <html>
     <head>
@@ -96,7 +92,7 @@ layout_page =  '''
 '''
 
 
-css_notion = '''
+notion_css = '''
 
 .notion-page-like-icon::after, .notion-heading-like-icon::after { content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath d='m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z'%3E%3C/path%3E%3C/svg%3E") }
 .notion-page-like-edit-icon::after { content: "✏️"; font-size: 0.4em; }
@@ -156,7 +152,7 @@ css_notion = '''
 
 '''
 
-css_notion_colors = '''
+notion_colors_css = '''
 /* https://docs.super.so/notion-colors */
 
 :root {
@@ -224,7 +220,7 @@ css_notion_colors = '''
 }
 '''
 
-css_notion_colors_classic = '''
+notion_colors_classic_css = '''
 .notion-color-default { color: var(--notion-light-color-text-default); }
 .notion-color-gray    { color: var(--notion-light-color-text-gray); }
 .notion-color-brown   { color: var(--notion-light-color-text-brown); }
@@ -247,7 +243,7 @@ css_notion_colors_classic = '''
 .notion-color-red_background     { background-color: var(--notion-light-color-bg-red); }
 '''
 
-css_twitter_emoji_font = '''
+twitter_emoji_font_css = '''
 @font-face {
     font-family: 'Twemoji Country Flags';
     unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
@@ -256,7 +252,7 @@ css_twitter_emoji_font = '''
 }
 '''
 
-css_minimacss_classic = '''/* css from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima */
+minimacss_classic_css = '''/* css from https://github.com/vadimkantorov/minimacss and https://github.com/jekyll/minima */
 
 @media (prefers-color-scheme: light) and (max-width: 1000000px), (min-width: 0px) {
   :root {
