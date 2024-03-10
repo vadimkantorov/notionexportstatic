@@ -1077,7 +1077,7 @@ def notion2static(
         sys.path.append(os.path.dirname(theme_py))
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
-    snippets = {}
+    snippets = read_snippets(snippets_dir)
 
     extractall(
         ctx['output_path'], 
@@ -1090,6 +1090,27 @@ def notion2static(
         ext = ext,
         snippets = snippets
     )
+    write_snippets(snippets_dir, snippets)
+
+def read_snippets(snippets_dir):
+    snippets = {}
+    if snippets_dir and os.path.exists(snippets_dir):
+        for basename in os.listdir(snippets_dir):
+            k = basename.replace('.', '_')
+            with open(os.path.join(snippets_dir, basename)) as f:
+                snippets[k] = f.read()
+    return snippets
+
+def write_snippets(snippets_dir, snippets, skip = []):
+    if snippets_dir:
+        os.makedirs(snippets_dir, exist_ok = True)
+        for k, v in snippets.items():
+            if k in skip:
+                continue
+            basename = k.replace('_css', '.css').replace('_html', '.html')
+            with open(os.path.join(snippets_dir, basename), 'w') as f:
+                f.write(v)
+    
 
 ##############################
 
