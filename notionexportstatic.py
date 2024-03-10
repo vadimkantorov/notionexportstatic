@@ -328,7 +328,7 @@ def equation2html(block, ctx, tag = 'code', class_name = 'notion-equation-block'
 def file2html(block, ctx, tag = 'a', class_name = 'notion-file-block'): return linklike2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
 def callout2html(block, ctx, tag = 'p', class_name = 'notion-callout-block'): return blocktag2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2html(block, ctx, tag = tag)) + '</div>\n'
 def pdf2html(block, ctx, tag = 'a', class_name = 'notion-pdf-block'): return embed2html(block, ctx, class_name = class_name, html_text = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag))
-def breadcrumb2html(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '&nbsp;/&nbsp;'.join(link_to_page2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
+def breadcrumb2html(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
 def template2html(block, ctx, tag = 'figure', class_name = 'notion-template-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{html_text}</figcaption>\n{html_children}'.format(html_text = richtext2html(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx), html_children = childrenlike2html(block, ctx)))
 def child_database2html(block, ctx, tag = 'figure', class_name = 'notion-child_database-block', untitled = '???'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption><strong>{html_child_database_title}</strong></figcaption>'.format(html_child_database_title = html.escape(block['child_database'].get('title') or untitled)))
 def pdf2html(block, ctx, tag = 'a', class_name = 'notion-pdf-block'): return embed2html(block, ctx, class_name = class_name, html_text = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag))
@@ -503,6 +503,7 @@ def video2markdown(block, ctx): return video2html(block, ctx)
 def embed2markdown(block, ctx): return embed2html(block, ctx)
 def child_database2markdown(block, ctx, untitled = '???'): return ' **{html_child_database_title}** '.format(child_database_title = (block['child_database'].get('title') or untitled))
 def template2markdown(block, ctx): return '---\n{markdown_text}\n{markdown_children}\n---'.format(markdown_text = richtext2markdown(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx), markdown_children = childrenlike2markdown(block, ctx))
+def breadcrumb2markdown(block, ctx, sep = ' / '): return  sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
 
 def code2markdown(block, ctx): return '{markdown_caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), markdown_caption = richtext2html(block['code'].get('caption', []), ctx)) + richtext2markdown(block['code'].get('rich_text', []), ctx) + '\n```'
 # outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
@@ -511,7 +512,6 @@ def code2markdown(block, ctx): return '{markdown_caption}\n```{language}\n'.form
 def toggle2markdown(block, ctx, tag = '', markdown_icon = ''): return tag + '▼ ' + richtext2markdown(block[block.get('type', '') or block.get('object', '')].get('text') or block[block.get('type', '') or block.get('object', '')].get('rich_text') or [], ctx)  + markdown_icon + '\n' + childrenlike2markdown(block, ctx)
 # outcome_block = '\n<details markdown="1">\n<summary markdown="1">\n\n' + outcome_block + '\n\n</summary>\n\n' + ''.join(block2markdown(subblock, ctx, page_id = page_id) for subblock in block["children"]) + '\n\n</details>\n\n'
 
-def breadcrumb2markdown(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block'): return  ' / '.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
 
 def callout2markdown(block, ctx):
     return '> {icon_emoji} '.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2markdown(block, ctx).rstrip() 
@@ -1008,6 +1008,9 @@ def notion2static(
     theme_py,
     sitemap_xml,
     assets_dir,
+    snippets_dir,
+    base_url,
+    edit_url,
 
     html_toc,
     html_cookies,
@@ -1018,8 +1021,7 @@ def notion2static(
     html_body_footer_html,
     html_article_header_html,
     html_article_footer_html,
-    base_url,
-    edit_url,
+    markdown_frontmatter,
     use_page_title_for_missing_slug,
 
     log_unsupported_blocks,
@@ -1075,8 +1077,8 @@ def notion2static(
         sys.path.append(os.path.dirname(theme_py))
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
-    read_snippet = lambda path: open(path).read() if path and os.path.exists(path) else ''
-    
+    snippets = {}
+
     extractall(
         ctx['output_path'], 
         ctx, 

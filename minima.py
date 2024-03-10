@@ -7,51 +7,63 @@
 # TODO: margin between blocks, except empty block
 # TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 # TODO: add hover style fof breadcrumb
+# pip install mdx_truly_sane_lists
+# pip install markdown-captions, pip install markdown-checklist
+# pip install pymdown-extensions
+#html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
-    toc = ctx.get('html_toc', False), 
-    cookies = ctx.get('html_cookies', False), 
+    toc = ctx.get('html_toc', False)
+    cookies = ctx.get('html_cookies', False)
+    
+    if 'css_notion_css' not in snippets:
+        snippets['css_notion_css'] = css_notion
+    if 'css_notion_colors_css' not in snippets:
+        snippets['css_notion_colors_css'] = css_notion_colors
+    if 'css_notion_colors_classic_css' not in snippets:
+        snippets['css_notion_colors_classic_css'] = css_notion_colors_classic
+    if 'css_twitter_emoji_font_css' not in snippets:
+        snippets['css_twitter_emoji_font_css'] = css_twitter_emoji_font
+    if 'css_minimacss_classic_css' not in snippets:
+        snippets['css_minimacss_classic_css'] = css_minimacss_classic
+    if 'html_page_layout_html' not in snippets:
+        snippets['html_page_layout_html' ] = layout_page
+    if 'html_cookies_notice_html' not in snippets:
+        snippets['html_cookies_notice_html'] = html_cookies_notice
+
     html_body_header_html = snippets.get('html_body_header_html', '') 
     html_body_footer_html = snippets.get('html_body_footer_html', '')
-    html_article_header_html = snippets.get('html_article_header_html', ''))
+    html_article_header_html = snippets.get('html_article_header_html', '')
     html_article_footer_html = snippets.get('html_article_footer_html', '')
+    html_page_layout_html = snippets.get('html_page_layout_html', '')
+    html_cookies_notice_html = snippets.get('html_cookies_notice_html', '')
+    css_notion_css = snippets.get('css_notion_css', '')
+    css_notion_colors_css = snippets.get('css_notion_colors_css', '')
+    css_notion_colors_classic_css = snippets.get('css_notion_colors_classic_css', '')
+    css_twitter_emoji_font_css = snippets.get('css_twitter_emoji_font_css', '')
+    css_minimacss_classic_css = snippets.get('css_minimacss_classic_css', '')
+    
+    css_style = css_notion_css + css_notion_colors_css + css_notion_colors_classic_css + css_twitter_emoji_font_css + css_minimacss_classic_css 
     
     page_id_first = page_ids[0]
-    
-    html_divider = block2html(dict(type = 'divider'), ctx) # TODO: delete class_name
-
-    html_header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    
-    html_main_toc = '' if not toc or len(page_ids) <= 1 else block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx)
-    
-    html_main = html_divider.join(block2html(notion_pages[page_id], ctx = ctx, html_prefix = html_article_header_html, html_suffix = html_article_footer_html, class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
-
-    css_style = css_notion + css_notion_colors + css_notion_colors_classic + css_twitter_emoji_font + css_minimacss_classic 
-    
-    html = layout_page.format(css_style = css_style, html_header = html_header_breadcrumb, html_main = html_main_toc + html_main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html, html_cookies_notice = html_cookies_notice if cookies else '')
-    
-    return html
+    divider = block2html(dict(type = 'divider'), ctx) # TODO: delete class_name
+    header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
+    main_toc = '' if not toc or len(page_ids) <= 1 else block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
+    main = divider.join(block2html(notion_pages[page_id], ctx = ctx, html_prefix = html_article_header_html, html_suffix = html_article_footer_html, class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
+    res = html_page_layout_html.format(css_style = css_style, html_header = header_breadcrumb, html_main = main_toc + main, html_body_header_html = html_body_header_html, html_body_footer_html = html_body_footer_html, html_cookies_notice = html_cookies_notice_html * cookies)
+    return res
 
 def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx, **kwargs: ''), snippets = {}):
     toc = config.get('html_toc', False)
 
     page_id_first = page_ids[0]
-    
-    markdown_divider = block2markdown(dict(type = 'divider'), ctx)
+    divider = block2markdown(dict(type = 'divider'), ctx)
+    header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
+    main_toc = '' if not toc or len(page_ids) <= 1 else block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
+    main = f'\n{divider}\n'.join(block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+    res = '\n\n'.join([header_breadcrumb, divider, main_toc, divider, main])
+    return res
 
-    markdown_header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    
-    markdown_main_toc = '' if not toc or len(page_ids) <= 1 else block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx = ctx)
-    
-    markdown_main = f'\n{markdown_divider}\n'.join(block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
-
-    markdown = '\n\n'.join([markdown_header_breadcrumb, markdown_divider, markdown_main_toc, markdown_divider, markdown_main])
-
-    # pip install mdx_truly_sane_lists
-    # pip install markdown-captions, pip install markdown-checklist
-    # pip install pymdown-extensions
-    #html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
-    return markdown
 
 
 html_cookies_notice = '''
@@ -1662,3 +1674,7 @@ table {
 // (Use `_sass/minima/custom-variables.scss` to override variable defaults)
 */
 '''
+
+if __name__ == '__main':
+    pass
+
