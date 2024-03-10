@@ -2,15 +2,12 @@
 # TODO: refactor _config.json / to allow not just slug but a full path | use parent path to determine link
 # TODO  notion2markdown: rstrip all <br/> at page end
 # TODO  notion2markdown: delete plain_text: ' ' empty text blocks
-# TODO  notion2markdown: optional frontmatter gen
 # TODO  notion2markdown: delete useless "> \n" in callout, ex https://github.com/vadimkantorov/notionfun/edit/gh-pages/_markdown/visa-c.md
 # TODO  notion2markdown: can deploy pre-generated html?
-# TODO: delete newlines from markdown functions
 # TODO: notionjson2html: allow prefix and suffix html to individual pages and site to allow google anaylitics, code highlighting, equation rendering
 # TODO: notionjson2html: add sticky footer for gdpr - or maybe another sticky header?
 # TODO: for single mode add breadcrumbs into page2html/page2markdown
 # TODO: flat assets dir support
-# TODO: notionjson2markdown: add dividers before and after toc
 
 # https://docs.super.so/super-css-classes
 
@@ -908,25 +905,22 @@ def extractall(
     notion_pages = {}, 
     notion_pages_flat = {}, 
     child_pages_by_parent_id = {}, 
-    index_html = False, 
-    use_page_title_for_missing_slug = False, 
-    extract_assets = False, 
-    extract_mode = '',
-    assets_dir = None,
     
-    ext = '.html'
+    ext = '.html',
+    snippets = {}
 ):
     notion_assets = ctx.get('assets', {})
-    if extract_mode == 'single' or extract_mode == 'singleflat':
+    index_html = ctx.get('extract_mode') in ['flat', 'nested']
+    if ctx.get('extract_mode') in ['single', 'singleflat']:
         assets_dir = output_path + '_files'
-        notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
+        notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False))
         if ext == '.md':
-           notionstr = theme.sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2markdown = block2markdown)
+           notionstr = theme.sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
         if ext == '.html':
-           notionstr = theme.sitepages2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2html = block2html)
+           notionstr = theme.sitepages2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2html = block2html, snippets = snippets)
         if ext == '.json':
             notionjson = dict(
-                pages = {page_id : page for page_id, page in (notion_pages if extract_mode == 'single' else notion_pages_flat).items() if page_id in page_ids}, 
+                pages = {page_id : page for page_id, page in (notion_pages if ctx.get('extract_mode') == 'single' else notion_pages_flat).items() if page_id in page_ids}, 
                 assets = notion_assets_for_blocks,
                 unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0),
             )
@@ -940,7 +934,7 @@ def extractall(
     os.makedirs(output_path, exist_ok = True)
     for page_id in page_ids:
         page_block = notion_pages_flat[page_id]
-        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = use_page_title_for_missing_slug)
+        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = ctx.get('use_page_title_for_missing_slug'))
 
         if ctx['sitemap_xml']:
             page_url_relative = get_page_url_relative(page_block, ctx)
@@ -957,14 +951,14 @@ def extractall(
         os.makedirs(page_dir, exist_ok = True)
         assets_dir = os.path.join(page_dir, page_slug + '_files')
             
-        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = extract_assets)
+        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir, notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False))
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
     
         if ext == '.html':
-            notionstr = theme.sitepages2html([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat, block2html = block2html)
+            notionstr = theme.sitepages2html([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat, block2html = block2html, snippets = snippets)
 
         if ext == '.md':
-            notionstr = theme.sitepages2markdown([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat, block2markdown = block2markdown)
+            notionstr = theme.sitepages2markdown([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
 
         if ext == '.json':
             notionjson = dict(
@@ -987,10 +981,6 @@ def extractall(
                 notion_pages = notion_pages,
                 notion_pages_flat = notion_pages_flat, 
                 child_pages_by_parent_id = child_pages_by_parent_id, 
-                index_html = index_html, 
-                use_page_title_for_missing_slug = use_page_title_for_missing_slug,
-                extract_assets = extract_assets, 
-                extract_mode = extract_mode,
                 ext = ext
             )
 
@@ -1040,7 +1030,7 @@ def notion2static(
     config = read_and_write_config(args.config_json, locals())
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
     
-    ext = dict(notionjson2html = '.html', notion2markdown = '.md', notionapi2notionjson = '.json')[args.action]
+    ext = dict(notionjson2html = '.html', notion2markdown = '.md', notionapi2notionjson = '.json')[action]
 
     if input_json:
         notionjson = json.load(open(input_json)) if input_json else {}
@@ -1065,7 +1055,7 @@ def notion2static(
     assert all(page_id in notion_pages_flat for page_id in root_page_ids)
 
     ctx = config.copy()
-    ctx['output_path'] = output_path if output_path else '_'.join(notion_page_id) if extract_mode != 'single' else (input_json.removesuffix('.json') + '.html')
+    ctx['output_path'] = output_path if output_path else '_'.join(notion_page_id) if ctx.get('extract_mode', 'single') != 'single' else (input_json.removesuffix('.json') + '.html')
     ctx['log_unsupported_blocks_file'] = open(log_unsupported_blocks if log_unsupported_blocks else os.devnull , 'w')
     ctx['log_urls_file'] = open(log_urls if log_urls else os.devnull , 'w')
     ctx['sitemap'] = sitemap
@@ -1094,13 +1084,9 @@ def notion2static(
         page_ids = page_ids, 
         notion_pages = notion_pages,
         notion_pages_flat = notion_pages_flat, 
-        child_pages_by_parent_id = child_pages_by_parent_id if extract_mode == 'nested' else {}, 
-        index_html = extract_mode in ['flat', 'nested'], 
-        use_page_title_for_missing_slug = ctx.get('use_page_title_for_missing_slug'),
-        extract_assets = extract_assets, 
-        extract_mode = extract_mode,
-        assets_dir = ctx['assets_dir'],
-        ext = ext
+        child_pages_by_parent_id = child_pages_by_parent_id if ctx.get('extract_mode') == 'nested' else {}, 
+        ext = ext,
+        snippets = snippets
     )
 
 ##############################
@@ -1189,6 +1175,7 @@ def block2markdown(block, ctx = {}, begin = False, end = False, **kwargs):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--action', default = 'notionjson2html', choices = ['notionjson2html', 'notionapi2notionjson', 'notion2markdown'])
+    parser.add_argument('--config-json')
     parser.add_argument('--input-json', '-i')
     parser.add_argument('--output-path', '-o')
     parser.add_argument('--notion-token', default = os.getenv('NOTION_TOKEN', ''))
@@ -1196,14 +1183,16 @@ if __name__ == '__main__':
     parser.add_argument('--theme-py', default = 'minima.py')
     parser.add_argument('--extract-mode', default = 'single', choices = ['single', 'singleflat', 'flat', 'flat.html', 'nested'])
     parser.add_argument('--assets-dir')
+    parser.add_argument('--snippets-dir')
     parser.add_argument('--sitemap-xml')
+    parser.add_argument('--base-url')
+    parser.add_argument('--edit-url')
     parser.add_argument('--log-unsupported-blocks')
     parser.add_argument('--log-urls')
     parser.add_argument('--download-assets', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
-
-    parser.add_argument('--config-json')
+    parser.add_argument('--markdown-frontmatter', action = 'store_true')
     parser.add_argument('--html-toc', action = 'store_true')
     parser.add_argument('--html-cookies', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
@@ -1213,9 +1202,6 @@ if __name__ == '__main__':
     parser.add_argument('--html-body-footer-html')
     parser.add_argument('--html-article-header-html')
     parser.add_argument('--html-article-footer-html')
-    parser.add_argument('--base-url')
-    parser.add_argument('--edit-url')
-
     args = parser.parse_args()
     print(args)
 
