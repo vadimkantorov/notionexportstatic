@@ -928,7 +928,7 @@ def extractall(
     notion_assets = ctx.get('assets', {})
     index_html = ctx.get('extract_mode') in extract_mode_index_html
 
-    if ctx.get('extract_mode') in extract_mode_single:
+    if ctx['extract_mode'] in extract_mode_single:
         notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = ctx['assets_dir'] or (output_path + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
         if ext == '.md':
            notionstr = theme.sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
@@ -936,7 +936,7 @@ def extractall(
            notionstr = theme.sitepages2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2html = block2html, snippets = snippets)
         if ext == '.json':
             notionjson = dict(
-                pages = {page_id : page for page_id, page in (notion_pages if ctx.get('extract_mode') == 'single' else notion_pages_flat).items() if page_id in page_ids}, 
+                pages = {page_id : page for page_id, page in (notion_pages if ctx['extract_mode'] == 'single.json' else notion_pages_flat).items() if page_id in page_ids}, 
                 assets = notion_assets_for_blocks,
                 unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0),
             )
