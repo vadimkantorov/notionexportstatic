@@ -11,7 +11,6 @@
 
 # https://docs.super.so/super-css-classes
 
-
 import os
 import re
 import sys
@@ -261,6 +260,8 @@ def video2html(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
 
 def image2html(block, ctx, tag = 'img', class_name = 'notion-image-block'):
+    if block['id'] == 'b2146d56-434b-4250-aeaf-b029621f606f':
+        breakpoint()
     src = get_asset_url(block, ctx)
     html_text = richtext2html(block, ctx, caption = True, title_mode = False)
     html_text_alt = richtext2html(block, ctx, caption = True, title_mode = True)
@@ -637,7 +638,7 @@ def get_page_url_relative(block, ctx):
     elif ctx['extract_mode'] == 'flat.html':
         return './' + (page_suffix if is_index_page else page_slug + '.html')
     
-    elif ctx['extract_mode'].startswith('single'):
+    elif ctx['extract_mode'] in extract_mode_single:
         page_url_relative = './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
 
         if page_slug_only:
@@ -649,7 +650,7 @@ def get_page_url_relative(block, ctx):
         return page_url_relative 
             
 
-    elif ctx['extract_mode'].startswith('nested'):
+    elif ctx['extract_mode'] in extract_mode_nested:
         if (k := sitemap_urlset_index(ctx['sitemap'], page_id)) != -1:
             return ctx['sitemap'][k]['locrel']
        
@@ -694,7 +695,7 @@ def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_sl
 
 def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
     s = richtext2html(block, ctx, rich_text = True, title_mode = True)
-    if ctx['extract_mode'] in ['single', 'singleflat']:
+    if ctx['extract_mode'] in extract_mode_single:
         page_block = get_page_current(block, ctx)
         page_slug = get_page_slug(page_block.get('id', ''), ctx)
         prefix = page_slug + '-'
@@ -743,9 +744,7 @@ def get_page_relative_link(page_url_base, page_url_target):
     target_path_splitted = target_path.split('/')
 
     num_common_parts = ([i for i, (part_base, part_target) in enumerate(zip(base_path_splitted, target_path_splitted)) if part_base != part_target] or [min(len(base_path_splitted), len(target_path_splitted))])[0]
-
     num_cd_parent = len(base_path_splitted) - num_common_parts - 1
-
     href = '../' * num_cd_parent + './' * (num_cd_parent == 0) + '/'.join(target_path_splitted[num_common_parts:]) + ('#' + target_fragment if target_fragment else '')
 
     return href
@@ -821,11 +820,11 @@ def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}
             else:
                 pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = parent_id)
 
-def discover_assets(blocks, asset_urls = [], include_image = True, include_video = False, include_file = False, include_pdf = False, exclude_datauri = True, block_types = []):
+def discover_assets(blocks, asset_urls = [], exclude_datauri = True, block_types = []):
     for block in blocks:
         for key in ['children', 'blocks']:
             if block.get(key, []):
-                discover_assets(block[key], asset_urls = asset_urls)
+                discover_assets(block[key], asset_urls = asset_urls, exclude_datauri = exclude_datauri, block_types = block_types)
         block_type = get_block_type(block)
         urls = [
             get_block_url(block.get('cover') or {}),
@@ -875,9 +874,9 @@ def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg
         sha1 = hashlib.sha1()
         sha1.update(path.encode())
         url_hash = sha1.hexdigest()
-        file_name = basename + '.' + url_hash + ext
-        notion_assets[url] = dict(basename = basename, uri = datauri, ok = ok)
-        print(url, file_name, ok)
+        basename_hashed = basename + '.' + url_hash + ext
+        notion_assets[url] = dict(basename = basename, basename_hashed = basename_hashed, uri = datauri, ok = ok)
+        print(url, basename, basename_hashed, ok)
     return notion_assets
 
 def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}, extract_assets = False, block_types = []):
@@ -887,7 +886,7 @@ def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}
     if extract_assets and assets:
         os.makedirs(assets_dir, exist_ok = True)
         for asset in assets.values():
-            asset_path = os.path.join(assets_dir, asset['basename'])
+            asset_path = os.path.join(assets_dir, asset['basename_hashed'])
             with open(asset_path, 'wb') as f:
                 f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
             asset['uri'] = 'file:///' +  '/'.join(asset_path.split(os.path.sep))
@@ -927,10 +926,10 @@ def extractall(
 ):
     ext = os.path.splitext(ctx['extract_mode'])[-1]
     notion_assets = ctx.get('assets', {})
-    index_html = ctx.get('extract_mode') in extract_mode_flat + extract_mode_nested
+    index_html = ctx.get('extract_mode') in extract_mode_index_html
 
     if ctx.get('extract_mode') in extract_mode_single:
-        notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = ctx['assets_dir'] or (output_path + '_files'), notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False))
+        notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = ctx['assets_dir'] or (output_path + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
         if ext == '.md':
            notionstr = theme.sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
         if ext == '.html':
@@ -953,7 +952,7 @@ def extractall(
         page_block = notion_pages_flat[page_id]
         page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = ctx.get('use_page_title_for_missing_slug'))
 
-        if ctx['sitemap_xml']:
+        if ctx['sitemap_xml']: #TODO: update with single setup?
             page_url_relative = get_page_url_relative(page_block, ctx)
             page_url_absolute = get_page_url_absolute(page_url_relative, ctx)
             sitemap_urlset_update(ctx['sitemap'], page_id, loc = page_url_absolute, locrel = page_url_relative)
@@ -961,13 +960,12 @@ def extractall(
 
         os.makedirs(output_path, exist_ok = True)
         
-        # TODO: flat.html?
         page_nested_dir = os.path.join(output_path, page_slug)
-        page_dir = page_nested_dir if ext == '.html' and index_html and page_slug != 'index' else output_path
+        page_dir = page_nested_dir if (index_html and page_slug != 'index') else output_path
         
         os.makedirs(page_dir, exist_ok = True)
             
-        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = ctx['assets_dir'] or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False))
+        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = ctx['assets_dir'] or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False), block_types = ctx['download_assets_block_types'])
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
     
         if ext == '.html':
@@ -1046,7 +1044,6 @@ def notion2static(
     use_page_title_for_missing_slug,
     log_unsupported_blocks,
     log_urls,
-
 
     toc,
     html_cookies,
@@ -1215,8 +1212,9 @@ def block2markdown(block, ctx = {}, begin = False, end = False, **kwargs):
 
 extract_mode_single = ['single.html', 'single.md', 'single.json', 'single_pages_flattened.json']
 extract_mode_flat = ['flat.html', 'flat.md', 'flat.json', 'flat/index.html']
-extract_mode_nested = ['nested.html', 'nested.md', 'nested.json']
-extract_mode_json = ['flat.json', 'nested.json', 'single.json', 'single_pages_flattened.json', ]
+extract_mode_nested = ['nested/index.html', 'nested.md', 'nested.json']
+extract_mode_json = ['flat.json', 'nested.json', 'single.json', 'single_pages_flattened.json']
+extract_mode_index_html = ['flat/index.html', 'nested/index.html']
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
