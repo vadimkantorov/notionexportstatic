@@ -1043,23 +1043,21 @@ def notion2static(
     log_urls,
 
 
-    html_toc,
+    toc,
     html_cookies,
     html_details_open,
     html_columnlist_disable,
     html_link_to_page_index_html,
     
-    html_body_header_html,
-    html_body_footer_html,
-    html_article_header_html,
-    html_article_footer_html,
+    body_header_html,
+    body_footer_html,
+    article_header_html,
+    article_footer_html,
 
-    action,
+    ext,
 ):
     config = read_and_write_config(args.config_json, locals())
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
-    
-    ext = dict(notionjson2html = '.html', notion2markdown = '.md', notionapi2notionjson = '.json')[action]
 
     if input_json:
         notionjson = json.load(open(input_json)) if input_json else {}
@@ -1105,10 +1103,10 @@ def notion2static(
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
     snippets = read_snippets(snippets_dir, snippets_extra_paths = dict(
-        html_body_header_html    = html_body_header_html    ,
-        html_body_footer_html    = html_body_footer_html    ,
-        html_article_header_html = html_article_header_html ,
-        html_article_footer_html = html_article_footer_html ,
+        body_header_html    = body_header_html    ,
+        body_footer_html    = body_footer_html    ,
+        article_header_html = article_header_html ,
+        article_footer_html = article_footer_html ,
     ))
     snippets_read = list(snippets.keys())
 
@@ -1211,7 +1209,7 @@ def block2markdown(block, ctx = {}, begin = False, end = False, **kwargs):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--action', default = 'notionjson2html', choices = ['notionjson2html', 'notionapi2notionjson', 'notion2markdown'])
+    parser.add_argument('--ext', default = '.html', choices = ['.html', '.json', '.md'])
     parser.add_argument('--config-json')
     parser.add_argument('--input-json', '-i')
     parser.add_argument('--output-path', '-o')
@@ -1229,22 +1227,22 @@ if __name__ == '__main__':
     parser.add_argument('--download-assets', action = 'store_true')
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
+    parser.add_argument('--toc', action = 'store_true')
     parser.add_argument('--markdown-frontmatter', action = 'store_true')
-    parser.add_argument('--html-toc', action = 'store_true')
     parser.add_argument('--html-cookies', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
     parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
-    parser.add_argument('--html-body-header-html')
-    parser.add_argument('--html-body-footer-html')
-    parser.add_argument('--html-article-header-html')
-    parser.add_argument('--html-article-footer-html')
+    parser.add_argument('--body-header-html')
+    parser.add_argument('--body-footer-html')
+    parser.add_argument('--article-header-html')
+    parser.add_argument('--article-footer-html')
     args = parser.parse_args()
     print(args)
 
     #notionjson2html : assert args.input_json
     #notionapi2notionjson: assert args.notion_page_id
-    if args.action == 'notionapi2notionjson' or (os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
+    if args.ext == '.json' or (os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
         notion2static(**vars(args))
 
     elif os.path.exists(args.input_json) and os.path.isdir(args.input_json):
