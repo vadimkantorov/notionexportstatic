@@ -340,7 +340,7 @@ def textlike2markdown(block, ctx, tag = '', markdown_icon = '', checked = None):
 def headinglike2markdown(block, ctx, tag = ''):
     block_id_no_dashes = block['id'].replace('-', '')
     block_slug = get_heading_slug(block, ctx)
-    markdown_anchor = f' [#](#{block_slug}) [#](#{block_id_no_dashes})'
+    markdown_anchor = '' # f' [#](#{block_slug}) [#](#{block_id_no_dashes})'
     return (textlike2markdown if block.get(get_block_type(block), {}).get('is_toggleable') is not True else toggle2markdown)(block, ctx, tag = tag, markdown_icon = markdown_anchor)
 
 def linklike2markdown(block, ctx, tag = '', full_url_as_caption = True, line_break = False):
