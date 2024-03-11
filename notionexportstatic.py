@@ -882,7 +882,7 @@ def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg
 def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}, extract_assets = False, block_types = []):
     urls = discover_assets(notion_pages.values(), [], block_types = block_types)
     print('\n'.join('URL ' + url for url in urls), file = ctx['log_urls_file'])
-    assets = {url : notion_assets[url] for url in urls}
+    assets = {url : notion_assets[url] for url in set(urls) & notion_assets.keys()}
     if extract_assets and assets:
         os.makedirs(assets_dir, exist_ok = True)
         for asset in assets.values():
