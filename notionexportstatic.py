@@ -336,18 +336,13 @@ def link_preview2html(block, ctx, tag = 'a', class_name = 'notion-link_preview-b
 
 ##############################
 
-def childrenlike2markdown(block, ctx, tag = '', newline = '\n\n'):
-    markdown = ''
-    subblocks = sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], [])
-    for i, subblock in enumerate(subblocks):
-        markdown += block2markdown(subblock, ctx) + newline
-    return markdown
+def childrenlike2markdown(block, ctx, tag = '', newline = '\n\n'): return newline.join(block2markdown(subblock, ctx) for i, subblock in sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], [])) + newline
 
 def textlike2markdown(block, ctx, tag = '', markdown_icon = '', checked = None):
     block_type = block.get('type', '') or block.get('object', '')
     markdown_text = richtext2markdown(block[block_type].get('text') or block[block_type].get('rich_text') or [], ctx)
     color = block[block_type].get('color', '')
-    markdown_checked = '[x] '.format('checked' * checked) if checked is not None else ''
+    markdown_checked = '[{}] '.format('x' if checked else ' ') if checked is not None else ''
     return tag + markdown_checked + markdown_text + childrenlike2markdown(block, ctx) + markdown_icon
 
 def headinglike2markdown(block, ctx, tag = ''):
