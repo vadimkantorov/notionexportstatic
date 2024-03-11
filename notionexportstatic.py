@@ -888,7 +888,7 @@ def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}
             with open(asset_path, 'wb') as f:
                 f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
             #asset['uri'] = 'file:///' +  '/'.join(asset_path.split(os.path.sep))
-            asset['uri'] = 'file:///' + os.path.sep.join(asset_path[-2:].split(os.path.sep))
+            asset['uri'] = 'file:///./' + os.path.sep.join(asset_path.split(os.path.sep)[-2:])
             print(asset_path)
     return assets
 
