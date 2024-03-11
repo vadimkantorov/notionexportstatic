@@ -253,12 +253,11 @@ def table2html(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     html_children += '\n</tbody>\n'
     return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_children)
 
-
 def video2html(block, ctx, tag = 'p', class_name = 'notion-video-block'):
-    src = get_asset_url(block, ctx)
-    is_youtube, src = normalize_youtube_url(src)
+    url = get_asset_url(block, ctx)
+    is_youtube, url, urlimg = normalize_youtube_url(url, embed = True)
     caption = richtext2html(block, ctx, caption = True)
-    html_contents = f'<div><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>' if is_youtube else f'<video playsinline muted loop controls src="{src}"></video>'
+    html_contents = f'<div><iframe width="640" height="480" src="{url}" frameborder="0" allowfullscreen></iframe></div>' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
     return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
 
 def image2html(block, ctx, tag = 'img', class_name = 'notion-image-block'):
@@ -331,13 +330,13 @@ def link_preview2html(block, ctx, tag = 'a', class_name = 'notion-link_preview-b
 
 ##############################
 
-def childrenlike2markdown(block, ctx, tag = '', newline = '\n\n'): return newline.join(block2markdown(subblock, ctx) for i, subblock in sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], [])) + newline
+def childrenlike2markdown(block, ctx, tag = '', newline = '\n\n'): return newline.join(block2markdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
 
 def textlike2markdown(block, ctx, tag = '', markdown_icon = '', checked = None):
     markdown_text = richtext2markdown(block, ctx, rich_text = True)
     color = block.get(get_block_type(block), {}).get('color', '')
     markdown_checked = '[{}] '.format('x' if checked else ' ') if checked is not None else ''
-    return tag + markdown_checked + markdown_text + childrenlike2markdown(block, ctx) + markdown_icon
+    return tag + markdown_checked + markdown_text + markdown_icon + childrenlike2markdown(block, ctx)
 
 def headinglike2markdown(block, ctx, tag = ''):
     block_id_no_dashes = block['id'].replace('-', '')
@@ -501,17 +500,16 @@ def callout2markdown(block, ctx):
     #outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block2markdown(subblock, ctx, page_id = page_id).splitlines()) + '>\n' for subblock in block["children"])
 
 def image2markdown(block, ctx): 
-    src = get_asset_url(block)
+    src = get_asset_url(block, ctx)
     markdown_text = richtext2markdown(block, ctx, caption = True, title_mode = False)
     markdown_text_alt = richtext2markdown(block, ctx, caption = True, title_mode = True)
     return f'![{markdown_text_alt}]({src})\n' + f'{markdown_text}' * bool(markdown_text)
 
 def video2markdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
-    src = get_asset_url(block)
-    is_youtube, src = normalize_youtube_url(src)
+    url = get_asset_url(block, ctx)
+    is_youtube, url, urlimg = normalize_youtube_url(url, embed = False)
     caption = richtext2html(block, ctx, caption = True)
-    html_contents = f'<div><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>' if use_youtube else f'<video playsinline muted loop controls src="{src}"></video>'
-    return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
+    return f'[YouTube: {url}]({url})\n![[YouTube]({urlimg})]({url} "YouTube")' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
 
 def link_to_page2markdown(block, ctx, line_break = True):
     link_to_page_info  = get_page_link_info(block, ctx)
@@ -674,9 +672,20 @@ def get_asset_url(block, ctx):
         return src.split('file:///', maxsplit = 1)[-1]
     return src.replace('http://', 'https://')
 
-def normalize_youtube_url(url):
-    is_youtube = url.startswith('https://youtube.com/') or url.startswith('https://youtu.be/')
-    return is_youtube, (url.replace('/watch?v=', '/embed/').split('&')[0] if is_youtube else url)
+def normalize_youtube_url(url, embed = False):
+    is_youtube = url.startswith('https://youtube.com/') or url.startswith('https://www.youtube.com/') or url.startswith('https://youtu.be/')
+
+    if is_youtube:
+        url_youtube_embed = url.replace('/watch?v=', '/embed/').split('&')[0]
+        url_youtube_watch = url.replace('/embed/', '/watch?v=').split('&')[0]
+        id_youtube = os.path.basename(url_youtube_embed)
+        url_youtube = url_youtube_embed if embed else url_youtube_watch
+    else:
+        url_youtube = url 
+        id_youtube = ''
+
+    urlimg_youtube = f'https://img.youtube.com/vi/{id_youtube}/0.jpg' * is_youtube
+    return is_youtube, url_youtube, urlimg_youtube
 
 def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_slug = False):
     page_id_no_dashes = page_id.replace('-', '')
