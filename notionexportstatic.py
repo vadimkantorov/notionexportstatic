@@ -404,7 +404,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     dt_modified = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_downloaded', 0)).strftime(strftime) if ctx.get('unix_seconds_downloaded', 0) else ''
     dt_published = datetime.datetime.fromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
     src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
-    src_cover = ctx['assets'].get(src_cover, {}).get('uri', src_cover)
+    src_cover = get_asset_url(src_cover, ctx)
     page_id = block.get('id', '')
     page_id_no_dashes = page_id.replace('-', '')
     page_title = (get_page_title(block, ctx))
@@ -883,6 +883,7 @@ def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}
     assets = {url : notion_assets[url] for url in set(urls) & notion_assets.keys()}
     if extract_assets and assets:
         os.makedirs(assets_dir, exist_ok = True)
+        print(assets_dir)
         for asset in assets.values():
             asset_path = os.path.join(assets_dir, asset['basename_hashed'])
             with open(asset_path, 'wb') as f:

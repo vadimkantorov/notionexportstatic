@@ -13,16 +13,15 @@
 #html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
-    snippets = snippets_default | snippets
-
-    style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
-    
     page_id_first = page_ids[0]
     divider = block2html(dict(type = 'divider'), ctx, class_name = '')
     header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
     main_toc = block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * (bool(ctx.get('toc')) and len(page_ids) > 1)
-    main = divider.join(block2html(notion_pages[page_id], ctx, html_prefix = snippets.get('article_header_html', ''), html_suffix = snippets.get('article_footer_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
     
+    snippets = snippets_default | snippets
+    style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
+    
+    main = divider.join(block2html(notion_pages[page_id], ctx, html_prefix = snippets.get('article_header_html', ''), html_suffix = snippets.get('article_footer_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
     res = snippets.get('page_html', '').format(
         style_css = style_css, 
         header_html = header_breadcrumb, 
@@ -37,9 +36,10 @@ def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdow
     page_id_first = page_ids[0]
     divider = '\n' + block2markdown(dict(type = 'divider'), ctx) + '\n'
     header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * (bool(ctx.get('toc')) and len(page_ids) > 1)
+    main_toc = (header_breadcrumb + divider + '\n' + block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * (bool(ctx.get('toc')) and len(page_ids) > 1)
+
     main = divider.join(block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
-    res = '\n'.join([header_breadcrumb, divider, main_toc, divider, main])
+    res = main_toc + main
     return res
 
 
