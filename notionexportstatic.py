@@ -260,8 +260,6 @@ def video2html(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
 
 def image2html(block, ctx, tag = 'img', class_name = 'notion-image-block'):
-    if block['id'] == 'b2146d56-434b-4250-aeaf-b029621f606f':
-        breakpoint()
     src = get_asset_url(block, ctx)
     html_text = richtext2html(block, ctx, caption = True, title_mode = False)
     html_text_alt = richtext2html(block, ctx, caption = True, title_mode = True)
@@ -889,7 +887,8 @@ def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}
             asset_path = os.path.join(assets_dir, asset['basename_hashed'])
             with open(asset_path, 'wb') as f:
                 f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
-            asset['uri'] = 'file:///' +  '/'.join(asset_path.split(os.path.sep))
+            #asset['uri'] = 'file:///' +  '/'.join(asset_path.split(os.path.sep))
+            asset['uri'] = 'file:///' + os.path.sep.join(asset_path[-2:].split(os.path.sep))
             print(asset_path)
     return assets
 
