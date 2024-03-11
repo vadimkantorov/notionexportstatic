@@ -204,7 +204,7 @@ def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     
     html_anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a><a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
     
-    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{html_anchor}</h1><p><sub><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} -> @{dt_published}">@{dt_published}</time></sub></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
+    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{html_anchor}</h1><i><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} -> @{dt_published}">@{dt_published}</time></i></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
 
 ##############################
 
@@ -331,8 +331,8 @@ def link_preview2html(block, ctx, tag = 'a', class_name = 'notion-link_preview-b
 
 def childrenlike2markdown(block, ctx, tag = '', newline = '\n\n'): return newline.join(block2markdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
 
-def textlike2markdown(block, ctx, tag = '', markdown_icon = '', checked = None):
-    markdown_text = richtext2markdown(block, ctx, rich_text = True)
+def textlike2markdown(block, ctx, tag = '', markdown_icon = '', checked = None, title_mode = False):
+    markdown_text = richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode)
     color = block.get(get_block_type(block), {}).get('color', '')
     markdown_checked = '[{}] '.format('x' if checked else ' ') if checked is not None else ''
     return tag + markdown_checked + markdown_text + markdown_icon + childrenlike2markdown(block, ctx)
@@ -420,7 +420,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     # <a href="#{page_slug}" class="notion-page-like-icon"></a>
     # <a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
 
-    page_md_content += '**@' + ' -> '.join([dt_modified, dt_published]) + '**\n\n'
+    page_md_content += '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
     page_md_content += childrenlike2markdown(block, ctx)
     page_md_content += '\n\n---\n\n'
     
@@ -463,7 +463,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
 #            outcome_block += "\t"*depth + block2markdown(subblock, ctx, depth = depth, page_id = page_id)
 
 def child_page2markdown(block, ctx): return page2markdown(block, ctx)
-def unsupported2markdown(block, ctx): return '\n> [!IMPORTANT]\n> unsupported ' + (block.get('type', '') or block.get('object', ''))
+def unsupported2markdown(block, ctx): return '*unsupported notion block [{block_id}]*'.format(block_id = block.get('id', ''))
 def divider2markdown(block, ctx, tag = '---'): return tag
 def heading_12markdown(block, ctx, tag = '# '  ): return headinglike2markdown(block, ctx, tag = tag) 
 def heading_22markdown(block, ctx, tag = '## ' ): return headinglike2markdown(block, ctx, tag = tag) 
@@ -490,7 +490,7 @@ def code2markdown(block, ctx): return '{markdown_caption}\n```{language}\n'.form
 # outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
 
 
-def toggle2markdown(block, ctx, tag = '', markdown_icon = ''): return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True)  + markdown_icon + '\n' + childrenlike2markdown(block, ctx)
+def toggle2markdown(block, ctx, tag = '', markdown_icon = '', title_mode = False): return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode)  + markdown_icon + '\n' + childrenlike2markdown(block, ctx)
 # outcome_block = '\n<details markdown="1">\n<summary markdown="1">\n\n' + outcome_block + '\n\n</summary>\n\n' + ''.join(block2markdown(subblock, ctx, page_id = page_id) for subblock in block["children"]) + '\n\n</details>\n\n'
 
 
@@ -512,6 +512,10 @@ def video2markdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
 
 def link_to_page2markdown(block, ctx, line_break = True):
     link_to_page_info  = get_page_link_info(block, ctx)
+    #if 'Как остаться во Франции после обучения' in link_to_page_info['page_title']:
+    #    breakpoint()
+    #    link_to_page_info  = get_page_link_info(block, ctx)
+        
     markdown_caption = '{page_emoji} {page_title}'.format(page_title = (link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
     return '[{markdown_caption}]({href})'.format(markdown_caption = markdown_caption, href = link_to_page_info['href'])# + '\n\n' * line_break
 
@@ -630,13 +634,16 @@ def get_page_url_relative(block, ctx):
     is_index_page = page_slug == 'index'
     page_suffix = '/index.html'.removeprefix('/' if is_index_page else '') if ctx.get('html_link_to_page_index_html') else ''
     
-    if ctx['extract_mode'] in ['flat/index.html']:
+    if ctx['extract_mode'] == 'flat/index.html':
         return './' + ('' if is_index_page else page_slug) + page_suffix
     
     elif ctx['extract_mode'] == 'flat.html':
         return './' + (page_suffix if is_index_page else page_slug + '.html')
+
+    elif ctx['extract_mode'] == 'flat.md':
+        return './' + ('' if is_index_page else page_slug)
     
-    elif ctx['extract_mode'] in extract_mode_single:
+    elif ctx['extract_mode'] in ['single.html', 'single.md']:
         page_url_relative = './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
 
         if page_slug_only:
@@ -646,9 +653,8 @@ def get_page_url_relative(block, ctx):
             return ctx['sitemap'][k].get('locrel') or page_url_relative
 
         return page_url_relative 
-            
 
-    elif ctx['extract_mode'] in extract_mode_nested:
+    elif ctx['extract_mode'] in ['nested.html', 'nested.md']:
         if (k := sitemap_urlset_index(ctx['sitemap'], page_id)) != -1:
             return ctx['sitemap'][k]['locrel']
        
