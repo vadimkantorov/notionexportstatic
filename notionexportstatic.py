@@ -838,7 +838,7 @@ def discover_assets(blocks, asset_urls = [], exclude_datauri = True, block_types
     return asset_urls
 
 def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}, mimedefault = 'application/octet-stream', block_types = []):
-    urls = discover_assets(blocks, [], exclude_datauri = False)
+    urls = discover_assets(blocks, [], exclude_datauri = False, block_types = block_types)
     notion_assets = {} 
     for url in urls:
         ok = True
