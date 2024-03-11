@@ -261,8 +261,10 @@ def video2html(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     html_contents = f'<div><iframe width="640" height="480" src="{src}" frameborder="0" allowfullscreen></iframe></div>' if use_iframe else f'<video playsinline muted loop controls src="{src}"></video>'
     return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
 
+def get_asset_url(block, ctx):
+    
+
 def image2html(block, ctx, tag = 'img', class_name = 'notion-image-block'):
-    assert block['image']['type'] in ['file', 'external']
     src = block['image'].get('file', {}).get('url') or block['image'].get('external', {}).get('url') or ''
     src = ctx['assets'].get(src, {}).get('uri', src)
     if src.startswith('file:///'):

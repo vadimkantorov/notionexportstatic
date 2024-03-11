@@ -13,14 +13,6 @@
 #html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
-    snippets_default = dict(
-        notionexportstatic_css = notionexportstatic_css,
-        notioncolors_css = notioncolors_css,
-        notioncolors_classic_css = notioncolors_classic_css,
-        minimacss_classic_css = minimacss_classic_css,
-        page_html = page_html,
-        cookiesnotice_html = cookiesnotice_html
-    )
     for k, v in snippets_default.items():
         if k not in snippets:
             snippets[k] = v
@@ -1660,6 +1652,27 @@ table {
 */
 '''
 
-if __name__ == '__main':
-    pass
+snippets_default = dict(
+    notionexportstatic_css = notionexportstatic_css,
+    notioncolors_css = notioncolors_css,
+    notioncolors_classic_css = notioncolors_classic_css,
+    minimacss_classic_css = minimacss_classic_css,
+    page_html = page_html,
+    cookiesnotice_html = cookiesnotice_html
+)
 
+if __name__ == '__main__':
+    import os
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--snippets-dir')
+    args = parser.parse_args()
+    print(args)
+    if args.snippets_dir:
+        os.makedirs(args.snippets_dir, exist_ok = True)
+        for k, v in snippets_default.items():
+            basename = k.replace('_css', '.css').replace('_html', '.html')
+            path = os.path.join(args.snippets_dir, basename)
+            with open(path, 'w') as f:
+                f.write(v)
+            print(path)
