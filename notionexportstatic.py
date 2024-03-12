@@ -1,8 +1,6 @@
 # TODO: refactor _config.json / to allow not just slug but a full path | use parent path to determine link
-# TODO: notionjson2html: allow prefix and suffix html to individual pages and site to allow google anaylitics, code highlighting, equation rendering
-# TODO: embedded pdf
-# TODO: flat assets dir support
-# TODO: drop nested, flattened
+# TODO: embedded pdf in markdown and html
+# TODO: update sitemap with single setup?
 
 # https://docs.super.so/super-css-classes
 
@@ -958,7 +956,7 @@ def extractall(
         page_block = notion_pages_flat[page_id]
         page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = ctx.get('use_page_title_for_missing_slug'))
 
-        if ctx['sitemap_xml']: #TODO: update with single setup?
+        if ctx['sitemap_xml']:
             page_url_relative = get_page_url_relative(page_block, ctx)
             page_url_absolute = get_page_url_absolute(page_url_relative, ctx)
             sitemap_urlset_update(ctx['sitemap'], page_id, loc = page_url_absolute, locrel = page_url_relative)
