@@ -541,19 +541,22 @@ def richtext2markdown(block, ctx, title_mode = False, caption = False, rich_text
     res = (plain_text)
     if href:
         res = link_to_page2markdown(block, ctx, line_break = False) if href.startswith('/') else linklike2markdown(block, ctx)
+    
+    space_left = bool(res) and res[0].isspace()
+    space_right = bool(res) and res[-1].isspace()
     if anno['bold']:
-       res = f'**{res}**' 
+       res = '**{res}**'.format(res = res.strip())
     if anno['italic']:
-        res = f'*{res}*'
+        res = '*{res}*'.format(res = res.strip())
     if anno['strikethrough']:
-        res = f'~~~{res}~~~'
+        res = '~~~{res}~~~'.format(res = res.strip())
     if anno['underline']:
         res = f'<u>{res}</u>'
     if anno['code']:
         res = f'`{res}`'
     if (color := anno['color']) != 'default':
         res = f'<span style="color:{color}">{res}</span>'
-    return res
+    return ' ' * space_left + res + ' ' * space_right
 
 
 ##############################
