@@ -4,9 +4,9 @@
 # https://github.com/jekyll/jekyll-sitemap
 
 # TODO: add InteractionObserver-based nav for single-page or for side menu
-# TODO: margin between blocks, except empty block
-# TODO: extract the html template if needed? support jinja2 templates? liquid/jekyll templates? string.Template?
 # TODO: add hover style fof breadcrumb
+# TODO: og/seo tags
+
 # pip install mdx_truly_sane_lists
 # pip install markdown-captions, pip install markdown-checklist
 # pip install pymdown-extensions
@@ -25,10 +25,10 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     res = snippets.get('page_html', '').format(
         style_css = style_css, 
         header_html = header_breadcrumb, 
-        main_html = main_toc + main, 
         body_header_html = snippets.get('body_header_html', ''), 
         body_footer_html = snippets.get('body_footer_html', ''), 
         cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies'))
+        main_html = main_toc + main, 
     )
     return res
 

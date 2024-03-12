@@ -1,8 +1,8 @@
 # TODO: refactor _config.json / to allow not just slug but a full path | use parent path to determine link
-# TODO: embedded pdf
 # TODO: notionjson2html: allow prefix and suffix html to individual pages and site to allow google anaylitics, code highlighting, equation rendering
+# TODO: embedded pdf
 # TODO: flat assets dir support
-# TODO: drop nested
+# TODO: drop nested, flattened
 
 # https://docs.super.so/super-css-classes
 
