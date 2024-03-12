@@ -97,10 +97,10 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
 
 ##############################
 
-def blocktag2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = '', attrs = {}, **kwargs):
+def blocktag2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = '', prefix = '', suffix = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
     notion_attrs = (' data-block-id="{id}" '.format(id = block.get('id', ''))) * bool(block.get('id')) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
-    return (f'<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>\n' if set_html_contents_and_close else '')) if tag else ''
+    return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>\n' if set_html_contents_and_close else '') + suffix) if tag else ''
 
 def childrenlike2html(block, ctx, tag = ''):
     html = ''
@@ -230,7 +230,7 @@ def table_of_contents2html(block, ctx, tag = 'ul', class_name = 'notion-table_of
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         html_text = richtext2html(block, ctx, rich_text = True, title_mode = True)
         html_children += f'<li class="notion-table_of_contents-heading notion-table_of_contents-{effective_heading_type}"><a href="#{block_hash}">' + html_text + '</a></li>\n'
-    return blocktag2html(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', set_html_contents_and_close = html_children)
+    return blocktag2html(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', set_html_contents_and_close = html_children, prefix = '<hr/>', suffix = '<hr/>')
 
 def table2html(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     table_width = block['table'].get('table_width', 0)
@@ -387,7 +387,7 @@ def table_of_contents2markdown(block, ctx, tag = '* '):
     inc_heading_type = dict(heading_0 = 'heading_1', heading_1 = 'heading_2', heading_2 = 'heading_3', heading_3 = 'heading_3').get
     nominal_heading_type, effective_heading_type = 'heading_0', 'heading_0'
     heading_type2depth = dict(heading_0 = 0, heading_1 = 1, heading_2 = 2, heading_3 = 3)
-    markdown_children = ''
+    markdown_children = '---\n'
     for block in headings:
         block_id_no_dashes = block.get('id', '').replace('-', '')
         block_slug = get_heading_slug(block, ctx)
@@ -396,6 +396,7 @@ def table_of_contents2markdown(block, ctx, tag = '* '):
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         markdown_text = richtext2markdown(block, ctx, rich_text = True, title_mode = True)
         markdown_children += max(0, heading_type2depth[effective_heading_type] - 1) * 4 * ' ' + f'{tag}[{markdown_text}](#{block_hash})\n'
+    markdown_children += '---\n'
     return markdown_children
 
 def mention2markdown(block, ctx):
