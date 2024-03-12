@@ -382,10 +382,12 @@ def table_of_contents2markdown(block, ctx, tag = '* '):
     markdown_children = ''
     for block in headings:
         block_id_no_dashes = block.get('id', '').replace('-', '')
+        block_slug = get_heading_slug(block, ctx)
+        block_hash = block_slug if ctx['extract_mode'] == 'single.md' else block_id_no_dashes
         heading_type = block.get('type', '')
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         markdown_text = richtext2markdown(block, ctx, rich_text = True, title_mode = True)
-        markdown_children += max(0, heading_type2depth[effective_heading_type] - 1) * 4 * ' ' + f'{tag}[{markdown_text}](#{block_id_no_dashes})\n'
+        markdown_children += max(0, heading_type2depth[effective_heading_type] - 1) * 4 * ' ' + f'{tag}[{markdown_text}](#{block_hash})\n'
     return markdown_children
 
 def mention2markdown(block, ctx):
@@ -417,7 +419,9 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else page_url
     
     page_md_content = f'![cover]({src_cover})\n\n' * bool(src_cover)
-    page_md_content += f'# {page_emoji} {page_title}\n\n'
+    page_md_content += f'# {page_emoji} {page_title}\n'
+    page_md_content += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
+    
     # <h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1>
     # <h1 id="{page_slug}">{page_title}{html_anchor}</h1>
     # <a href="#{page_slug}" class="notion-page-like-icon"></a>
