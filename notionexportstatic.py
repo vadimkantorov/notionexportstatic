@@ -1,13 +1,8 @@
-# TODO: do not download if everything already downloaded, otherwise download assets by default (at least images)
 # TODO: refactor _config.json / to allow not just slug but a full path | use parent path to determine link
-# TODO  notion2markdown: rstrip all <br/> at page end
-# TODO  notion2markdown: delete plain_text: ' ' empty text blocks
-# TODO  notion2markdown: delete useless "> \n" in callout, ex https://github.com/vadimkantorov/notionfun/edit/gh-pages/_markdown/visa-c.md
-# TODO  notion2markdown: can deploy pre-generated html?
+# TODO: embedded pdf
 # TODO: notionjson2html: allow prefix and suffix html to individual pages and site to allow google anaylitics, code highlighting, equation rendering
-# TODO: notionjson2html: add sticky footer for gdpr - or maybe another sticky header?
-# TODO: for single mode add breadcrumbs into page2html/page2markdown
 # TODO: flat assets dir support
+# TODO: drop nested
 
 # https://docs.super.so/super-css-classes
 
