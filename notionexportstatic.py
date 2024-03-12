@@ -423,8 +423,8 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else page_url
     
     page_md_content = f'![cover]({src_cover})\n\n' * bool(src_cover)
-    page_md_content += f'# {page_emoji} {page_title}\n'
     page_md_content += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
+    page_md_content += f'# {page_emoji} {page_title}\n'
     
     # <h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1>
     # <h1 id="{page_slug}">{page_title}{html_anchor}</h1>
