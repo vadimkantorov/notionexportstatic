@@ -696,7 +696,7 @@ def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_sl
     page_title_slug = slugify(get_page_title(ctx.get('id2block', {}).get(page_id), ctx)) or page_id_no_dashes
     return ctx.get('slugs', {}).get(page_id) or ctx.get('slugs', {}).get(page_id_no_dashes) or (None if only_slug else (page_title_slug if use_page_title_for_missing_slug else page_id_no_dashes))
 
-def get_heading_slug(block, ctx, space = '_', lower = False, prefix = ''):
+def get_heading_slug(block, ctx, space = '-', lower = True, prefix = ''):
     s = richtext2html(block, ctx, rich_text = True, title_mode = True)
     if ctx['extract_mode'] in extract_mode_single:
         page_block = get_page_current(block, ctx)
@@ -902,7 +902,7 @@ def slugify(s, space = '_', lower = True):
     s = unicodedata.normalize('NFKC', s)
     s = s.strip()
     s = re.sub(r'\s', space, s, flags = re.U)
-    s = re.sub(r'[^-_.\w]', space, s, flags = re.U)
+    s = re.sub(r'[^-_\w]', space, s, flags = re.U)
     s = s.lower() if lower else s
     return s
 
