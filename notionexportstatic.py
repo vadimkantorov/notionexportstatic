@@ -512,10 +512,6 @@ def video2markdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
 
 def link_to_page2markdown(block, ctx, line_break = True):
     link_to_page_info  = get_page_link_info(block, ctx)
-    #if 'Как остаться во Франции после обучения' in link_to_page_info['page_title']:
-    #    breakpoint()
-    #    link_to_page_info  = get_page_link_info(block, ctx)
-        
     markdown_caption = '{page_emoji} {page_title}'.format(page_title = (link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
     return '[{markdown_caption}]({href})'.format(markdown_caption = markdown_caption, href = link_to_page_info['href'])# + '\n\n' * line_break
 
@@ -644,7 +640,8 @@ def get_page_url_relative(block, ctx):
         return './' + (page_suffix if is_index_page else page_slug + '.html')
 
     elif ctx['extract_mode'] == 'flat.md':
-        return './' + ('' if is_index_page else page_slug)
+        #return './' + ('' if is_index_page else page_slug)
+        return './' + ('index.md' if is_index_page else page_slug + '.md')
     
     elif ctx['extract_mode'] in ['single.html', 'single.md']:
         page_url_relative = './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
