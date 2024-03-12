@@ -519,7 +519,7 @@ def video2markdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     url = get_asset_url(block, ctx)
     is_youtube, url, urlimg = normalize_youtube_url(url, embed = False)
     caption = richtext2html(block, ctx, caption = True)
-    return f'[YouTube: {url}]({url})\n![[YouTube]({urlimg})]({url} "YouTube")' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
+    return f'[YouTube: {url}]({url})\n[![YouTube]({urlimg})]({url} "YouTube")' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
 
 def link_to_page2markdown(block, ctx, line_break = True):
     link_to_page_info  = get_page_link_info(block, ctx)
