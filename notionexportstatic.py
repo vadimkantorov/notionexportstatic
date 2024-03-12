@@ -541,15 +541,15 @@ def richtext2markdown(block, ctx, title_mode = False, caption = False, rich_text
     space_left = bool(res) and res[0].isspace()
     space_right = bool(res) and res[-1].isspace()
     if anno['bold']:
-       res = '**{res}**'.format(res = res.strip())
+       res = ' **{res}** '.format(res = res.strip())
     if anno['italic']:
-        res = '*{res}*'.format(res = res.strip())
+        res = ' *{res}* '.format(res = res.strip())
     if anno['strikethrough']:
-        res = '~~~{res}~~~'.format(res = res.strip())
+        res = ' ~~~{res}~~~ '.format(res = res.strip())
     if anno['underline']:
         res = f'<u>{res}</u>'
     if anno['code']:
-        res = f'`{res}`'
+        res = f' `{res}` '
     if (color := anno['color']) != 'default':
         res = f'<span style="color:{color}">{res}</span>'
     return ' ' * space_left + res + ' ' * space_right
