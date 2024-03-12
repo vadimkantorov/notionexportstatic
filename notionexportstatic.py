@@ -335,12 +335,15 @@ def textlike2markdown(block, ctx, tag = '', markdown_icon = '', checked = None, 
     markdown_text = richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode)
     color = block.get(get_block_type(block), {}).get('color', '')
     markdown_checked = '[{}] '.format('x' if checked else ' ') if checked is not None else ''
-    return tag + markdown_checked + markdown_text + markdown_icon + childrenlike2markdown(block, ctx)
+    return tag + markdown_checked + markdown_text + markdown_icon + '\n' + childrenlike2markdown(block, ctx)
+
+def toggle2markdown(block, ctx, tag = '', markdown_icon = '', title_mode = False): return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode)  + markdown_icon + '\n' + childrenlike2markdown(block, ctx)
+# outcome_block = '\n<details markdown="1">\n<summary markdown="1">\n\n' + outcome_block + '\n\n</summary>\n\n' + ''.join(block2markdown(subblock, ctx, page_id = page_id) for subblock in block["children"]) + '\n\n</details>\n\n'
 
 def headinglike2markdown(block, ctx, tag = ''):
     block_id_no_dashes = block['id'].replace('-', '')
     block_slug = get_heading_slug(block, ctx)
-    markdown_anchor = '' # f' [#](#{block_slug}) [#](#{block_id_no_dashes})'
+    markdown_anchor = '\n<i id="{block_id_no_dashes}"></i><i id="{block_slug}"></i>\n' # f' [#](#{block_slug}) [#](#{block_id_no_dashes})'
     return (textlike2markdown if block.get(get_block_type(block), {}).get('is_toggleable') is not True else toggle2markdown)(block, ctx, tag = tag, markdown_icon = markdown_anchor)
 
 def linklike2markdown(block, ctx, tag = '', full_url_as_caption = True, line_break = False):
@@ -488,10 +491,6 @@ def breadcrumb2markdown(block, ctx, sep = ' / '): return  sep.join(link_to_page2
 
 def code2markdown(block, ctx): return '{markdown_caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), markdown_caption = richtext2html(block, ctx, caption = True)) + richtext2markdown(block, ctx, rich_text = True) + '\n```'
 # outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
-
-
-def toggle2markdown(block, ctx, tag = '', markdown_icon = '', title_mode = False): return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode)  + markdown_icon + '\n' + childrenlike2markdown(block, ctx)
-# outcome_block = '\n<details markdown="1">\n<summary markdown="1">\n\n' + outcome_block + '\n\n</summary>\n\n' + ''.join(block2markdown(subblock, ctx, page_id = page_id) for subblock in block["children"]) + '\n\n</details>\n\n'
 
 
 def callout2markdown(block, ctx):
