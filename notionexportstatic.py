@@ -422,22 +422,38 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     page_slug = get_page_slug(page_id, ctx)
     src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else page_url
     
-    page_md_content = f'![cover]({src_cover})\n\n' * bool(src_cover)
-    page_md_content += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
-    page_md_content += f'# {page_emoji} {page_title}\n'
+
+    res = f'![cover]({src_cover})\n\n' * bool(src_cover)
+    res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
+    res += f'# {page_emoji} {page_title}\n'
     
-    # <h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1>
-    # <h1 id="{page_slug}">{page_title}{html_anchor}</h1>
-    # <a href="#{page_slug}" class="notion-page-like-icon"></a>
+    #markdown_anchor = f' [#](#{block_hash})'
     # <a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
 
-    page_md_content += '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
-    page_md_content += childrenlike2markdown(block, ctx)
-    page_md_content += '\n\n---\n\n'
+    res += '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
+    res += childrenlike2markdown(block, ctx)
+    res += '\n\n---\n\n'
+    
+    if ctx['markdown_frontmatter']:
+        res = f'''---\ntitle: "{page_title}"\ncover: {src_cover}\nemoji: {page_emoji}\n---\n\n''' + res
+        
+    #    elif page.get("icon"):
+    #        icon = page["icon"]["file"]["url"]
+    #        pages[page_id]["icon"] = icon
+    #    elif ctx['pages'][block['id']]['icon']:
+    #        icon = ctx['pages'][block['id']]['icon']
+    #        outcome_block = f"""[<span class="miniicon"> <img src="{icon}"></img></span> {outcome_block}"""
+
+    #    elif block['has_children']:
+    #        depth += 1
+    #        for subblock in block["children"]: # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
+    #            if subblock['type'] == "heading_1":
+    #                depth = 0
+    #            outcome_block += "\t"*depth + block2markdown(subblock, ctx, depth = depth, page_id = page_id)
     
     #page_md_fixed_lines = []
     #prev_line_type = ''
-    #for line in page_md_content.splitlines():
+    #for line in res.splitlines():
     #    line_type = ''
     #    norm_line = line.lstrip('\t').lstrip()
     #    if norm_line.startswith('- [ ]') or norm_line.startswith('- [x]'):
@@ -453,25 +469,10 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     #        page_md_fixed_lines.append('')
     #    page_md_fixed_lines.append(line)
     #    prev_line_type = line_type
-    #page_md_content = '\n'.join(page_md_fixed_lines)
-    #page_md_content = page_md_content.replace('\n\n\n', '\n\n')
+    #res = '\n'.join(page_md_fixed_lines)
+    #res = res.replace('\n\n\n', '\n\n')
     # page_md = code_aligner(page_md)
-    #metadata = '''---\ntitle: "{title}"\ncover: {cover}\nemoji: {emoji}\n{properties}\n---\n\n'''.format(properties = '\n'.join(f'{k}: {v}' for k, v in page.get('properties_md', {}).items()), title = page.get('title', ''), cover = page.get('cover', ''), emoji = page.get('emoji', ''))
-    return page_md_content
-
-#    if 'page_id' in payload:
-#        kwargs['url'] = ctx['pages'][payload['page_id']]['url']
-#        kwargs['caption'] = ctx['pages'][payload['page_id']]['title']
-#        kwargs['emoji'] = ctx['pages'][payload['page_id']].get('emoji') or ''
-#    if 'url' in payload or 'external' in payload or 'file' in payload:
-#        kwargs['url'] = payload.get('url') or payload.get('external', {}).get('url') or payload.get('file', {}).get('url')
-#
-#    elif block['has_children']:
-#        depth += 1
-#        for subblock in block["children"]: # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
-#            if subblock['type'] == "heading_1":
-#                depth = 0
-#            outcome_block += "\t"*depth + block2markdown(subblock, ctx, depth = depth, page_id = page_id)
+    return res
 
 def child_page2markdown(block, ctx): return page2markdown(block, ctx)
 def unsupported2markdown(block, ctx): return '*unsupported notion block [{block_id}]*'.format(block_id = block.get('id', ''))
