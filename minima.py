@@ -27,7 +27,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
         header_html = header_breadcrumb, 
         body_header_html = snippets.get('body_header_html', ''), 
         body_footer_html = snippets.get('body_footer_html', ''), 
-        cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies'))
+        cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies')),
         main_html = main_toc + main, 
     )
     return res

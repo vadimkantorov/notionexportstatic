@@ -932,7 +932,7 @@ def extractall(
     notion_assets = ctx.get('assets', {})
     index_html = ctx.get('extract_mode') in extract_mode_index_html
     
-    assets_dir = os.path.join(output_path, 'assets') if extract_mode in extract_mode_flat[:-1] else None
+    assets_dir = os.path.join(output_path, 'assets') if ctx['extract_mode'] in extract_mode_flat[:-1] else None
 
     if ctx['extract_mode'] in extract_mode_single:
         notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = assets_dir or (output_path + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
@@ -1031,7 +1031,6 @@ def notion2static(
     extract_mode,
     theme_py,
     sitemap_xml,
-    assets_dir,
     snippets_dir,
     base_url,
     edit_url,
