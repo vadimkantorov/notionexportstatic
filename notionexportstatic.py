@@ -370,11 +370,16 @@ def table2markdown(block, ctx, sanitize_table_cell = lambda md: md.replace('\n',
 def table_of_contents2markdown(block, ctx, tag = '* '):
     #return '\n\n{:toc}\n\n'
     if block.get('site_table_of_contents_page_ids'):
+        if ctx.get('markdown_toc_site'):
+            return ctx['markdown_toc_site']
         table_of_contents_page_tree = lambda page_ids, depth = 0: '' if not page_ids else ''.join(depth * 4 * ' ' + '{tag}{markdown_link_to_page}\n{markdown_child_pages}'.format(tag = tag, markdown_link_to_page = link_to_page2markdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), markdown_child_pages = table_of_contents_page_tree([page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, [])], depth + 1)) for page_id in page_ids)
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return table_of_contents_page_tree(root_page_ids, depth = 0)
+    if ctx.get('markdown_toc_page'):
+        return ctx['markdown_toc_page']
+
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
     color = block['table_of_contents'].get('color', '')
