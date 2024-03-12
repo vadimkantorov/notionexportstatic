@@ -224,10 +224,12 @@ def table_of_contents2html(block, ctx, tag = 'ul', class_name = 'notion-table_of
     html_children = ''
     for block in headings:
         block_id_no_dashes = block.get('id', '').replace('-', '')
+        block_slug = get_heading_slug(block, ctx)
+        block_hash = block_slug if ctx['extract_mode'] in ['flat.html', 'flat/index.html'] else block_id_no_dashes
         heading_type = block.get('type', '')
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         html_text = richtext2html(block, ctx, rich_text = True, title_mode = True)
-        html_children += f'<li class="notion-table_of_contents-heading notion-table_of_contents-{effective_heading_type}"><a href="#{block_id_no_dashes}">' + html_text + '</a></li>\n'
+        html_children += f'<li class="notion-table_of_contents-heading notion-table_of_contents-{effective_heading_type}"><a href="#{block_hash}">' + html_text + '</a></li>\n'
     return blocktag2html(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', set_html_contents_and_close = html_children)
 
 def table2html(block, ctx, tag = 'table', class_name = 'notion-table-block'):
@@ -383,7 +385,7 @@ def table_of_contents2markdown(block, ctx, tag = '* '):
     for block in headings:
         block_id_no_dashes = block.get('id', '').replace('-', '')
         block_slug = get_heading_slug(block, ctx)
-        block_hash = block_slug if ctx['extract_mode'] == 'single.md' else block_id_no_dashes
+        block_hash = block_slug if ctx['extract_mode'] == 'flat.md' else block_id_no_dashes
         heading_type = block.get('type', '')
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         markdown_text = richtext2markdown(block, ctx, rich_text = True, title_mode = True)
