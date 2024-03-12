@@ -1057,6 +1057,8 @@ def notion2static(
     base_url,
     edit_url,
     markdown_frontmatter,
+    markdown_toc_site,
+    markdown_toc_page,
     use_page_title_for_missing_slug,
     log_unsupported_blocks,
     log_urls,
@@ -1253,6 +1255,8 @@ if __name__ == '__main__':
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
     parser.add_argument('--toc', action = 'store_true')
     parser.add_argument('--markdown-frontmatter', action = 'store_true')
+    parser.add_argument('--markdown-toc-site')
+    parser.add_argument('--markdown-toc-page')
     parser.add_argument('--html-cookies', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
