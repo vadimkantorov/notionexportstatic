@@ -713,7 +713,10 @@ def get_page_url(block, ctx, base_url = 'https://www.notion.so'):
     return block.get('url', os.path.join(base_url, block.get('id', '').replace('-', '')))
 
 def get_page_url_absolute(page_url_relative, ctx):
-    return (ctx['base_url'].rstrip('/') + page_url_relative.removeprefix('./')) if ctx.get('base_url') else ('file:///' + page_url_relative)
+    page_url_absolute = (os.path.join(ctx['base_url'], page_url_relative.removeprefix('./'))) if ctx.get('base_url') else ('file:///' + page_url_relative.rmeoveprefix('file:///'))
+    if ctx['base_url_removesuffix']:
+        page_url_absolute = page_url_absolute.removesuffix(ctx['base_url_removesuffix'])
+    return page_url_absolute
 
 def get_page_url_relative(block, ctx):
     page_id = block.get('link_to_page', {}).get('page_id', '') or (block.get('href', '').removeprefix('/') if block.get('href', '').startswith('/') else '') or block.get('id', '')
@@ -732,7 +735,8 @@ def get_page_url_relative(block, ctx):
 
     elif ctx['extract_mode'] == 'flat.md':
         #return './' + ('' if is_index_page else page_slug)
-        return './' + ('index.md' if is_index_page else page_slug + '.md')
+        #return './' + ('index.md' if is_index_page else page_slug + '.md')
+        return './' + ('' if is_index_page else page_slug + '.md')
     
     elif ctx['extract_mode'] in ['single.html', 'single.md']:
         page_url_relative = './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
@@ -1127,6 +1131,7 @@ def notion2static(
     sitemap_xml,
     snippets_dir,
     base_url,
+    base_url_removesuffix,
     edit_url,
     markdown_frontmatter,
     markdown_toc_page,
@@ -1313,6 +1318,7 @@ if __name__ == '__main__':
     parser.add_argument('--snippets-dir')
     parser.add_argument('--sitemap-xml')
     parser.add_argument('--base-url')
+    parser.add_argument('--base-url-removesuffix')
     parser.add_argument('--edit-url')
     parser.add_argument('--log-unsupported-blocks')
     parser.add_argument('--log-urls')
