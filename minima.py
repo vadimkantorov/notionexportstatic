@@ -1,11 +1,183 @@
 # https://github.com/jekyll/minima
-# https://github.com/jekyll/jekyll-seo-tag/blob/master/lib/template.html
-# https://github.com/jekyll/jekyll-feed/blob/master/lib/jekyll-feed/generator.rb
-# https://github.com/jekyll/jekyll-sitemap
 
 # TODO: add InteractionObserver-based nav for single-page or for side menu
 # TODO: add hover style fof breadcrumb
-# TODO: og/seo tags
+#    <!-- OpenGraph -->
+#    <meta property="og:locale" content="en_EN" />
+#    <meta property="og:type" content="website">
+#    <meta property="og:site_name" content="https://myurl/">
+#    <meta property="og:title" content="mytitle!"/>
+#    <meta name="twitter:card" content="summary" />
+#    <meta property="twitter:image" content="https://mypreview_square.png">
+#    <meta property="og:image" content="https://mypreview.png">
+#    <meta property="og:url" content="https://myurl" />
+#    <meta property="og:description" content="mydescr">
+#<!-- Begin Jekyll SEO tag v{{ seo_tag.version }} -->
+#{% if seo_tag.title? %}
+#  <title>{{ seo_tag.title }}</title>
+#{% endif %}
+#
+#<meta name="generator" content="Jekyll v{{ jekyll.version }}" />
+#
+#{% if seo_tag.page_title %}
+#  <meta property="og:title" content="{{ seo_tag.page_title }}" />
+#{% endif %}
+#
+#{% if seo_tag.author.name %}
+#  <meta name="author" content="{{ seo_tag.author.name }}" />
+#{% endif %}
+#
+#<meta property="og:locale" content="{{ seo_tag.page_locale }}" />
+#
+#{% if seo_tag.description %}
+#  <meta name="description" content="{{ seo_tag.description }}" />
+#  <meta property="og:description" content="{{ seo_tag.description }}" />
+#  <meta property="twitter:description" content="{{ seo_tag.description }}" />
+#{% endif %}
+#
+#{% if site.url %}
+#  <link rel="canonical" href="{{ seo_tag.canonical_url }}" />
+#  <meta property="og:url" content="{{ seo_tag.canonical_url }}" />
+#{% endif %}
+#
+#{% if seo_tag.site_title %}
+#  <meta property="og:site_name" content="{{ seo_tag.site_title }}" />
+#{% endif %}
+#
+#{% if seo_tag.image %}
+#  <meta property="og:image" content="{{ seo_tag.image.path }}" />
+#  {% if seo_tag.image.height %}
+#    <meta property="og:image:height" content="{{ seo_tag.image.height }}" />
+#  {% endif %}
+#  {% if seo_tag.image.width %}
+#    <meta property="og:image:width" content="{{ seo_tag.image.width }}" />
+#  {% endif %}
+#  {% if seo_tag.image.alt %}
+#    <meta property="og:image:alt" content="{{ seo_tag.image.alt }}" />
+#  {% endif %}
+#{% endif %}
+#
+#{% if page.date %}
+#  <meta property="og:type" content="article" />
+#  <meta property="article:published_time" content="{{ page.date | date_to_xmlschema }}" />
+#{% else %}
+#  <meta property="og:type" content="website" />
+#{% endif %}
+#
+#{% if paginator.previous_page %}
+#  <link rel="prev" href="{{ paginator.previous_page_path | absolute_url }}" />
+#{% endif %}
+#{% if paginator.next_page %}
+#  <link rel="next" href="{{ paginator.next_page_path | absolute_url }}" />
+#{% endif %}
+#
+#{% if seo_tag.image %}
+#  <meta name="twitter:card" content="{{ page.twitter.card | default: site.twitter.card | default: "summary_large_image" }}" />
+#  <meta property="twitter:image" content="{{ seo_tag.image.path }}" />
+#{% else %}
+#  <meta name="twitter:card" content="summary" />
+#{% endif %}
+#
+#{% if seo_tag.image.alt %}
+#  <meta name="twitter:image:alt" content="{{ seo_tag.image.alt }}" />
+#{% endif %}
+#
+#{% if seo_tag.page_title %}
+#  <meta property="twitter:title" content="{{ seo_tag.page_title }}" />
+#{% endif %}
+#
+#{% if site.twitter %}
+#  <meta name="twitter:site" content="@{{ site.twitter.username | remove:'@' }}" />
+#
+#  {% if seo_tag.author.twitter %}
+#    <meta name="twitter:creator" content="@{{ seo_tag.author.twitter | remove:'@' }}" />
+#  {% endif %}
+#{% endif %}
+#
+#{% if site.facebook %}
+#  {% if site.facebook.admins %}
+#    <meta property="fb:admins" content="{{ site.facebook.admins }}" />
+#  {% endif %}
+#
+#  {% if site.facebook.publisher %}
+#    <meta property="article:publisher" content="{{ site.facebook.publisher }}" />
+#  {% endif %}
+#
+#  {% if site.facebook.app_id %}
+#    <meta property="fb:app_id" content="{{ site.facebook.app_id }}" />
+#  {% endif %}
+#{% endif %}
+#
+#{% if site.webmaster_verifications %}
+#  {% if site.webmaster_verifications.google %}
+#    <meta name="google-site-verification" content="{{ site.webmaster_verifications.google }}" />
+#  {% endif %}
+#
+#  {% if site.webmaster_verifications.bing %}
+#    <meta name="msvalidate.01" content="{{ site.webmaster_verifications.bing }}" />
+#  {% endif %}
+#
+#  {% if site.webmaster_verifications.alexa %}
+#    <meta name="alexaVerifyID" content="{{ site.webmaster_verifications.alexa }}" />
+#  {% endif %}
+#
+#  {% if site.webmaster_verifications.yandex %}
+#    <meta name="yandex-verification" content="{{ site.webmaster_verifications.yandex }}" />
+#  {% endif %}
+#
+#  {% if site.webmaster_verifications.baidu %}
+#    <meta name="baidu-site-verification" content="{{ site.webmaster_verifications.baidu }}" />
+#  {% endif %}
+#
+#  {% if site.webmaster_verifications.facebook %}
+#    <meta name="facebook-domain-verification" content="{{ site.webmaster_verifications.facebook }}" />
+#  {% endif %}
+#{% elsif site.google_site_verification %}
+#  <meta name="google-site-verification" content="{{ site.google_site_verification }}" />
+#{% endif %}
+#
+#<script type="application/ld+json">
+#  {{ seo_tag.json_ld | jsonify }}
+#</script>
+#
+#<!-- End Jekyll SEO tag -->
+
+#<?xml version="1.0" encoding="UTF-8"?>
+#{% if page.xsl %}
+#  <?xml-stylesheet type="text/xsl" href="{{ "/sitemap.xsl" | absolute_url }}"?>
+#{% endif %}
+#<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+#  {% assign collections = site.collections | where_exp:'collection','collection.output != false' %}
+#  {% for collection in collections %}
+#    {% assign docs = collection.docs | where_exp:'doc','doc.sitemap != false' %}
+#    {% for doc in docs %}
+#      <url>
+#        <loc>{{ doc.url | replace:'/index.html','/' | absolute_url | xml_escape }}</loc>
+#        {% if doc.last_modified_at or doc.date %}
+#          <lastmod>{{ doc.last_modified_at | default: doc.date | date_to_xmlschema }}</lastmod>
+#        {% endif %}
+#      </url>
+#    {% endfor %}
+#  {% endfor %}
+#
+#  {% assign pages = site.html_pages | where_exp:'doc','doc.sitemap != false' | where_exp:'doc','doc.url != "/404.html"' %}
+#  {% for page in pages %}
+#    <url>
+#      <loc>{{ page.url | replace:'/index.html','/' | absolute_url | xml_escape }}</loc>
+#      {% if page.last_modified_at %}
+#        <lastmod>{{ page.last_modified_at | date_to_xmlschema }}</lastmod>
+#      {% endif %}
+#    </url>
+#  {% endfor %}
+#
+#  {% assign static_files = page.static_files | where_exp:'page','page.sitemap != false' | where_exp:'page','page.name != "404.html"' %}
+#  {% for file in static_files %}
+#    <url>
+#      <loc>{{ file.path | replace:'/index.html','/' | absolute_url | xml_escape }}</loc>
+#      <lastmod>{{ file.modified_time | date_to_xmlschema }}</lastmod>
+#    </url>
+#  {% endfor %}
+#</urlset>
 
 # pip install mdx_truly_sane_lists
 # pip install markdown-captions, pip install markdown-checklist
