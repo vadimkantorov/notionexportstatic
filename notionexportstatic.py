@@ -1,96 +1,5 @@
-# TODO: refactor _config.json / to allow not just slug but a full path | use parent path to determine link
 # TODO: embedded pdf in markdown and html
 # TODO: page_icon with path, not just emoji
-
-# https://docs.super.so/super-css-classes
-# Name	HTML Element	CSS Class	Category
-# Link <a> .notion-link
-# Page <div> .notion-page
-# Page Icon <div> .notion-page__icon
-# Page Title <div> .notion-page__title
-# Bullet List <ul> .notion-bulleted-list
-# Numbered List <ol> .notion-numbered-list
-# List Item <li> .notion-list-item
-# To-do <div> .notion-to-do
-# To-do Content Wrapper <div> .notion-to-do__content
-# To-do Checkbox Wrapper <div> .notion-to-do__icon
-# To-do Checkbox (Unchecked) <div> .notion-checkbox
-# To-do Checkbox (Checked) <div> .notion-checkbox.checked
-# To-do Title (Unchecked) <div> .notion-to-do__title
-# To-do Title (Checked) <div> .notion-to-do__title.checked
-# To-do Check Icon (Unchecked) <svg> .notion-checkbox>svg
-# To-do Check Icon (Checked) <svg> .notion-checkbox.checked>svg
-# Toggle <details> .notion-toggle
-# Toggle Title (Summary) <summary> .notion-toggle__summary
-# Toggle Icon (pseudo element) .notion-toggle__summary::before
-# Toggle Content <div> .notion-toggle__content
-# Quote <blockquote> .notion-quote
-# Callout <div> .notion-callout
-# Callout Icon <div> .notion-callout__icon
-# Callout Content <p> .notion-callout__content
-# Callout Border <div> .notion-callout.border
-# Code Content Wrapper <pre> .notion-code>pre
-# Code Content <code> .notion-code code
-# Divider <div> .notion-divider
-# Table of Contents <ul> .notion-table-of-contents
-# Table of Contents Item <li> .notion-table-of-contents__item
-# Notion Equations <span> .notion-equation
-# Notion Equation (Inline) <span> .notion-equation.notion-equation__inline
-# Notion Equation (Block) <span> .notion-equation.notion-equation__block
-# Content Container <article> .notion-root
-# Column list <div> .notion-column-list
-# Column <div> .notion-column
-# Notion Header Section <div> .notion-header
-# Notion Header Title Wrapper <div> .notion-header__title-wrapper
-# Notion Header Title <h1> .notion-header__title
-# Notion Header Icon Wrapper <div> .notion-header__icon-wrapper
-# Notion Header Icon <div> .notion-header__icon
-# Notion Header Cover <div> .notion-header__cover
-# Text <p> .notion-text__content
-# Bold Text <b> strong
-# All Headings n/a .notion-heading
-# Heading 1 <h1> h1.notion-heading
-# Heading 2 <h2> h2.notion-heading
-# Heading 3 <h3> h3.notion-heading
-# Notion Caption <figcaption> .notion-caption
-# Image <div> .notion-image
-# Image (Type 2) <img> .notion-image img
-# Bookmark <div> .notion-bookmark
-# Bookmark Content <div> .notion-bookmark__content
-# Bookmark Title <h5> .notion-bookmark__title
-# Bookmark Description <p> .notion-bookmark__description
-# Bookmark Link <div> .notion-bookmark__link
-# Bookmark Cover Wrapper <div> .notion-bookmark__cover
-# Bookmark Cover Image <img> .notion-bookmark__cover img
-# Video <div> .notion-video
-# Audio <div> .notion-audio
-# File <a> .notion-file
-# File Icon <div> .notion-file__icon
-# File Title <span> .notion-file__title
-# File Size Text <span> .notion-file__size
-# Embedded Content Wrapper (Including caption) <div> .notion-embed
-# Embedded Content <div> .notion-embed__content
-# Embedded Content Loader <div> .notion-embed__loader
-# Embedded Content Iframe wrapper <div> .notion-embed__container
-# Tweet <div> .notion-tweet
-# Tweet Header Wrapper <div> .static-tweet-header
-# Tweet Header Avatar <a> .static-tweet-header-avatar
-# Tweet Header Author Wrapper <a> .static-tweet-header-author
-# Tweet Header Name <span> .static-tweet-header-name
-# Tweet Header Username <span> .static-tweet-header-username
-# Tweet Header Twitter Button <a> .static-tweet-header-brand
-# Tweet Text <p> .static-tweet-p
-# Tweet Image Wrapepr <div> .image-container
-# Tweet Info <div> .static-tweet-info
-# Notion Navbar <div> .notion-navbar
-# Notion Navbar Link <a> .notion-navbar>a
-# Notion Navbar Title <div> .notion-navbar__title
-# Notion Navbar Icon <div> .notion-navbar__icon
-# Notion Navbar Search Button <div> .notion-navbar__search
-# Notion Navbar Breadcrumb Divider <span> .notion-breadcrumb__divider
-# Notion Navbar Breadcrumb Item <div> .notion-breadcrumb__item
-# Notion Navbar Breadcrumb Dots <div> .notion-breadcrumb__dots
-
 
 import os
 import re
@@ -505,13 +414,11 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     page_slug = get_page_slug(page_id, ctx)
     src_edit = ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else page_url
     
+    markdown_anchor = f' [#](#{block_hash})' + f'[✏️]({src_edit})' * bool(ctx.get('edit_url'))
 
     res = f'![cover]({src_cover})\n\n' * bool(src_cover)
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
-    res += f'# {page_emoji} {page_title}\n'
-    
-    #markdown_anchor = f' [#](#{block_hash})'
-    # <a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>'
+    res += f'# {page_emoji} {page_title} {markdown_anchor}\n'
 
     res += '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
     res += childrenlike2markdown(block, ctx)
@@ -533,7 +440,6 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     #            if subblock['type'] == "heading_1":
     #                depth = 0
     #            outcome_block += "\t"*depth + block2markdown(subblock, ctx, depth = depth, page_id = page_id)
-    
     #page_md_fixed_lines = []
     #prev_line_type = ''
     #for line in res.splitlines():
@@ -558,7 +464,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     return res
 
 def child_page2markdown(block, ctx): return page2markdown(block, ctx)
-def unsupported2markdown(block, ctx): return '*unsupported notion block [{block_id}]*'.format(block_id = block.get('id', ''))
+def unsupported2markdown(block, ctx): return ' *unsupported notion block [{block_id}]* '.format(block_id = block.get('id', ''))
 def divider2markdown(block, ctx, tag = '---'): return tag
 def heading_12markdown(block, ctx, tag = '# '  ): return headinglike2markdown(block, ctx, tag = tag) 
 def heading_22markdown(block, ctx, tag = '## ' ): return headinglike2markdown(block, ctx, tag = tag) 
