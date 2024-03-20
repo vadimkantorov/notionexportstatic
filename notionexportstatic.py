@@ -1,6 +1,8 @@
 # TODO: embedded pdf in markdown and html
 # TODO: page_icon with path, not just emoji
 # TODO: current page url
+# TODO: reduce newlines in markdown
+# TODO: experiment with slug to match github slugs
 
 import os
 import re
@@ -129,7 +131,7 @@ def richtext2html(block, ctx = {}, title_mode = False, caption = False, rich_tex
     if href:
         res = link_to_page2html(block, ctx, line_break = False) if href.startswith('/') else linklike2html(block, ctx)
     if anno['bold']:
-        res = f'<b>{res}</b> ' 
+        res = f'<b>{res}</b>' 
     if anno['italic']:
         res = f'<i>{res}</i>'
     if anno['strikethrough']:
@@ -194,8 +196,9 @@ def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx)
     src_edit = get_page_edit_url(page_id, ctx, page_id_no_dashes = page_id_no_dashes, page_slug = page_slug)
-    
-    anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a>' + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
+
+    anchor = link_to_page2html(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon') + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
+    #anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a>' + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     
     return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1><i><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} -> @{dt_published}">@{dt_published}</time></i></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
 
@@ -292,10 +295,10 @@ def mention2html(block, ctx, tag = 'div', class_name = dict(page = 'notion-page-
         return blocktag2html(block, ctx, tag = 'strong', class_name = class_name[mention_type], set_html_contents_and_close = '@{date_text}'.format(date_text = html.escape(block.get('plain_text', ''))))
     return unsupported2html(block, ctx)
 
-def link_to_page2html(block, ctx, tag = 'a', line_break = True, class_name = 'notion-alias-block', html_icon = '', untitled = '???'):
+def link_to_page2html(block, ctx, tag = 'a', caption = None, line_break = True, class_name = 'notion-alias-block', html_icon = '', untitled = '???'):
     link_to_page_info  = get_page_link_info(block, ctx)
-    html_caption = '{html_icon}{page_emoji} {page_title}'.format(html_icon = html_icon, page_title = html.escape(link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
-    return blocktag2html(block, ctx, tag = tag, attrs = dict(href = link_to_page_info['href']), class_name = class_name, set_html_contents_and_close = html_caption) + '<br/>' * line_break
+    caption = caption if caption is not None else '{html_icon}{page_emoji} {page_title}'.format(html_icon = html_icon, page_title = html.escape(link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
+    return blocktag2html(block, ctx, tag = tag, attrs = dict(href = link_to_page_info['href']), class_name = class_name, set_html_contents_and_close = caption) + '<br/>' * line_break
 
 def child_page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', **kwargs): return page2html(block, ctx, tag = tag, class_name = class_name, **kwargs)
 def unsupported2html(block, ctx, tag = 'div', class_name = 'notion-unsupported-block', comment = True, **ignored): return '\n<!--\n' * comment + html.escape(blocktag2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block.get('type', '') or block.get('object', '')}, selfclose = True)) + '\n-->\n' * comment
@@ -511,9 +514,9 @@ def video2markdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     caption = richtext2html(block, ctx, caption = True)
     return f'[YouTube: {url}]({url})\n[![YouTube]({urlimg})]({url} "YouTube")' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
 
-def link_to_page2markdown(block, ctx, line_break = True, caption = ''):
+def link_to_page2markdown(block, ctx, line_break = True, caption = None):
     link_to_page_info  = get_page_link_info(block, ctx)
-    caption = caption or '{page_emoji} {page_title}'.format(page_title = (link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
+    caption = caption if caption is not None else '{page_emoji} {page_title}'.format(page_title = (link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
     return '[{caption}]({href})'.format(caption = caption, href = link_to_page_info['href']) + '\n\n' * line_break
 
 def richtext2markdown(block, ctx, title_mode = False, caption = False, rich_text = False):
@@ -959,6 +962,19 @@ def extractall(
         return print(output_path)
 
     os.makedirs(output_path, exist_ok = True)
+    
+    # page_locale = 'en_EN',
+    # page_title = '',
+    # page_url_absolute = '',
+    # page_description = '',
+    # page_image_url = '',
+    # page_image_height = '',
+    # page_image_width = '',
+    # page_image_alt = '',
+    # page_published_time_xmlschema = '',
+    # site_name = '',
+    # site_twitter_card_type = '',
+    # site_twitter_atusername = ''
 
     for page_id in page_ids:
         page_block = notion_pages_flat[page_id]
@@ -1058,6 +1074,8 @@ def notion2static(
     article_header_html,
     article_footer_html,
 ):
+    #notionjson2html : assert args.input_json
+    #notionapi2notionjson: assert args.notion_page_id
     config = read_and_write_config(args.config_json, locals())
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
 
@@ -1247,8 +1265,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    #notionjson2html : assert args.input_json
-    #notionapi2notionjson: assert args.notion_page_id
     if args.extract_mode in extract_mode_json or (os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
         notion2static(**vars(args))
 
