@@ -18,6 +18,9 @@ NOTION_TOKEN=secret_...
 NOTION_ROOT_PAGE_ID=notionrootpageid32alphanumeric00
 NOTION_CHILD_PAGE_ID=notionchildpageid32alphanumeric0
 
+# prepare ./notionexportstatic/
+git clone https://github.com/vadimkantorov/notionexportstatic
+
 # extract all snippets used by a theme
 python ./notionexportstatic/minima.py --snippets-dir ./_snippets
 
@@ -33,7 +36,7 @@ python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN -
 #python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --extract-mode flat.html --config-json _config.json
 #python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --extract-mode flat/index.html --config-json _config.json --html-details-open --toc --html-link-to-page-index-html --sitemap-xml ./flat/sitemap.xml 
 #python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./single/index.html --sitemap-xml ./single/sitemap.xml --extract-mode single.json --config-json __config.json --html-details-open  --toc --html-columnlist-disable --extract-mode=single.html --snippets-dir _snippets
-#chrome --headless --print-to-pdf=./single/index.pdf ./single/index.html
+chrome --headless --print-to-pdf=./single/index.pdf ./single/index.html
 
 # render markdown
 #python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat.md/ --extract-mode flat.md --config-json _config.json  --extract-assets --sitemap-xml ./flat.md/sitemap.xml --base-url 'https://vadimkantorov.github.io/eriadilos-lixe/markdown/' --base-url-removesuffix .md --edit-url 'https://github.com/vadimkantorov/eriadilos-lixe/edit/gh-pages/markdown/{page_slug}.md'
