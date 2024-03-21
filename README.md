@@ -1,4 +1,4 @@
-# `notionexportstatic` is a script for dowloading pages from Notion API as JSON and generating static HTML / Markdown
+# Python script for dowloading pages from Notion API as JSON and generating static HTML / Markdown
 
 - can be used for backing up Notion pages (along with child pages recursively) 
 - can be used as a Static Site Generator (SSG) running in GitHub Actions and deploying to GitHub Pages for publishing Notion pages as a website with a custom domain
