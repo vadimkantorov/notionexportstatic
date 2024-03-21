@@ -492,7 +492,7 @@ def link_preview2markdown(block, ctx, tag = '🌐'): return linklike2markdown(bl
 def embed2markdown(block, ctx): return embed2html(block, ctx)
 def child_database2markdown(block, ctx, untitled = '???'): return ' **{html_child_database_title}** '.format(child_database_title = (block['child_database'].get('title') or untitled))
 def template2markdown(block, ctx): return '---\n{markdown_text}\n{markdown_children}\n---'.format(markdown_text = richtext2markdown(block, ctx, rich_text = True), markdown_children = childrenlike2markdown(block, ctx))
-def breadcrumb2markdown(block, ctx, sep = ' / '): return  sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
+def breadcrumb2markdown(block, ctx, sep = ' / '): return sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
 
 def code2markdown(block, ctx): return '{markdown_caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), markdown_caption = richtext2html(block, ctx, caption = True)) + richtext2markdown(block, ctx, rich_text = True) + '\n```'
 # outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
@@ -515,8 +515,13 @@ def video2markdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     return f'[YouTube: {url}]({url})\n[![YouTube]({urlimg})]({url} "YouTube")' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
 
 def link_to_page2markdown(block, ctx, line_break = True, caption = None):
-    link_to_page_info  = get_page_link_info(block, ctx)
+    link_to_page_info = get_page_link_info(block, ctx)
     caption = caption if caption is not None else '{page_emoji} {page_title}'.format(page_title = (link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
+    #if link_to_page_info['href'] == './' and get_page_current(block, ctx).get('child_page', {}).get('title') == 'Как остаться во Франции после обучения':
+    #    breakpoint()
+    #    link_to_page_info = get_page_link_info(block, ctx)
+    #    print(1)
+    
     return '[{caption}]({href})'.format(caption = caption, href = link_to_page_info['href']) + '\n\n' * line_break
 
 def richtext2markdown(block, ctx, title_mode = False, caption = False, rich_text = False):
@@ -647,7 +652,7 @@ def get_page_url_relative(block, ctx):
         return './' + (page_suffix if is_index_page else page_slug + '.html')
 
     elif ctx['extract_mode'] == 'flat.md':
-        return './' + ('' if is_index_page else page_slug + '.md')
+        return './' + ('index.md' if is_index_page else page_slug + '.md')
     
     elif ctx['extract_mode'] in ['single.html', 'single.md']:
         page_url_relative = './' + os.path.basename(ctx['output_path']) + ('' if is_index_page else '#' + page_slug)
@@ -666,7 +671,7 @@ def get_block_url(block):
     payload = block.get(get_block_type(block), {})
     if not isinstance(payload, dict):
         payload = {}
-    url = block.get('file', {}).get('url') or block.get('external', {}).get('url') or payload.get('file', {}).get('url') or payload.get('external', {}).get('url') or block.get('url') or block.get('href') or block.get('url') or '' 
+    url = block.get('file', {}).get('url') or block.get('external', {}).get('url') or payload.get('file', {}).get('url') or payload.get('external', {}).get('url') or block.get('url') or block.get('href') or payload.get('url') or '' 
     return url
 
 def get_asset_url(block, ctx):
