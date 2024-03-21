@@ -1,12 +1,12 @@
-# `notionexportstatic` is a script for dowloading pages from Notion API as JSON and generating static HTML/Markdown
+# `notionexportstatic` is a script for dowloading pages from Notion API as JSON and generating static HTML / Markdown
 
 - can be used for backing up Notion pages (along with child pages recursively) 
 - can be used as a Static Site Generator (SSG) running in GitHub Actions and deploying to GitHub Pages for publishing Notion pages as a website with a custom domain
-- supports three output file formats: JSON/HTML/Markdown
+- supports three output file formats: JSON / HTML / Markdown
 - supports two output modes: single file and flat directory
 - supports downloading the assets and embedding them in the output files or in output directory
 - supports loading all options from a config in JSON format or as command-line arguments for overriding the config
-- supports specifying HTML header/footer snippets for customizing the output (Cookie Notice, Google Analytics, KaTeX rendering)
+- supports specifying HTML header / footer snippets for customizing the output (Cookie Notice, Google Analytics, KaTeX rendering)
 - generates basic HTML meta og SEO tags
 
 Functions for retrieving from Notion API are based on https://github.com/MerkulovDaniil/notion4ever
@@ -15,8 +15,8 @@ Functions for retrieving from Notion API are based on https://github.com/Merkulo
 
 ```shell
 NOTION_TOKEN=secret_...
-NOTION_ROOT_PAGE_ID=notionrootpageid32alphanumerical
-NOTION_CHILD_PAGE_ID=notionchildpageid32alphanumerica
+NOTION_ROOT_PAGE_ID=notionrootpageid32alphanumeric00
+NOTION_CHILD_PAGE_ID=notionchildpageid32alphanumeric0
 
 # extract all snippets used by a theme
 python ./notionexportstatic/minima.py --snippets-dir ./_snippets
