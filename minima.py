@@ -1,13 +1,12 @@
 # https://github.com/jekyll/minima
 # https://github.com/vadimkantorov/minimacss 
 # https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/markup
+# https://katex.org/docs/browser
 
 # TODO: add hover style for breadcrumb
 
-# pip install mdx_truly_sane_lists
-# pip install markdown-captions, pip install markdown-checklist
-# pip install pymdown-extensions
-#html_content = markdown.markdown(md_content, extensions=["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs={'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
+# pip install mdx_truly_sane_lists markdown-captions markdown-checklist pymdown-extensions
+# html_content = markdown.markdown(md_content, extensions = ["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs = {'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
@@ -28,18 +27,19 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
         cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies')),
         main_html = main_toc + main, 
 
-        page_locale = 'en_EN',
-        page_title = '',
-        page_url_absolute = '',
-        page_description = '',
-        page_image_url = '',
-        page_image_height = '',
-        page_image_width = '',
-        page_image_alt = '',
-        page_published_time_xmlschema = '',
-        site_name = '',
-        site_twitter_card_type = '',
-        site_twitter_atusername = ''
+        page_locale                   = ctx.get('page_info', {}).get(page_id_first, {}).get('page_locale', ''),
+        page_title                    = ctx.get('page_info', {}).get(page_id_first, {}).get('page_title', ''),
+        page_url_absolute             = ctx.get('page_info', {}).get(page_id_first, {}).get('page_url_absolute', ''),
+        page_description              = ctx.get('page_info', {}).get(page_id_first, {}).get('page_description', ''),
+        page_image_url                = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_url', ''),
+        page_image_height             = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_height', ''),
+        page_image_width              = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_width', ''),
+        page_image_alt                = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_alt', ''),
+        page_published_time_xmlschema = ctx.get('page_info', {}).get(page_id_first, {}).get('page_published_time_xmlschema', ''),
+
+        site_name                     = ctx.get('site_info', {}).get('site_name', ''),
+        site_twitter_card_type        = ctx.get('site_info', {}).get('site_twitter_card_type', ''),
+        site_twitter_atusername       = ctx.get('site_info', {}).get('site_twitter_atusername', '')
     )
     return res
 
@@ -53,9 +53,28 @@ def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdow
     res = main_toc + main
     return res
 
+katex_html = '''
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+
+<!-- The loading of KaTeX is deferred to speed up page rendering -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+
+<!-- To automatically render math in text elements, include the auto-render extension: -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+'''
+
+googleanalytics_html = '''
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={TAG_ID}"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+gtag = () => dataLayer.push(arguments);
+if(document.cookie) [gtag('js', new Date()); gtag('config', '{TAG_ID}')];
+</script>
+'''
 
 cookiesnotice_html = '''
-<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice</div>
+<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice<button onclick="document.cookie = 'accepted';">Accept</button></div>
 '''
 
 head_html = '''
