@@ -2,12 +2,15 @@
 
 - can be used for backing up Notion pages (along with child pages recursively) 
 - can be used as a Static Site Generator (SSG) running in GitHub Actions and deploying to GitHub Pages for publishing Notion pages as a website with a custom domain
+- can be used as a module/function, not just from command line
 - supports three output file formats: JSON / HTML / Markdown
 - supports two output modes: single file and flat directory
 - supports downloading the assets and embedding them in the output files or in output directory
 - supports loading all options from a config in JSON format or as command-line arguments for overriding the config
 - supports specifying HTML header / footer snippets for customizing the output (Cookie Notice, Google Analytics, KaTeX rendering)
+- supports simple and versatile CSS-based customization of the HTML output
 - generates basic HTML meta og SEO tags
+- single-file HTML output mode can be used for rendering a PDF with all content from Notion workspace in a single PDF file for backup purposes
 
 Functions for retrieving from Notion API are based on https://github.com/MerkulovDaniil/notion4ever
 
@@ -36,6 +39,8 @@ python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN -
 #python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --extract-mode flat.html --config-json _config.json
 #python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --extract-mode flat/index.html --config-json _config.json --html-details-open --toc --html-link-to-page-index-html --sitemap-xml ./flat/sitemap.xml 
 #python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./single/index.html --sitemap-xml ./single/sitemap.xml --extract-mode single.json --config-json __config.json --html-details-open  --toc --html-columnlist-disable --extract-mode=single.html --snippets-dir _snippets
+
+# convert HTML to PDF using headless Chrome / Chromium
 chrome --headless --print-to-pdf=./single/index.pdf ./single/index.html
 
 # render markdown
