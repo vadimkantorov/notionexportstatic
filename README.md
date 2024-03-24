@@ -178,13 +178,5 @@ jobs:
           git push
 ```
 
-# TODO
-- cookies notice: snippet for html and for markdown
-- katex for equations
-- google analytics 
-- option to export html templates and use templates
-- option for generating or not toc for markdown
-- nanojekyll theme using stock minima templates
-
 # License
 MIT
