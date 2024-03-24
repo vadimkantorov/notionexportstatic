@@ -16,7 +16,7 @@
 
 Functions for retrieving from Notion API are based on https://github.com/MerkulovDaniil/notion4ever
 
-For full understanding of supported features, please ask questions in [Issues](./issues/) or read the code.
+For full understanding of supported features, please ask questions in [issues](../../issues/) or read the code.
 
 # Usage
 
@@ -48,10 +48,10 @@ chrome --headless --print-to-pdf=./single.html.pdf ./single.html
 # generate HTML in ./flat/my_page_slug/index.html file structure, suitable for publishing to GitHub Pages site (urls will be ./flat/my_page_slug/), page slugs are specified in _config.json (see example of _config.json below)
 python ./notionexportstatic/notionexportstatic.py -i ./everything.json -o ./flat/  --sitemap-xml ./flat/sitemap.xml --config-json _config.json --extract-mode flat/index.html  --html-details-open --html-link-to-page-index-html --toc 
 # generates ./flat/my_page_slug.html file structure, suitable for browsing locally without a web server
-python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat.html/ --config-json _config.json --extract-mode flat.html
+python ./notionexportstatic/notionexportstatic.py -i ./everything.json -o ./flat.html/ --config-json _config.json --extract-mode flat.html
 
 # generate Markdown in ./flat.md/my_page_slug.md file structure, suitable for using with Markdown-based Static Site Generators like Jekyll (see example of _config.yml below for Jekyll configuration) and running it on GitHub Pages / Actions
-python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat.md/ --sitemap-xml ./flat.md/sitemap.xml --config-json _config.json  --extract-mode flat.md  --extract-assets  --base-url-removesuffix .md --base-url 'https://vadimkantorov.github.io/notionexportstatic/markdown/' --edit-url 'https://github.com/vadimkantorov/notionexportstatic/edit/gh-pages/markdown/{page_slug}.md'
+python ./notionexportstatic/notionexportstatic.py -i ./everything.json -o ./flat.md/ --sitemap-xml ./flat.md/sitemap.xml --config-json _config.json  --extract-mode flat.md  --extract-assets  --base-url-removesuffix .md --base-url 'https://vadimkantorov.github.io/notionexportstatic/markdown/' --edit-url 'https://github.com/vadimkantorov/notionexportstatic/edit/gh-pages/markdown/{page_slug}.md'
 # generate Markdown in ./flat.md/my_page_slug.md for a single page, useful for re-importing some Notion pages into an existing Markdown-based website structure
 python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json -o ./flat.md/my_page_slug.md --sitemap-xml ./flat.md/sitemap.xml --config-json _config.json --extract-mode single.md --edit-url 'https://github.com/vadimkantorov/notionexportstatic/edit/gh-pages/markdown/{page_slug}.md' 
 ```
