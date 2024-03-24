@@ -460,12 +460,6 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     res += '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
     res += childrenlike2markdown(block, ctx)
     
-    # elif page.get("icon"):
-    #     icon = page["icon"]["file"]["url"]
-    #     pages[page_id]["icon"] = icon
-    # elif ctx['pages'][block['id']]['icon']:
-    #     icon = ctx['pages'][block['id']]['icon']
-    #     outcome_block = f"""[<span class="miniicon"> <img src="{icon}"></img></span> {outcome_block}"""
     # elif block['has_children']:
     #     depth += 1
     #     for subblock in block["children"]: # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
@@ -607,7 +601,6 @@ def get_page_link_info(block, ctx, untitled = '???'):
 
 
 def get_page_title(block, ctx, untitled = 'Untitled'):
-    #  pages[page_id]["title"] = page["properties"]["title"]["title"][0]["plain_text"] if len(page.get("properties",{}).get('title', {}).get('title', [])) > 0 else pages[page_id].get("title")
     if not block:
         return ''
     page_title = ' '.join(t['plain_text'] for t in block.get('properties', {}).get('title', {}).get('title', [])).strip() or block.get('child_page', {}).get('title', '').strip() or block.get('title', '').strip() or ' '.join(t['plain_text'] for t in block.get('properties', {}).get('Name', {}).get('title', [])).strip() or block.get('plain_text') or untitled
@@ -617,6 +610,14 @@ def get_page_title(block, ctx, untitled = 'Untitled'):
 def get_page_emoji(block, ctx):
     if not block:
         return ''
+    
+    # elif page.get("icon"):
+    #     icon = page["icon"]["file"]["url"]
+    #     pages[page_id]["icon"] = icon
+    # elif ctx['pages'][block['id']]['icon']:
+    #     icon = ctx['pages'][block['id']]['icon']
+    #     outcome_block = f"""[<span class="miniicon"> <img src="{icon}"></img></span> {outcome_block}"""
+
     payload_icon = block.get('icon') or {}
     icon_emoji = payload_icon.get(payload_icon.get('type'), '')
     children = block.get('children', []) or block.get('blocks', [])
