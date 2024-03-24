@@ -4,9 +4,12 @@
 # TODO: experiment with heading slug to match github slugs
 # TODO: convert download-assets to mime types?
 # TODO: replace ctx.get() by ctx[]
-# TODO: enable passing slugs as cmdline arg
 # TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
 # TODO: support toggle for Markdown
+# TODO: support passing page meta tags from _config or from cmdline
+# TODO: rename toc to toc-global/multipage?
+# TODO: uncomma first notion_page_id, uncomma slugs
+# TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
 
 
 import os
@@ -101,10 +104,10 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
 
 ##############################
 
-def blocktag2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = '', prefix = '', suffix = '', attrs = {}, **kwargs):
+def blocktag2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = None, prefix = '', suffix = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
     notion_attrs = (' data-block-id="{id}" '.format(id = block.get('id', ''))) * bool(block.get('id')) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
-    return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>\n' if set_html_contents_and_close else '') + suffix) if tag else ''
+    return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) if tag else ''
 
 def childrenlike2html(block, ctx, tag = ''):
     html = ''
@@ -122,13 +125,14 @@ def richtext2html(block, ctx = {}, title_mode = False, caption = False, rich_tex
     if isinstance(block, dict):
         block_type = get_block_type(block)
         if rich_text:
-            block = block.get(get_block_type(block), {}).get('rich_text', [])
+            block = get_block_rich_text(block)
         if caption: 
             block = block.get(get_block_type(block), {}).get('caption', [])
     if isinstance(block, list):
         return ''.join(richtext2html(subblock, ctx, title_mode = title_mode) for subblock in block).strip()
     
     plain_text = block['plain_text']
+    content = block.get('content', '')
     anno = block['annotations']
     href = block.get('href', '')
     if title_mode:
@@ -159,7 +163,10 @@ def textlike2html(block, ctx, tag = 'span', class_name = '', attrs = {}, html_ic
     color = block.get(get_block_type(block), {}).get('color', '')
     html_text = richtext2html(block, ctx, rich_text = True)
     html_checked = '<input type="checkbox" disabled {} />'.format('checked' * checked) if checked is not None else ''
-    return blocktag2html(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, set_html_contents_and_close = html_checked + html_text + childrenlike2html(block, ctx) + html_icon)
+    html = html_checked + html_text + childrenlike2html(block, ctx) + html_icon
+    if not html:
+        breakpoint()
+    return blocktag2html(block, ctx, tag = tag, class_name = class_name + f' notion-color-{color}', attrs = attrs, set_html_contents_and_close = html)
 
 def toggle2html(block, ctx, tag = 'span', class_name = 'notion-toggle-block', attrs = {}, html_icon = ''):
     color = block.get(get_block_type(block), {}).get('color', '')
@@ -193,8 +200,8 @@ def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     #     pages[page_id]["icon"] = icon
     #     pages[page_id]["assets_to_download"].append(icon)
 
-    dt_modified = datetime.datetime.utcfromtimestamp(ctx.get('unix_seconds_downloaded', 0)).strftime(strftime) if ctx.get('unix_seconds_downloaded', 0) else ''
-    dt_published = datetime.datetime.utcfromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
+    dt_modified = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_downloaded') 
+    dt_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated') 
     src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
     src_cover = get_asset_url(src_cover, ctx)
     page_id = block.get('id', '')
@@ -308,13 +315,23 @@ def link_to_page2html(block, ctx, tag = 'a', caption = None, line_break = True, 
     caption = caption if caption is not None else '{html_icon}{page_emoji} {page_title}'.format(html_icon = html_icon, page_title = html.escape(link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
     return blocktag2html(block, ctx, tag = tag, attrs = dict(href = link_to_page_info['href']), class_name = class_name, set_html_contents_and_close = caption) + '<br/>' * line_break
 
+def get_block_rich_text(block): return block.get('rich_text', []) or block.get('text', []) or block.get(get_block_type(block), {}).get('rich_text', []) or block.get(get_block_type(block), {}).get('text', []) or []
+
+def get_plain_text(block, ctx):
+    if isinstance(block, list):
+        return ''.join(get_plain_text(subblock, ctx) for subblock in block).strip()
+    return block['plain_text']
+
+def paragraph_is_empty(block, ctx):
+    return block.get('has_children') is False and not get_plain_text(get_block_rich_text(block), ctx).strip()
+
 def child_page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', **kwargs): return page2html(block, ctx, tag = tag, class_name = class_name, **kwargs)
 def unsupported2html(block, ctx, tag = 'div', class_name = 'notion-unsupported-block', comment = True, **ignored): return '\n<!--\n' * comment + html.escape(blocktag2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block.get('type', '') or block.get('object', '')}, selfclose = True)) + '\n-->\n' * comment
 def divider2html(block, ctx, tag = 'hr', class_name = 'notion-divider-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, selfclose = True)
 def heading_12html(block, ctx, tag = 'h1', class_name = 'notion-header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
 def heading_22html(block, ctx, tag = 'h2', class_name = 'notion-sub_header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
 def heading_32html(block, ctx, tag = 'h3', class_name = 'notion-sub_sub_header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
-def paragraph2html(block, ctx, tag = 'p', class_name = 'notion-text-block'): return blocktag2html(block, ctx, tag = 'br', class_name = class_name, selfclose = True) if block.get('has_children') is False and not (block.get(get_block_type(block), {}).get('rich_text')) else textlike2html(block, ctx, tag = tag, class_name = class_name)
+def paragraph2html(block, ctx, tag = 'p', class_name = 'notion-text-block'): return blocktag2html(block, ctx, tag = 'br', class_name = class_name, selfclose = True) if paragraph_is_empty(block, ctx) else textlike2html(block, ctx, tag = tag, class_name = class_name)
 def column_list2html(block, ctx, tag = 'div', class_name = 'notion-column_list-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name + ' notion_column_list-block-vertical' * (ctx.get('html_columnlist_disable') is True), set_html_contents_and_close = childrenlike2html(block, ctx))
 def column2html(block, ctx, tag = 'div', class_name = 'notion-column-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = childrenlike2html(block, ctx, tag = tag)) 
 def bulleted_list_item2html(block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block'): return f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
@@ -417,8 +434,8 @@ def mention2markdown(block, ctx):
     return unsupported2markdown(block, ctx)
 
 def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
-    dt_modified = datetime.datetime.utcfromtimestamp(ctx.get('unix_seconds_downloaded', 0)).strftime(strftime) if ctx.get('unix_seconds_downloaded', 0) else ''
-    dt_published = datetime.datetime.utcfromtimestamp(ctx.get('unix_seconds_generated', 0)).strftime(strftime) if ctx.get('unix_seconds_generated', 0) else ''
+    dt_modified = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_downloaded') 
+    dt_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated') 
     src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
     src_cover = get_asset_url(src_cover, ctx)
     page_id = block.get('id', '')
@@ -484,7 +501,7 @@ def divider2markdown(block, ctx, tag = '---'): return tag
 def heading_12markdown(block, ctx, tag = '# '  ): return headinglike2markdown(block, ctx, tag = tag) 
 def heading_22markdown(block, ctx, tag = '## ' ): return headinglike2markdown(block, ctx, tag = tag) 
 def heading_32markdown(block, ctx, tag = '### '): return headinglike2markdown(block, ctx, tag = tag) 
-def paragraph2markdown(block, ctx): return '' if block.get('has_children') is False and not (block.get(get_block_type(block), {}).get('rich_text')) else textlike2markdown(block, ctx)
+def paragraph2markdown(block, ctx): return '\n\n' if paragraph_is_empty(block, ctx) else textlike2markdown(block, ctx)
 def column_list2markdown(block, ctx): return childrenlike2markdown(block, ctx)
 def column2markdown(block, ctx):      return childrenlike2markdown(block, ctx)
 def bulleted_list_item2markdown(block, ctx, tag = '* '): return tag + textlike2markdown(block, ctx)
@@ -531,7 +548,7 @@ def richtext2markdown(block, ctx, title_mode = False, caption = False, rich_text
     if isinstance(block, dict):
         block_type = get_block_type(block)
         if rich_text:
-            block = block.get(get_block_type(block), {}).get('rich_text', [])
+            block = get_block_rich_text(block)
         if caption: 
             block = block.get(get_block_type(block), {}).get('caption', [])
     if isinstance(block, list):
@@ -539,6 +556,7 @@ def richtext2markdown(block, ctx, title_mode = False, caption = False, rich_text
     
     plain_text = block['plain_text']
     anno = block['annotations']
+    content = block.get('content', '')
     href = block.get('href', '')
     if title_mode:
         return plain_text
@@ -778,27 +796,34 @@ def get_page_headings(block, ctx):
             stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
     return headings
 
-def get_page_info(notion_pages_flat, ctx):
+def get_page_time_published(block, ctx, strftime = '', key = 'unix_seconds_generated'):
+    return datetime.datetime.utcfromtimestamp(ctx.get(key, 0)).strftime(strftime) if key in ctx else ''
+
+def get_page_description(block, ctx):
+    return ''
+
+def get_page_image(block, ctx):
+    return dict(page_image_url = '', page_image_height = '', page_image_width = '', page_image_alt = '')
+
+def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00'):
     page_info = {}
     for page_id, page in notion_pages_flat.items():
+        page_image_info = get_page_image(page, ctx)
         page_info[page_id] = dict(
-            page_locale = 'en_EN',
-            page_title = '',
-            page_url_absolute = '',
-            page_description = '',
-            page_image_url = '',
-            page_image_height = '',
-            page_image_width = '',
-            page_image_alt = '',
-            page_published_time_xmlschema = ''
+            page_image_info,
+            page_title = get_page_title(page, ctx),
+            page_url_absolute = get_page_url_absolute(get_page_url_relative(page, ctx), ctx),
+            page_description = get_page_description(page, ctx),
+            page_published_time_xmlschema = get_page_time_published(page, ctx, strftime = strftime),
         )
     return page_info
 
 def get_site_info(ctx):
     site_info = dict(    
-        site_name = '',
-        site_twitter_card_type = '',
-        site_twitter_atusername = ''
+        site_name = ctx['site_info_name'] or '',
+        site_twitter_card_type = ctx['site_info_twitter_card_type'] or '',
+        site_twitter_atusername = ctx['site_info_twitter_atusername'] or '',
+        site_locale = ctx['site_info_locale'] or '',
     )
     return site_info
 
@@ -1000,9 +1025,6 @@ def extractall(
         return print(output_path)
 
     os.makedirs(output_path, exist_ok = True)
-    # site_name = '',
-    # site_twitter_card_type = '',
-    # site_twitter_atusername = ''
 
     if page_ids and ctx['sitemap_xml']:
         print(ctx['sitemap_xml'])
@@ -1050,6 +1072,9 @@ def read_and_write_config(config_json, config):
     for k, v in config_args.items():
         if (k not in config) or v:
             config[k] = v
+        elif k in config and v and isinstance(v, dict):
+            config[k].update(v)
+
     if config_json and not os.path.exists(config_json):
         os.makedirs(os.path.dirname(config_json) or '.', exist_ok = True)
         with open(config_json, 'w') as f:
@@ -1080,7 +1105,8 @@ def notion2static(
     notion_page_id,
     extract_assets,
     download_assets_block_types,
-    ,
+    
+    slugs,
     extract_mode,
     theme_py,
     sitemap_xml,
@@ -1103,9 +1129,15 @@ def notion2static(
     bodyfooter_html,
     articleheader_html,
     articlefooter_html,
+    
+    site_info_name,
+    site_info_twitter_card_type,
+    site_info_twitter_atusername,
+    site_info_locale
 ):
     #notionjson2html : assert args.input_json
     #notionapi2notionjson: assert args.notion_page_id
+    slugs = {k.lower().strip() : v.lower().strip() for s in slugs for kv in s.split(',') for k, v in [kv.split('=')]}
     config = read_and_write_config(args.config_json, locals())
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
     notion_slugs = config.get('slugs', {})
@@ -1276,17 +1308,18 @@ if __name__ == '__main__':
     parser.add_argument('--extract-mode', default = 'single.html', choices = extract_mode_single + extract_mode_flat)
     parser.add_argument('--snippets-dir')
     parser.add_argument('--sitemap-xml')
-    parser.add_argument('--base-url')
     parser.add_argument('--base-url-removesuffix')
+    parser.add_argument('--base-url')
     parser.add_argument('--edit-url')
     parser.add_argument('--log-unsupported-blocks')
     parser.add_argument('--log-urls')
     parser.add_argument('--download-assets-block-types', nargs = '*', choices = ['image', 'video', 'pdf', 'file'], default = ['image', 'pdf', 'file'])
     parser.add_argument('--extract-assets', action = 'store_true')
+    parser.add_argument('--slugs', nargs = '*', default = [])
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
     parser.add_argument('--toc', action = 'store_true')
-    parser.add_argument('--markdown-frontmatter', action = 'store_true')
     parser.add_argument('--markdown-toc-page')
+    parser.add_argument('--markdown-frontmatter', action = 'store_true')
     parser.add_argument('--html-cookies', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
@@ -1295,6 +1328,12 @@ if __name__ == '__main__':
     parser.add_argument('--bodyfooter-html')
     parser.add_argument('--articleheader-html')
     parser.add_argument('--articlefooter-html')
+
+    parser.add_argument('--site-info-name', default = 'notionexportstatic')
+    parser.add_argument('--site-info-locale', default = 'en_EN')
+    parser.add_argument('--site-info-twitter-card-type')
+    parser.add_argument('--site-info-twitter-atusername')
+
     args = parser.parse_args()
     print(args)
 
