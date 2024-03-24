@@ -1,0 +1,36 @@
+name: render_notion_pages
+on: workflow_dispatch
+# https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
+permissions: write-all
+
+jobs:
+  render_notion_pages:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: browser-actions/setup-chrome@v1
+
+      - uses: actions/checkout@v4
+      - name: Clone notionexportstatic
+        run: git clone https://github.com/vadimkantorov/notionexportstatic
+
+      - name: Generate HTML and PDF
+        run: |
+          # generate an everything HTML and PDF
+          mkdir -p ./single/ ./flat/ ./markdown/
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./single/index.html --config-json _config.json --extract-mode single.html  --html-details-open --html-columnlist-disable --toc
+          chrome --headless --print-to-pdf=./single/index.pdf ./single/index.html
+
+          # generate flat HTML
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --config-json _config.json --extract-mode flat.html  --html-details-open --html-columnlist-disable
+
+          # generate flat Markdown
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/ --config-json _config.json --extract-mode flat.md --html-details-open  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md --html-details-open --html-columnlist-disable  --toc
+
+      - name: Push HTML and Markdown and PDF
+        run: |
+          git config user.name 'Vadim Kantorov'
+          git config user.email 'vadimkantorov@gmail.com'
+          git add -f -A ./single/ ./flat/ ./markdown/
+          git commit -a -m ...
+          git push

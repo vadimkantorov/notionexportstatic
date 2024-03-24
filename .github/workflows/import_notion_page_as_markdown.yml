@@ -1,0 +1,34 @@
+name: import_notion_page_as_markdown
+on:
+  workflow_dispatch:
+    inputs:
+      commaseparatednotionpageids:
+        description: 'comma separated notion page ids'
+        required: false
+        default: ''
+
+# https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
+permissions: write-all
+
+jobs:
+  import_notion_page_as_markdown:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone notionexportstatic
+        run: git clone https://github.com/vadimkantorov/notionexportstatic
+
+      - name: Import Markdown
+        run: |
+          python ./notionexportstatic/notionexportstatic.py --notion-page-id ${{ github.event.inputs.commaseparatednotionpageids }} -o ./markdown/ --config-json _config.json --extract-mode flat.md
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+
+      - name: Push HTML and Markdown and PDF
+        run: |
+          git config user.name 'Vadim Kantorov'
+          git config user.email 'vadimkantorov@gmail.com'
+          git add -f -A ./markdown/
+          git commit -a -m ...
+          git push

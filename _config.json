@@ -1,0 +1,6 @@
+{
+    "slugs": {
+        "some_page_id" : "index",
+        "some_other_page_id" : "my_page_slug"
+    }
+}

@@ -1,0 +1,30 @@
+title: notionexportstatic
+author:
+  name: Vadim Kantorov
+  email: vadimkantorov@gmail.com
+description: "notionexportstatic example website"
+
+optional_front_matter:
+  remove_originals: true
+  collections: true
+
+markdown: CommonMarkGhPages
+commonmark:
+  options: ["UNSAFE", "SMART", "FOOTNOTES"]
+
+include: ['markdown'] #, '_assets']
+defaults:
+  - scope:
+      path: "markdown"
+    values:
+      layout: "page"
+      permalink: /markdown/:basename/
+  - scope:
+      path: "markdown/index.md"
+    values:
+      layout: "page"
+      permalink: /markdown/
+
+remote_theme: jekyll/minima
+#minima:
+#  skin: classic
