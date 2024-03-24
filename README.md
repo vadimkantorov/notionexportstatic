@@ -72,7 +72,7 @@ title: notionexportstatic
 author:
   name: Vadim Kantorov
   email: vadimkantorov@gmail.com
-description: "Great site about Jekyll on GH-Pages."
+description: "notionexportstatic example website"
 
 optional_front_matter:
   remove_originals: true
