@@ -1,7 +1,13 @@
 # TODO: embedded pdf in markdown and html
 # TODO: page_icon with path, not just emoji
 # TODO: reduce newlines in markdown
-# TODO: experiment with slug to match github slugs
+# TODO: experiment with heading slug to match github slugs
+# TODO: convert download-assets to mime types?
+# TODO: replace ctx.get() by ctx[]
+# TODO: enable passing slugs as cmdline arg
+# TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
+# TODO: support toggle for Markdown
+
 
 import os
 import re
@@ -614,15 +620,18 @@ def get_page_current(block, ctx):
         parent_block = ctx['id2block'][parent_id]
     return parent_block
 
-def get_page_ids_normalized(root_page_ids, all_page_and_child_page_ids, notion_slugs):
+def resolve_page_ids(root_page_ids, all_page_and_child_page_ids, notion_slugs):
     for i in range(len(root_page_ids)):
         for k, v in notion_slugs.items():
-            if root_page_ids[i] == v:
-                root_page_ids[i] = k
+            if root_page_ids[i].lower() == v.lower():
+                root_page_ids[i] = k.replace('-', '')
         for k in all_page_and_child_page_ids:
             if root_page_ids[i] == k.replace('-', ''):
                 root_page_ids[i] = k
     return root_page_ids
+
+def resolve_page_ids_no_dashes(notion_page_id, notion_slugs):
+    return  [([k for k, v in notion_slugs.items() if v.lower() == page_id.lower()] or [page_id])[0].replace('-', '') for page_id in notion_page_id]
 
 def get_page_edit_url(page_id, ctx, page_id_no_dashes, page_slug):
     return ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else None
@@ -1014,7 +1023,7 @@ def extractall(
         
         os.makedirs(page_dir, exist_ok = True)
             
-        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False), block_types = ctx['download_assets_block_types'])
+        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False), block_types = ctx.get('download_assets_block_types', []))
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
     
         if ext == '.html':
@@ -1037,7 +1046,7 @@ def extractall(
 
 def read_and_write_config(config_json, config):
     config_args = config
-    config = json.load(open(config_json)) if config_json and os.path.exists(config_json) else {}
+    config = json.load(open(config_json)) if config_json and os.path.exists(config_json) and os.path.isfile(config_json) else {}
     for k, v in config_args.items():
         if (k not in config) or v:
             config[k] = v
@@ -1071,6 +1080,7 @@ def notion2static(
     notion_page_id,
     extract_assets,
     download_assets_block_types,
+    ,
     extract_mode,
     theme_py,
     sitemap_xml,
@@ -1089,27 +1099,27 @@ def notion2static(
     html_details_open,
     html_columnlist_disable,
     html_link_to_page_index_html,
-    
-    body_header_html,
-    body_footer_html,
-    article_header_html,
-    article_footer_html,
+    bodyheader_html,
+    bodyfooter_html,
+    articleheader_html,
+    articlefooter_html,
 ):
     #notionjson2html : assert args.input_json
     #notionapi2notionjson: assert args.notion_page_id
     config = read_and_write_config(args.config_json, locals())
     sitemap = sitemap_urlset_read(sitemap_xml) if sitemap_xml else []
+    notion_slugs = config.get('slugs', {})
+    notion_page_id = config.get('notion_page_id', [])
 
     if input_json:
         notionjson = json.load(open(input_json)) if input_json else {}
     else:
-        notion_page_ids_no_dashes = [([k for k, v in config.get('slugs', {}).items() if v.lower() == notion_page_id.lower()] or [notion_page_id])[0].replace('-', '') for notion_page_id in notion_page_id]
-        notionjson = notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes)
+        notionjson = notionapi_retrieve_page_list(notion_token, resolve_page_ids_no_dashes(notion_page_id, notion_slugs))
+
     notion_pages = notionjson.get('pages', {})
-    notion_assets = notionjson.get('assets', {}) or download_assets(notion_pages.values(), block_types = download_assets_block_types)
+    notion_assets = notionjson.get('assets', {}) or download_assets(notion_pages.values(), block_types = config['download_assets_block_types'])
 
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
-    notion_slugs = config.get('slugs', {})
 
     notion_pages_flat = copy.deepcopy(notion_pages)
     child_pages_by_parent_id = {}
@@ -1118,7 +1128,7 @@ def notion2static(
     child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
         
-    root_page_ids = get_page_ids_normalized(notion_page_id or list(notion_pages.keys()), notion_pages_flat.keys(), notion_slugs)
+    root_page_ids = resolve_page_ids(notion_page_id or list(notion_pages.keys()), notion_pages_flat.keys(), notion_slugs)
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if child_page['id'] not in root_page_ids]
     assert all(page_id in notion_pages_flat for page_id in root_page_ids), f'{notion_pages_flat.keys()=}, {root_page_ids=}'
     
@@ -1149,10 +1159,10 @@ def notion2static(
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
     snippets = read_snippets(snippets_dir, snippets_extra_paths = dict(
-        body_header_html    = body_header_html   ,
-        body_footer_html    = body_footer_html   ,
-        article_header_html = article_header_html,
-        article_footer_html = article_footer_html,
+        bodyheader_html    = bodyheader_html   ,
+        bodyfooter_html    = bodyfooter_html   ,
+        articleheader_html = articleheader_html,
+        articlefooter_html = articlefooter_html,
     ))
     snippets_read = list(snippets.keys())
 
@@ -1252,7 +1262,7 @@ def block2markdown(block, ctx = {}, begin = False, end = False, **kwargs):
 
 extract_mode_single = ['single.html', 'single.md', 'single.json']
 extract_mode_flat = ['flat.html', 'flat.md', 'flat.json', 'flat/index.html']
-extract_mode_json = ['flat.json',  'single.json']
+extract_mode_json = ['flat.json', 'single.json']
 extract_mode_index_html = ['flat/index.html']
 
 if __name__ == '__main__':
@@ -1271,7 +1281,7 @@ if __name__ == '__main__':
     parser.add_argument('--edit-url')
     parser.add_argument('--log-unsupported-blocks')
     parser.add_argument('--log-urls')
-    parser.add_argument('--download-assets-block-types', nargs = '*', choices = ['image', 'video', 'pdf', 'file'], default = ['image'])
+    parser.add_argument('--download-assets-block-types', nargs = '*', choices = ['image', 'video', 'pdf', 'file'], default = ['image', 'pdf', 'file'])
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
     parser.add_argument('--toc', action = 'store_true')
@@ -1281,10 +1291,10 @@ if __name__ == '__main__':
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
     parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
-    parser.add_argument('--body-header-html')
-    parser.add_argument('--body-footer-html')
-    parser.add_argument('--article-header-html')
-    parser.add_argument('--article-footer-html')
+    parser.add_argument('--bodyheader-html')
+    parser.add_argument('--bodyfooter-html')
+    parser.add_argument('--articleheader-html')
+    parser.add_argument('--articlefooter-html')
     args = parser.parse_args()
     print(args)
 

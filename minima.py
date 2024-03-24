@@ -17,13 +17,13 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     snippets = snippets_default | snippets
     style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
     
-    main = divider.join(block2html(notion_pages[page_id], ctx, html_prefix = snippets.get('article_header_html', ''), html_suffix = snippets.get('article_footer_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
+    main = divider.join(block2html(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
     res = snippets.get('page_html', '').format(
         head_html = snippets.get('head_html', ''),
         style_css = style_css, 
         header_html = header_breadcrumb, 
-        body_header_html = snippets.get('body_header_html', ''), 
-        body_footer_html = snippets.get('body_footer_html', ''), 
+        bodyheader_html = snippets.get('bodyheader_html', ''), 
+        bodyfooter_html = snippets.get('bodyfooter_html', ''), 
         cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies')),
         main_html = main_toc + main, 
 
@@ -122,7 +122,7 @@ page_html =  '''
     </head>
     <body>
         {cookiesnotice_html}
-        {body_header_html}
+        {bodyheader_html}
         <header class="site-header notion-topbar">
             {header_html}
         </header>
@@ -131,7 +131,7 @@ page_html =  '''
                 {main_html}
             </div>
         </main>
-        {body_footer_html}
+        {bodyfooter_html}
     </body>
 </html>
 '''
