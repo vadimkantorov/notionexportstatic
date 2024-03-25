@@ -1,6 +1,11 @@
 name: import_notion_pages_as_markdown
 on:
-  #push:
+  push:
+    inputs:
+      commaseparatednotionpageids:
+        description: 'comma separated notion page ids'
+        required: false
+        default: '183af621072445438c48af7dd4f21f5c'
   
   workflow_dispatch:
     inputs:
