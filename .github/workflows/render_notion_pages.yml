@@ -41,9 +41,9 @@ jobs:
         run: |
           mkdir -p ./html/ ./markdown/
           # generate single Markdown from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --extract-mode single.md
           # generate single HTML and PDF from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/single.html --config-json _config.json --extract-mode single.html
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/single.html --extract-mode single.html
           # html2pdf conversion
           chrome --headless --print-to-pdf=./everything.pdf ./html/single.html
           
@@ -51,7 +51,7 @@ jobs:
         run: |
           mkdir -p ./html/ ./markdown/
           # generate flat HTML from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/ --config-json _config.json --extract-mode flat.html
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/ --extract-mode flat.html
           # generate flat Markdown from a pre-downloaded ./everything.json
           python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/ --config-json _config.json --extract-mode flat.md  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
 
