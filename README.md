@@ -9,7 +9,7 @@
 - supports downloading the assets and embedding them in the output files or in output directory
 - supports loading all options from a config in JSON format or as command-line arguments for overriding the config
 - supports custom HTML header / footer snippets for customizing the output (Cookie Notice, Google Analytics, KaTeX rendering)
-- supports custom CSS styling of the HTML output
+- supports custom CSS styling of the HTML output (basic CSS is based on https://github.com/jekyll/minima theme)
 - supports custom page slugs / page urls
 - generates sitemap.xml and basic HTML meta og SEO tags
 - single-file HTML output mode can be used for rendering a PDF with all content from Notion workspace in a single PDF file for backup purposes
