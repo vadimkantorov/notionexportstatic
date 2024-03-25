@@ -1340,7 +1340,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    if args.extract_mode in extract_mode_json or (args.input_json and os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
+    if args.extract_mode in extract_mode_json or args.notion_page_id or (args.input_json and os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
         notion2static(**vars(args))
 
     elif args.input_json and os.path.exists(args.input_json) and os.path.isdir(args.input_json):
