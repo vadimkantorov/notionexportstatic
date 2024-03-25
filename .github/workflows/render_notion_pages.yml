@@ -37,7 +37,7 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
       
-      - name: Generate single HTML and PDF and Markdown and optionally save the content into everything.json
+      - name: Generate single HTML and PDF and Markdown
         run: |
           mkdir -p ./html/ ./markdown/
           # generate single Markdown from a pre-downloaded ./everything.json

@@ -25,16 +25,15 @@ jobs:
         run: git clone --branch master https://github.com/vadimkantorov/notionexportstatic
 
       - name: Import Markdown
-        run: |
-          python ./notionexportstatic/notionexportstatic.py --notion-page-id $NOTION_PAGE_ID -o ./markdown/ --config-json _config.json --extract-mode flat.md
+        run: python ./notionexportstatic/notionexportstatic.py --notion-page-id $NOTION_PAGE_ID -o ./markdown/ --config-json _config.json --extract-mode flat.md
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
 
       - name: Push HTML and Markdown and PDF
         run: |
-          git config user.name 'Vadim Kantorov'
-          git config user.email 'vadimkantorov@gmail.com'
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git add -f -A ./markdown/
           git commit -a -m ...
           git push
