@@ -210,7 +210,7 @@ def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     page_emoji = get_page_emoji(block, ctx)
     page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx)
-    src_edit = get_page_edit_url(page_id, ctx, page_id_no_dashes = page_id_no_dashes, page_slug = page_slug)
+    src_edit = get_page_edit_url(page_id, ctx, page_slug = page_slug)
 
     anchor = link_to_page2html(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon') + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     #anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a>' + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
@@ -444,7 +444,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     page_emoji = get_page_emoji(block, ctx)
     page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx)
-    src_edit = get_page_edit_url(page_id, ctx, page_id_no_dashes = page_id_no_dashes, page_slug = page_slug)
+    src_edit = get_page_edit_url(page_id, ctx, page_slug = page_slug)
     
     anchor = ' ' + link_to_page2markdown(block, ctx, caption = '#', line_break = False) + f'[✏️]({src_edit})' * bool(src_edit)
     
@@ -652,11 +652,13 @@ def resolve_page_ids(root_page_ids, all_page_and_child_page_ids, notion_slugs):
 def resolve_page_ids_no_dashes(notion_page_id, notion_slugs):
     return  [([k for k, v in notion_slugs.items() if v.lower() == page_id.lower()] or [page_id])[0].replace('-', '') for page_id in notion_page_id]
 
-def get_page_edit_url(page_id, ctx, page_id_no_dashes, page_slug):
-    return ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else None
+def get_page_edit_url(page_id, ctx, page_slug, base_url = 'https://notion.so'):
+    page_id_no_dashes = page_id.replace('-', '')
+    return ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else os.path.join(base_url, page_id_no_dashes)
 
 def get_page_url(block, ctx, base_url = 'https://www.notion.so'):
-    return block.get('url', os.path.join(base_url, block.get('id', '').replace('-', '')))
+    page_id_no_dashes = block.get('id', '').replace('-', '')
+    return block.get('url', os.path.join(base_url, page_id_no_dashes))
 
 def get_page_url_absolute(page_url_relative, ctx):
     page_url_absolute = (os.path.join(ctx['base_url'], page_url_relative.removeprefix('./'))) if ctx.get('base_url') else ('file:///' + page_url_relative.removeprefix('file:///'))
@@ -1300,7 +1302,7 @@ extract_mode_index_html = ['flat/index.html']
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config-json')
+    parser.add_argument('--config-json', default = '_config.json')
     parser.add_argument('--input-json', '-i')
     parser.add_argument('--output-path', '-o')
     parser.add_argument('--notion-token', default = os.getenv('NOTION_TOKEN', ''))

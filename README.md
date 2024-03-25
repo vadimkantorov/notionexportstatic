@@ -67,115 +67,25 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 ```
 
 # Example `_config.yml` file for https://github.com/jekyll/minima theme
-```yaml
-title: notionexportstatic
-author:
-  name: Vadim Kantorov
-  email: vadimkantorov@gmail.com
-description: "notionexportstatic example website"
-
-optional_front_matter:
-  remove_originals: true
-  collections: true
-
-markdown: CommonMarkGhPages
-commonmark:
-  options: ["UNSAFE", "SMART", "FOOTNOTES"]
-
-include: ['markdown'] #, '_assets']
-defaults:
-  - scope:
-      path: "markdown"
-    values:
-      layout: "page"
-      permalink: /markdown/:basename/
-  - scope:
-      path: "markdown/index.md"
-    values:
-      layout: "page"
-      permalink: /markdown/
-
-remote_theme: jekyll/minima
-#minima:
-#  skin: classic
-```
+See [`_config.yml`](../gh-pages/_config.yml)
 
 # Example `.github/workflows/render_notion_pages.yml`
-```yaml
-name: render_notion_pages
-on: workflow_dispatch
-# https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
-permissions: write-all
-
-jobs:
-  render_notion_pages:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: browser-actions/setup-chrome@v1
-
-      - uses: actions/checkout@v4
-      - name: Clone notionexportstatic
-        run: git clone https://github.com/vadimkantorov/notionexportstatic
-
-      - name: Generate HTML and PDF
-        run: |
-          # generate an everything HTML and PDF
-          mkdir -p ./single/ ./flat/ ./markdown/
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./single/index.html --config-json _config.json --extract-mode single.html  --html-details-open --html-columnlist-disable --toc
-          chrome --headless --print-to-pdf=./single/index.pdf ./single/index.html
-
-          # generate flat HTML
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --config-json _config.json --extract-mode flat.html  --html-details-open --html-columnlist-disable
-
-          # generate flat Markdown
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/ --config-json _config.json --extract-mode flat.md --html-details-open  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md --html-details-open --html-columnlist-disable  --toc
-
-      - name: Push HTML and Markdown and PDF
-        run: |
-          git config user.name 'Vadim Kantorov'
-          git config user.email 'vadimkantorov@gmail.com'
-          git add -f -A ./single/ ./flat/ ./markdown/
-          git commit -a -m ...
-          git push
-```
+See [`.github/workflows/render_notion_pages.yml`](../gh-pages/.github/workflows/render_notion_pages.yml)
 
 # Example `.github/workflows/import_notion_page_as_markdown.yml`
-```yaml
-name: import_notion_page_as_markdown
-on:
-  workflow_dispatch:
-    inputs:
-      commaseparatednotionpageids:
-        description: 'comma separated notion page ids'
-        required: false
-        default: ''
+See [`.github/workflows/import_notion_page_as_markdown.yml`](../gh-pages/.github/workflows/import_notion_page_as_markdown.yml)
 
-# https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
-permissions: write-all
+# References
+- https://github.com/jekyll/minima
+- https://github.com/vadimkantorov/minimacss 
+- https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/markup
+- https://katex.org/docs/browser
 
-jobs:
-  import_notion_page_as_markdown:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Clone notionexportstatic
-        run: git clone https://github.com/vadimkantorov/notionexportstatic
-
-      - name: Import Markdown
-        run: |
-          python ./notionexportstatic/notionexportstatic.py --notion-page-id ${{ github.event.inputs.commaseparatednotionpageids }} -o ./markdown/ --config-json _config.json --extract-mode flat.md
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-
-      - name: Push HTML and Markdown and PDF
-        run: |
-          git config user.name 'Vadim Kantorov'
-          git config user.email 'vadimkantorov@gmail.com'
-          git add -f -A ./markdown/
-          git commit -a -m ...
-          git push
+# Notes
+For markdown2html conversion in Python:
+```python
+# pip install markdown   markdown-captions markdown-checklist pymdown-extensions mdx_truly_sane_lists
+html_content = markdown.markdown(md_content, extensions = ["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs = {'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
 ```
 
 # License

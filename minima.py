@@ -1,12 +1,5 @@
-# https://github.com/jekyll/minima
-# https://github.com/vadimkantorov/minimacss 
-# https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/markup
-# https://katex.org/docs/browser
-
 # TODO: add hover style for breadcrumb
-
-# pip install mdx_truly_sane_lists markdown-captions markdown-checklist pymdown-extensions
-# html_content = markdown.markdown(md_content, extensions = ["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs = {'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
+# TODO: use string.Template instead of string formatting in minima.py
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
