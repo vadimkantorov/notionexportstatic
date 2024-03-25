@@ -1340,10 +1340,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args)
 
-    if args.extract_mode in extract_mode_json or (os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
+    if args.extract_mode in extract_mode_json or (args.input_json and os.path.exists(args.input_json) and os.path.isfile(args.input_json)):
         notion2static(**vars(args))
 
-    elif os.path.exists(args.input_json) and os.path.isdir(args.input_json):
+    elif args.input_json and os.path.exists(args.input_json) and os.path.isdir(args.input_json):
         file_paths_recursive_json = [os.path.join(dirpath, basename) for dirpath, dirnames, filenames in os.walk(args.input_json) for basename in filenames if basename.endswith('.json')]
         for file_path in file_paths_recursive_json:
             try:
