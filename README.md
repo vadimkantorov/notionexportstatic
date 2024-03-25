@@ -56,23 +56,16 @@ python ./notionexportstatic/notionexportstatic.py -i ./everything.json -o ./flat
 python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json -o ./flat.md/my_page_slug.md --sitemap-xml ./flat.md/sitemap.xml --config-json _config.json --extract-mode single.md --edit-url 'https://github.com/vadimkantorov/notionexportstatic/edit/gh-pages/markdown/{page_slug}.md' 
 ```
 
-# Example `_config.json` file for page slugs and other options
-```json
-{
-    "slugs": {
-        "183af621-0724-4543-8c48-af7dd4f21f5c" : "index",
-        "1e01f04a-c311-430d-8c41-747f4a8ff601" : "my_child_page"
-    }
-}
-```
+### Example `_config.json` file for page slugs and other options
+See [`_config.yml`](../gh-pages/_config.json)
 
-# Example `_config.yml` file for https://github.com/jekyll/minima theme
+### Example `_config.yml` file for https://github.com/jekyll/minima theme
 See [`_config.yml`](../gh-pages/_config.yml)
 
-# Example `.github/workflows/render_notion_pages.yml`
+### Example `.github/workflows/render_notion_pages.yml`
 See [`.github/workflows/render_notion_pages.yml`](../gh-pages/.github/workflows/render_notion_pages.yml)
 
-# Example `.github/workflows/import_notion_page_as_markdown.yml`
+### Example `.github/workflows/import_notion_page_as_markdown.yml`
 See [`.github/workflows/import_notion_page_as_markdown.yml`](../gh-pages/.github/workflows/import_notion_page_as_markdown.yml)
 
 # References
