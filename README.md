@@ -60,8 +60,8 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 ```json
 {
     "slugs": {
-        "some_page_id" : "index",
-        "some_other_page_id" : "my_page_slug"
+        "183af621-0724-4543-8c48-af7dd4f21f5c" : "index",
+        "1e01f04a-c311-430d-8c41-747f4a8ff601" : "my_child_page"
     }
 }
 ```
