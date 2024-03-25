@@ -47,7 +47,7 @@
             },
             "url": "https://www.notion.so/Mypage-183af621072445438c48af7dd4f21f5c",
             "public_url": "https://tokot.notion.site/Mypage-183af621072445438c48af7dd4f21f5c",
-            "request_id": "b8c90a5f-8e8e-4dcd-ab47-ef8e270b18df",
+            "request_id": "93dd3e94-b49d-464b-ac82-7989696a1809",
             "blocks": [
                 {
                     "object": "block",
@@ -70,8 +70,7 @@
                     "archived": false,
                     "type": "paragraph",
                     "paragraph": {
-                        "color": "default",
-                        "text": [
+                        "rich_text": [
                             {
                                 "type": "mention",
                                 "mention": {
@@ -91,7 +90,8 @@
                                 "plain_text": "Mypage",
                                 "href": "https://www.notion.so/183af621072445438c48af7dd4f21f5c"
                             }
-                        ]
+                        ],
+                        "color": "default"
                     }
                 },
                 {
@@ -115,8 +115,7 @@
                     "archived": false,
                     "type": "paragraph",
                     "paragraph": {
-                        "color": "default",
-                        "text": [
+                        "rich_text": [
                             {
                                 "type": "mention",
                                 "mention": {
@@ -138,7 +137,8 @@
                                 "plain_text": "2024-02-14",
                                 "href": null
                             }
-                        ]
+                        ],
+                        "color": "default"
                     }
                 },
                 {
@@ -162,8 +162,7 @@
                     "archived": false,
                     "type": "paragraph",
                     "paragraph": {
-                        "color": "default",
-                        "text": [
+                        "rich_text": [
                             {
                                 "type": "text",
                                 "text": {
@@ -218,7 +217,8 @@
                                 "plain_text": " foo",
                                 "href": null
                             }
-                        ]
+                        ],
+                        "color": "default"
                     }
                 },
                 {
@@ -242,8 +242,7 @@
                     "archived": false,
                     "type": "paragraph",
                     "paragraph": {
-                        "color": "red",
-                        "text": [
+                        "rich_text": [
                             {
                                 "type": "mention",
                                 "mention": {
@@ -282,7 +281,8 @@
                                 "plain_text": " ",
                                 "href": null
                             }
-                        ]
+                        ],
+                        "color": "red"
                     }
                 },
                 {
@@ -306,8 +306,7 @@
                     "archived": false,
                     "type": "paragraph",
                     "paragraph": {
-                        "color": "default",
-                        "text": [
+                        "rich_text": [
                             {
                                 "type": "mention",
                                 "mention": {
@@ -329,7 +328,8 @@
                                 "plain_text": "2024-02-15T09:00:00.000+01:00 → 2024-02-28T09:00:00.000+01:00",
                                 "href": null
                             }
-                        ]
+                        ],
+                        "color": "default"
                     }
                 },
                 {
@@ -353,8 +353,7 @@
                     "archived": false,
                     "type": "paragraph",
                     "paragraph": {
-                        "color": "default",
-                        "text": [
+                        "rich_text": [
                             {
                                 "type": "text",
                                 "text": {
@@ -372,7 +371,8 @@
                                 "plain_text": " ",
                                 "href": null
                             }
-                        ]
+                        ],
+                        "color": "default"
                     }
                 },
                 {
@@ -444,8 +444,7 @@
                     "archived": false,
                     "type": "paragraph",
                     "paragraph": {
-                        "color": "default",
-                        "text": [
+                        "rich_text": [
                             {
                                 "type": "mention",
                                 "mention": {
@@ -482,7 +481,8 @@
                                 "plain_text": " ",
                                 "href": null
                             }
-                        ]
+                        ],
+                        "color": "default"
                     }
                 },
                 {
@@ -558,10 +558,10 @@
             },
             "url": "https://www.notion.so/asdsd-1e01f04ac311430d8c41747f4a8ff601",
             "public_url": "https://tokot.notion.site/asdsd-1e01f04ac311430d8c41747f4a8ff601",
-            "request_id": "0e6c22f0-6bea-4473-934a-e6e6a8960b65",
+            "request_id": "e91eedc0-cd9c-4cdd-962f-154370facb89",
             "blocks": []
         }
     },
     "assets": {},
-    "unix_seconds_downloaded": 1711297881
+    "unix_seconds_downloaded": 1711383633
 }
