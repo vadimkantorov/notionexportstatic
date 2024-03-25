@@ -20,6 +20,9 @@ jobs:
   render_notion_pages:
     runs-on: ubuntu-22.04
     steps:
+      - name: Prerequisites
+        run: python -m pip install notion-client --user
+
       - uses: browser-actions/setup-chrome@v1 # only for html2pdf conversion
 
       - uses: actions/checkout@v4
