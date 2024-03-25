@@ -1,6 +1,6 @@
 name: import_notion_pages_as_markdown
 on:
-  push:
+  #push:
   
   workflow_dispatch:
     inputs:
