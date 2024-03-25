@@ -1,5 +1,7 @@
 name: import_notion_pages_as_markdown
 on:
+  push:
+  
   workflow_dispatch:
     inputs:
       commaseparatednotionpageids:
