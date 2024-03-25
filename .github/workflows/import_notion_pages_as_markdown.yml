@@ -1,4 +1,4 @@
-name: import_notion_page_as_markdown
+name: import_notion_pages_as_markdown
 on:
   workflow_dispatch:
     inputs:
@@ -11,7 +11,7 @@ on:
 permissions: write-all
 
 jobs:
-  import_notion_page_as_markdown:
+  import_notion_pages_as_markdown:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
