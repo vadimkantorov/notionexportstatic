@@ -51,9 +51,9 @@ jobs:
         run: |
           mkdir -p ./html/ ./markdown/
           # generate flat HTML from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/ --extract-mode flat.html
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/ --extract-mode flat/index.html
           # generate flat Markdown from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/ --config-json _config.json --extract-mode flat.md  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/ --extract-mode flat.md  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
 
       - name: Push HTML and Markdown
         run: |
