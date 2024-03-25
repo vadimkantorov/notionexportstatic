@@ -3,8 +3,6 @@ name: render_notion_pages
 permissions: write-all
 
 on:
-  push:
-
   workflow_dispatch:
     inputs:
       commaseparatednotionpageids:
