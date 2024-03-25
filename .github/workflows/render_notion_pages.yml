@@ -11,8 +11,8 @@ on:
         default: '183af621072445438c48af7dd4f21f5c'
       downloadfromnotion:
         description: 'download from notion or use a pre-downloadeded and pre-committed ./everything.json'
+        type: boolean
         required: false
-        default: '0'
 
 jobs:
   render_notion_pages:
@@ -30,24 +30,23 @@ jobs:
       - name: Clone notionexportstatic
         run: git clone --branch master https://github.com/vadimkantorov/notionexportstatic
       
+      - name: Optionally refresh ./everything.json
+        if: github.event.inputs.downloadfromnotion
+        run: python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
+      
       - name: Generate single HTML and PDF and Markdown and optionally save the content into everything.json
         run: |
           mkdir -p ./html/ ./markdown/
-
-          # optionally refresh ./everything.json
-          [ "$DOWNLOAD_FROM_NOTION" = 1 ] && python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
           
           # generate single Markdown from a pre-downloaded ./everything.json
           python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md
           # generate single HTML and PDF from a pre-downloaded ./everything.json
           python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/single.html --config-json _config.json --extract-mode single.html
           # html2pdf conversion
-          chrome --headless --print-to-pdf=./single.pdf ./html/single.html
-
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
-          DOWNLOAD_FROM_NOTION: ${{ github.event.inputs.downloadfromnotion }}
+          chrome --headless --print-to-pdf=./everything.pdf ./html/single.html
           
       - name: Generate flat HTML and Markdown from a pre-downloaded JSON
         run: |
@@ -61,12 +60,6 @@ jobs:
         run: |
           git config user.name 'Vadim Kantorov'
           git config user.email 'vadimkantorov@gmail.com'
-          git add -f -A ./everything.json ./html/ ./markdown/
+          git add -f -A ./everything.json ./everything.pdf ./html/ ./markdown/
           git commit -a -m ...
           git push
-
-      - name: Single PDF file
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifacts
-          path: single.pdf
