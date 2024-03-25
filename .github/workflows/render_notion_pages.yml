@@ -10,22 +10,23 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
 
       - uses: actions/checkout@v4
+
       - name: Clone notionexportstatic
         run: git clone https://github.com/vadimkantorov/notionexportstatic
 
-      - name: Generate HTML and PDF
+      - name: Generate HTML and PDF and Markdown
         run: |
           # generate an everything HTML and PDF
           mkdir -p ./single/ ./flat/ ./markdown/
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./single/index.html --config-json _config.json --extract-mode single.html  --html-details-open --html-columnlist-disable --toc
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./single/index.html --config-json _config.json --extract-mode single.html --toc
           chrome --headless --print-to-pdf=./single/index.pdf ./single/index.html
 
           # generate flat HTML
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --config-json _config.json --extract-mode flat.html  --html-details-open --html-columnlist-disable
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./flat/ --config-json _config.json --extract-mode flat.html
 
           # generate flat Markdown
           python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/ --config-json _config.json --extract-mode flat.md --html-details-open  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md --html-details-open --html-columnlist-disable  --toc
+          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md  --toc
 
       - name: Push HTML and Markdown and PDF
         run: |

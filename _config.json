@@ -2,5 +2,8 @@
     "slugs": {
         "183af621-0724-4543-8c48-af7dd4f21f5c" : "index",
         "1e01f04a-c311-430d-8c41-747f4a8ff601" : "my_child_page"
-    }
+    },
+
+    "html_details_open": true,
+    "html_columnlist_disable": true
 }
