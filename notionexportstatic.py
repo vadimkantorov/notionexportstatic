@@ -346,7 +346,7 @@ def callout2html(block, ctx, tag = 'p', class_name = 'notion-callout-block'): re
 def pdf2html(block, ctx, tag = 'a', class_name = 'notion-pdf-block'): return embed2html(block, ctx, class_name = class_name, html_text = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag))
 def breadcrumb2html(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
 def template2html(block, ctx, tag = 'figure', class_name = 'notion-template-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{html_text}</figcaption>\n{html_children}'.format(html_text = richtext2html(block, ctx, rich_text = True), html_children = childrenlike2html(block, ctx)))
-def child_database2html(block, ctx, tag = 'figure', class_name = 'notion-child_database-block', untitled = '???'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption><strong>{html_child_database_title}</strong></figcaption>'.format(html_child_database_title = html.escape(block['child_database'].get('title') or untitled)))
+def child_database2html(block, ctx, tag = 'figure', class_name = 'notion-child_database-block', untitled = '???'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption><strong>{child_database_title}</strong></figcaption>'.format(child_database_title = html.escape(block['child_database'].get('title') or untitled)))
 def pdf2html(block, ctx, tag = 'a', class_name = 'notion-pdf-block'): return embed2html(block, ctx, class_name = class_name, html_text = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag))
 def link_preview2html(block, ctx, tag = 'a', class_name = 'notion-link_preview-block'): return linklike2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
 
@@ -509,7 +509,7 @@ def pdf2markdown(block, ctx, tag = '📄'): return linklike2markdown(block, ctx,
 def bookmark2markdown(block, ctx, tag = '🔖'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
 def link_preview2markdown(block, ctx, tag = '🌐'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
 def embed2markdown(block, ctx): return embed2html(block, ctx)
-def child_database2markdown(block, ctx, untitled = '???'): return ' **{html_child_database_title}** '.format(child_database_title = (block['child_database'].get('title') or untitled))
+def child_database2markdown(block, ctx, untitled = '???'): return ' **child_database_title}** '.format(child_database_title = (block['child_database'].get('title') or untitled))
 def template2markdown(block, ctx): return '---\n{markdown_text}\n{markdown_children}\n---'.format(markdown_text = richtext2markdown(block, ctx, rich_text = True), markdown_children = childrenlike2markdown(block, ctx))
 def breadcrumb2markdown(block, ctx, sep = ' / '): return sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
 
