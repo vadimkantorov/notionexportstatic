@@ -11,6 +11,7 @@
 # TODO: uncomma first notion_page_id, uncomma slugs
 # TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
 # TODO: when downloading several pages from slugs, make sure that there is no double-download
+# TODO: option to not update published date
 
 import os
 import re
@@ -457,7 +458,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
     res += f'# {page_emoji} {page_title} {anchor}\n'
 
-    res += '*@' + ' -> '.join([dt_modified, dt_published]) + '* ' + f'[✏️]({src_edit})' * bool(src_edit) + '\n\n'
+    res += f'[✏️]({src_edit}) ' * bool(src_edit) + '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
     res += childrenlike2markdown(block, ctx)
     
     # elif block['has_children']:
@@ -509,7 +510,7 @@ def pdf2markdown(block, ctx, tag = '📄'): return linklike2markdown(block, ctx,
 def bookmark2markdown(block, ctx, tag = '🔖'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
 def link_preview2markdown(block, ctx, tag = '🌐'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
 def embed2markdown(block, ctx): return embed2html(block, ctx)
-def child_database2markdown(block, ctx, untitled = '???', tag = ' ** '): return '{tag}{child_database_title}{tag}'.format(tag = tag, child_database_title = (block['child_database'].get('title') or untitled))
+def child_database2markdown(block, ctx, untitled = '???', tag = '**'): return ' {tag}{child_database_title}{tag} '.format(tag = tag, child_database_title = (block['child_database'].get('title') or untitled))
 def template2markdown(block, ctx): return '---\n{markdown_text}\n{markdown_children}\n---'.format(markdown_text = richtext2markdown(block, ctx, rich_text = True), markdown_children = childrenlike2markdown(block, ctx))
 def breadcrumb2markdown(block, ctx, sep = ' / '): return sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
 
