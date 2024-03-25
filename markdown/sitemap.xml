@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url id="183af621-0724-4543-8c48-af7dd4f21f5c">
+    <loc>https://vadimkantorov.github.io/notionexportstatic/markdown/index</loc>
+    <locrel>./index.md</locrel>
+  </url>
+  <url id="1e01f04a-c311-430d-8c41-747f4a8ff601">
+    <loc>https://vadimkantorov.github.io/notionexportstatic/markdown/my_child_page</loc>
+    <locrel>./my_child_page.md</locrel>
+  </url>
+</urlset>
