@@ -24,9 +24,11 @@ jobs:
       - uses: browser-actions/setup-chrome@v1 # only for html2pdf conversion
 
       - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
 
       - name: Clone notionexportstatic
-        run: git clone https://github.com/vadimkantorov/notionexportstatic
+        run: git clone --branch master https://github.com/vadimkantorov/notionexportstatic
       
       - name: Generate single HTML and PDF and Markdown and optionally save the content into everything.json
         run: |
