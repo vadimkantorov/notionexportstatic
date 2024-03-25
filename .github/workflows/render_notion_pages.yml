@@ -31,7 +31,7 @@ jobs:
         run: git clone --branch master https://github.com/vadimkantorov/notionexportstatic
       
       - name: Optionally refresh ./everything.json
-        #if: github.event.inputs.downloadfromnotion
+        if: github.event.inputs.downloadfromnotion == 'true'
         run: echo $DOWNLOAD_FROM_NOTION
         #python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
         env:
