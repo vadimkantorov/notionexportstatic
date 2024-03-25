@@ -31,11 +31,13 @@ jobs:
         run: git clone --branch master https://github.com/vadimkantorov/notionexportstatic
       
       - name: Optionally refresh ./everything.json
-        if: github.event.inputs.downloadfromnotion
-        run: python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
+        #if: github.event.inputs.downloadfromnotion
+        run: echo $DOWNLOAD_FROM_NOTION
+        #python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
+          DOWNLOAD_FROM_NOTION: ${{ github.event.inputs.downloadfromnotion }}
       
       - name: Generate single HTML and PDF and Markdown and optionally save the content into everything.json
         run: |
