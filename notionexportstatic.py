@@ -509,7 +509,7 @@ def pdf2markdown(block, ctx, tag = '📄'): return linklike2markdown(block, ctx,
 def bookmark2markdown(block, ctx, tag = '🔖'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
 def link_preview2markdown(block, ctx, tag = '🌐'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
 def embed2markdown(block, ctx): return embed2html(block, ctx)
-def child_database2markdown(block, ctx, untitled = '???'): return ' **child_database_title}** '.format(child_database_title = (block['child_database'].get('title') or untitled))
+def child_database2markdown(block, ctx, untitled = '???', tag = ' ** '): return '{tag}{child_database_title}{tag}'.format(child_database_title = (block['child_database'].get('title') or untitled))
 def template2markdown(block, ctx): return '---\n{markdown_text}\n{markdown_children}\n---'.format(markdown_text = richtext2markdown(block, ctx, rich_text = True), markdown_children = childrenlike2markdown(block, ctx))
 def breadcrumb2markdown(block, ctx, sep = ' / '): return sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
 
