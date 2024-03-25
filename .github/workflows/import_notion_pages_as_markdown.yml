@@ -1,12 +1,5 @@
 name: import_notion_pages_as_markdown
 on:
-  push:
-    inputs:
-      commaseparatednotionpageids:
-        description: 'comma separated notion page ids'
-        required: false
-        default: '183af621072445438c48af7dd4f21f5c'
-  
   workflow_dispatch:
     inputs:
       commaseparatednotionpageids:
@@ -22,12 +15,15 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
 
       - name: Clone notionexportstatic
-        run: git clone https://github.com/vadimkantorov/notionexportstatic
+        run: git clone --branch master https://github.com/vadimkantorov/notionexportstatic
 
       - name: Import Markdown
-        run: python ./notionexportstatic/notionexportstatic.py --notion-page-id $NOTION_PAGE_ID -o ./markdown/ --config-json _config.json --extract-mode flat.md
+        run: |
+          python ./notionexportstatic/notionexportstatic.py --notion-page-id $NOTION_PAGE_ID -o ./markdown/ --config-json _config.json --extract-mode flat.md
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
