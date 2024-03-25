@@ -446,7 +446,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     page_slug = get_page_slug(page_id, ctx)
     src_edit = get_page_edit_url(page_id, ctx, page_slug = page_slug)
     
-    anchor = ' ' + link_to_page2markdown(block, ctx, caption = '#', line_break = False) + f'[✏️]({src_edit})' * bool(src_edit)
+    anchor = ' ' + link_to_page2markdown(block, ctx, caption = '#', line_break = False)
     
     res = ''
     
@@ -457,7 +457,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
     res += f'# {page_emoji} {page_title} {anchor}\n'
 
-    res += '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
+    res += '*@' + ' -> '.join([dt_modified, dt_published]) + '* ' + f'[✏️]({src_edit})' * bool(src_edit) + '\n\n'
     res += childrenlike2markdown(block, ctx)
     
     # elif block['has_children']:
