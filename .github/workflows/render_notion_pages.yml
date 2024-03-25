@@ -1,7 +1,18 @@
 name: render_notion_pages
-on: workflow_dispatch
 # https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
 permissions: write-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      commaseparatednotionpageids:
+        description: 'comma separated notion page ids'
+        required: false
+        default: '183af621072445438c48af7dd4f21f5c'
+      downloadfromnotion:
+        description: 'download from notion or use a pre-downloadeded and pre-committed ./everything.json'
+        required: false
+        default: '0'
 
 jobs:
   render_notion_pages:
@@ -19,7 +30,7 @@ jobs:
           mkdir -p ./html/ ./markdown/
 
           # optionally refresh ./everything.json
-          [ $DOWNLOAD_FROM_NOTION ] && python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
+          [ "$DOWNLOAD_FROM_NOTION" = 1 ] && python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
           
           # generate single Markdown from a pre-downloaded ./everything.json
           python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md
@@ -29,9 +40,9 @@ jobs:
           chrome --headless --print-to-pdf=./single.pdf ./html/single.html
 
         env:
-          DOWNLOAD_FROM_NOTION: 1
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_PAGE_ID: ${{ secrets.NOTION_PAGE_ID }}
+          NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
+          DOWNLOAD_FROM_NOTION: ${{ github.event.inputs.downloadfromnotion }}
           
       - name: Generate flat HTML and Markdown from a pre-downloaded JSON
         run: |

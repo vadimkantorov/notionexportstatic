@@ -5,7 +5,7 @@ on:
       commaseparatednotionpageids:
         description: 'comma separated notion page ids'
         required: false
-        default: ''
+        default: '183af621072445438c48af7dd4f21f5c'
 
 # https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
 permissions: write-all
