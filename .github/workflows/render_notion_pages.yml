@@ -32,17 +32,14 @@ jobs:
       
       - name: Optionally refresh ./everything.json
         if: github.event.inputs.downloadfromnotion == 'true'
-        run: echo $DOWNLOAD_FROM_NOTION
-        #python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
+        run: python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
-          DOWNLOAD_FROM_NOTION: ${{ github.event.inputs.downloadfromnotion }}
       
       - name: Generate single HTML and PDF and Markdown and optionally save the content into everything.json
         run: |
           mkdir -p ./html/ ./markdown/
-          
           # generate single Markdown from a pre-downloaded ./everything.json
           python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --config-json _config.json --extract-mode single.md
           # generate single HTML and PDF from a pre-downloaded ./everything.json
@@ -60,8 +57,8 @@ jobs:
 
       - name: Push HTML and Markdown
         run: |
-          git config user.name 'Vadim Kantorov'
-          git config user.email 'vadimkantorov@gmail.com'
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git add -f -A ./everything.json ./everything.pdf ./html/ ./markdown/
           git commit -a -m ...
           git push
