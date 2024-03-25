@@ -10,7 +10,7 @@
 # TODO: rename toc to toc-global/multipage?
 # TODO: uncomma first notion_page_id, uncomma slugs
 # TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
-
+# TODO: when downloading several pages from slugs, make sure that there is no double-download
 
 import os
 import re
