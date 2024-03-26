@@ -1,3 +1,5 @@
+import string
+
 # TODO: add hover style for breadcrumb
 # TODO: use string.Template instead of string formatting in minima.py
 
@@ -17,7 +19,7 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
         header_html = header_breadcrumb, 
         bodyheader_html = snippets.get('bodyheader_html', ''), 
         bodyfooter_html = snippets.get('bodyfooter_html', ''), 
-        cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies')),
+        cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx['html_cookies']),
         main_html = main_toc + main, 
 
         page_title                    = ctx.get('page_info', {}).get(page_id_first, {}).get('page_title', ''),

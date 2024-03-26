@@ -3,15 +3,15 @@
 # TODO: reduce newlines in markdown
 # TODO: experiment with heading slug to match github slugs
 # TODO: convert download-assets to mime types?
-# TODO: replace ctx.get() by ctx[]
 # TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
+# TODO: do not download an asset if already exists (if extract_assets is used)
 # TODO: support toggle for Markdown
 # TODO: support passing page meta tags from _config or from cmdline
 # TODO: rename toc to toc-global/multipage?
 # TODO: uncomma first notion_page_id, uncomma slugs
 # TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
 # TODO: when downloading several pages from slugs, make sure that there is no double-download
-# TODO: option to not update published date
+# TODO: option to not update published date or to choose which date to use
 
 import os
 import re
@@ -172,7 +172,7 @@ def textlike2html(block, ctx, tag = 'span', class_name = '', attrs = {}, html_ic
 def toggle2html(block, ctx, tag = 'span', class_name = 'notion-toggle-block', attrs = {}, html_icon = ''):
     color = block.get(get_block_type(block), {}).get('color', '')
     html_text = richtext2html(block, ctx, rich_text = True)
-    return blocktag2html(block, ctx, tag = 'details', class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = dict(attrs, open = None) if ctx.get('html_details_open') else attrs, set_html_contents_and_close = f'<summary><{tag}>{html_text}{html_icon}</{tag}></summary>\n' + childrenlike2html(block, ctx))
+    return blocktag2html(block, ctx, tag = 'details', class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = dict(attrs, open = None) if ctx['html_details_open'] else attrs, set_html_contents_and_close = f'<summary><{tag}>{html_text}{html_icon}</{tag}></summary>\n' + childrenlike2html(block, ctx))
 
 def headinglike2html(block, ctx, tag, class_name = ''):
     block_id_no_dashes = block['id'].replace('-', '')
@@ -216,7 +216,7 @@ def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     anchor = link_to_page2html(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon') + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     #anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a>' + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     
-    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1><i><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} -> @{dt_published}">@{dt_published}</time></i></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
+    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1><i><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} → @{dt_published}">@{dt_published}</time></i></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
 
 ##############################
 
@@ -333,7 +333,7 @@ def heading_12html(block, ctx, tag = 'h1', class_name = 'notion-header-block'): 
 def heading_22html(block, ctx, tag = 'h2', class_name = 'notion-sub_header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
 def heading_32html(block, ctx, tag = 'h3', class_name = 'notion-sub_sub_header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
 def paragraph2html(block, ctx, tag = 'p', class_name = 'notion-text-block'): return blocktag2html(block, ctx, tag = 'br', class_name = class_name, selfclose = True) if paragraph_is_empty(block, ctx) else textlike2html(block, ctx, tag = tag, class_name = class_name)
-def column_list2html(block, ctx, tag = 'div', class_name = 'notion-column_list-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name + ' notion_column_list-block-vertical' * (ctx.get('html_columnlist_disable') is True), set_html_contents_and_close = childrenlike2html(block, ctx))
+def column_list2html(block, ctx, tag = 'div', class_name = 'notion-column_list-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name + ' notion_column_list-block-vertical' * (ctx['html_columnlist_disable'] is True), set_html_contents_and_close = childrenlike2html(block, ctx))
 def column2html(block, ctx, tag = 'div', class_name = 'notion-column-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = childrenlike2html(block, ctx, tag = tag)) 
 def bulleted_list_item2html(block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block'): return f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
 def numbered_list_item2html(block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block'): return f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end 
@@ -398,7 +398,7 @@ def table_of_contents2markdown(block, ctx, tag = '* '):
         child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return table_of_contents_page_tree(root_page_ids, depth = 0)
-    if ctx.get('markdown_toc_page'):
+    if ctx['markdown_toc_page']:
         return ctx['markdown_toc_page']
 
     page_block = get_page_current(block, ctx)
@@ -458,7 +458,7 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
     res += f'# {page_emoji} {page_title} {anchor}\n'
 
-    res += f'[✏️]({src_edit}) ' * bool(src_edit) + '*@' + ' -> '.join([dt_modified, dt_published]) + '*\n\n'
+    res += f'[✏️]({src_edit}) ' * bool(src_edit) + '*@' + ' → '.join([dt_modified, dt_published]) + '*\n\n'
     res += childrenlike2markdown(block, ctx)
     
     # elif block['has_children']:
@@ -655,14 +655,14 @@ def resolve_page_ids_no_dashes(notion_page_id, notion_slugs):
 
 def get_page_edit_url(page_id, ctx, page_slug, base_url = 'https://notion.so'):
     page_id_no_dashes = page_id.replace('-', '')
-    return ctx.get('edit_url', '').format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx.get('edit_url') else os.path.join(base_url, page_id_no_dashes)
+    return ctx['edit_url'].format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx['edit_url'] else os.path.join(base_url, page_id_no_dashes)
 
 def get_page_url(block, ctx, base_url = 'https://www.notion.so'):
     page_id_no_dashes = block.get('id', '').replace('-', '')
     return block.get('url', os.path.join(base_url, page_id_no_dashes))
 
 def get_page_url_absolute(page_url_relative, ctx):
-    page_url_absolute = (os.path.join(ctx['base_url'], page_url_relative.removeprefix('./'))) if ctx.get('base_url') else ('file:///' + page_url_relative.removeprefix('file:///'))
+    page_url_absolute = (os.path.join(ctx['base_url'], page_url_relative.removeprefix('./'))) if ctx['base_url'] else ('file:///' + page_url_relative.removeprefix('file:///'))
     if ctx['base_url_removesuffix']:
         page_url_absolute = page_url_absolute.removesuffix(ctx['base_url_removesuffix'])
     return page_url_absolute
@@ -674,7 +674,7 @@ def get_page_url_relative(block, ctx):
     page_slug = get_page_slug(page_id, ctx)
     page_slug_only = get_page_slug(page_id, ctx, only_slug = True)
     is_index_page = page_slug == 'index'
-    page_suffix = '/index.html'.removeprefix('/' if is_index_page else '') if ctx.get('html_link_to_page_index_html') else ''
+    page_suffix = '/index.html'.removeprefix('/' if is_index_page else '') if ctx['html_link_to_page_index_html'] else ''
     
     if ctx['extract_mode'] == 'flat/index.html':
         return './' + ('' if is_index_page else page_slug) + page_suffix
@@ -729,8 +729,8 @@ def normalize_youtube_url(url, embed = False):
 
 def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_slug = False):
     page_id_no_dashes = page_id.replace('-', '')
-    page_title_slug = slugify(get_page_title(ctx.get('id2block', {}).get(page_id), ctx)) or page_id_no_dashes
-    return ctx.get('slugs', {}).get(page_id) or ctx.get('slugs', {}).get(page_id_no_dashes) or (None if only_slug else (page_title_slug if use_page_title_for_missing_slug else page_id_no_dashes))
+    page_title_slug = slugify(get_page_title(ctx['id2block'].get(page_id), ctx)) or page_id_no_dashes
+    return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id_no_dashes) or (None if only_slug else (page_title_slug if use_page_title_for_missing_slug else page_id_no_dashes))
 
 def get_heading_slug(block, ctx, space = '-', lower = True, prefix = ''):
     s = richtext2html(block, ctx, rich_text = True, title_mode = True)
@@ -997,7 +997,7 @@ def extractall(
 ):
     ext = os.path.splitext(ctx['extract_mode'])[-1]
     notion_assets = ctx.get('assets', {})
-    index_html = ctx.get('extract_mode') in extract_mode_index_html
+    index_html = ctx['extract_mode'] in extract_mode_index_html
     
     assets_dir = os.path.join(output_path, 'assets') if ctx['extract_mode'] in extract_mode_flat[:-1] else None
 
@@ -1043,13 +1043,13 @@ def extractall(
 
         os.makedirs(output_path, exist_ok = True)
         
-        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = ctx.get('use_page_title_for_missing_slug'))
+        page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = ctx['use_page_title_for_missing_slug'])
         page_nested_dir = os.path.join(output_path, page_slug)
         page_dir = page_nested_dir if (index_html and page_slug != 'index') else output_path
         
         os.makedirs(page_dir, exist_ok = True)
             
-        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx.get('extract_assets', False), block_types = ctx.get('download_assets_block_types', []))
+        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
     
         if ext == '.html':
@@ -1062,7 +1062,7 @@ def extractall(
             notionjson = dict(
                 pages = {page_id : page_block}, 
                 assets = notion_assets_for_block, 
-                unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0)
+                unix_seconds_downloaded = ctx.get('unix_seconds_downloaded', 0),
             )
             notionstr = json.dumps(notionjson, ensure_ascii = False, indent = 4)
 
