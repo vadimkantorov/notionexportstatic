@@ -1,48 +1,45 @@
-import string
-
 # TODO: add hover style for breadcrumb
-# TODO: use string.Template instead of string formatting in minima.py
+# TODO: scroll-to-top link in bottom-right over-the-top
+# TODO: burger menu example for global toc
+# TODO: global toc nav
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
     divider = block2html(dict(type = 'divider'), ctx, class_name = '')
     header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * (bool(ctx.get('toc')) and len(page_ids) > 1)
+    main_toc = block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * bool(len(page_ids) > 1)
     
     snippets = snippets_default | snippets
     style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
     
     main = divider.join(block2html(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
-    res = snippets.get('page_html', '').format(
-        head_html = snippets.get('head_html', ''),
-        style_css = style_css, 
-        header_html = header_breadcrumb, 
-        bodyheader_html = snippets.get('bodyheader_html', ''), 
-        bodyfooter_html = snippets.get('bodyfooter_html', ''), 
-        cookiesnotice_html = snippets.get('cookiesnotice_html', '') * bool(ctx['html_cookies']),
-        main_html = main_toc + main, 
-
-        page_title                    = ctx.get('page_info', {}).get(page_id_first, {}).get('page_title', ''),
-        page_url_absolute             = ctx.get('page_info', {}).get(page_id_first, {}).get('page_url_absolute', ''),
-        page_description              = ctx.get('page_info', {}).get(page_id_first, {}).get('page_description', ''),
-        page_image_url                = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_url', ''),
-        page_image_height             = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_height', ''),
-        page_image_width              = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_width', ''),
-        page_image_alt                = ctx.get('page_info', {}).get(page_id_first, {}).get('page_image_alt', ''),
-        page_published_time_xmlschema = ctx.get('page_info', {}).get(page_id_first, {}).get('page_published_time_xmlschema', ''),
-
-        site_name                     = ctx.get('site_info', {}).get('site_name', ''),
-        site_locale                   = ctx.get('site_info', {}).get('site_locale', ''),
-        site_twitter_card_type        = ctx.get('site_info', {}).get('site_twitter_card_type', ''),
-        site_twitter_atusername       = ctx.get('site_info', {}).get('site_twitter_atusername', '')
-    )
+    res = snippets.get('page_html', '') \
+        .replace('{{ head_html }}', snippets.get('head_html', '')) \
+        .replace('{{ style_css }}', style_css) \
+        .replace('{{ header_html }}', header_breadcrumb) \
+        .replace('{{ bodyheader_html }}', snippets.get('bodyheader_html', '')) \
+        .replace('{{ bodyfooter_html }}', snippets.get('bodyfooter_html', '')) \
+        .replace('{{ cookiesnotice_html }}', snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies', False))) \
+        .replace('{{ main_html }}', main_toc + main) \
+        .replace('{{ site_title }}'                   , ctx.get('meta_tags', {}).get('site_title', '')) \
+        .replace('{{ site_url_absolute }}'            , ctx.get('meta_tags', {}).get('site_url_absolute', '')) \
+        .replace('{{ site_description }}'             , ctx.get('meta_tags', {}).get('site_description', '')) \
+        .replace('{{ site_image_url }}'               , ctx.get('meta_tags', {}).get('site_image_url', '')) \
+        .replace('{{ site_image_height }}'            , ctx.get('meta_tags', {}).get('site_image_height', '')) \
+        .replace('{{ site_image_width }}'             , ctx.get('meta_tags', {}).get('site_image_width', '')) \
+        .replace('{{ site_image_alt }}'               , ctx.get('meta_tags', {}).get('site_image_alt', '')) \
+        .replace('{{ site_published_time_xmlschema }}', ctx.get('meta_tags', {}).get('site_published_time_xmlschema', '')) \
+        .replace('{{ site_name }}'                    , ctx.get('meta_tags', {}).get('site_name', '')) \
+        .replace('{{ site_locale }}'                  , ctx.get('meta_tags', {}).get('site_locale', '')) \
+        .replace('{{ site_twitter_card_type }}'       , ctx.get('meta_tags', {}).get('site_twitter_card_type', '')) \
+        .replace('{{ site_twitter_atusername }}'      , ctx.get('meta_tags', {}).get('site_twitter_atusername', ''))
     return res
 
 def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
     divider = '\n' + block2markdown(dict(type = 'divider'), ctx) + '\n'
     header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = (header_breadcrumb + divider + '\n' + block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * (bool(ctx.get('toc')) and len(page_ids) > 1)
+    main_toc = (header_breadcrumb + divider + '\n' + block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * bool(len(page_ids) > 1)
 
     main = divider.join(block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
     res = main_toc + main
@@ -87,46 +84,43 @@ page_html =  '''
 <!DOCTYPE html>
 <html>
     <head>
-        <title>{page_title}</title>
-        <link rel="canonical" href="{page_url_absolute}" />
+        <title>{{ site_title }}</title>
+        <link rel="canonical" href="{{ site_url_absolute }}" />
         
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         
-        <meta property="og:type" content="article">
-        <meta property="og:title" content="{page_title}"/>
-        <meta property="og:url" content="{page_url_absolute}" />
-        <meta property="og:description" content="{page_description}" />
-        <meta property="og:site_name" content="{site_name}" />
-        <meta property="og:locale" content="{site_locale}" />
-
-        <meta property="og:image" content="{page_image_url}">
-        <meta property="og:image:height" content="{page_image_height}" />
-        <meta property="og:image:width" content="{page_image_width}" />
-        <meta property="og:image:alt" content="{page_image_alt}" />
+        <meta name="twitter:site"               content="{{ site_twitter_atusername }}" />
+        <meta name="twitter:card"               content="{{ site_twitter_card_type }}" /> <!-- summary_large_image or summary -->
+        <meta name="description"                content="{{ site_description }}" />
+        <meta property="og:description"         content="{{ site_description }}" />
+        <meta property="og:site_name"           content="{{ site_name }}" />
+        <meta property="og:locale"              content="{{ site_locale }}" />
+        <meta property="og:title"               content="{{ site_title }}"/>
+        <meta property="og:url"                 content="{{ site_url_absolute }}" />
+        <meta property="article:published_time" content="{{ site_published_time_xmlschema }}" />
+        <meta property="og:image"               content="{{ site_image_url }}">
+        <meta property="og:image:height"        content="{{ site_image_height }}" />
+        <meta property="og:image:width"         content="{{ site_image_width }}" />
+        <meta property="og:image:alt"           content="{{ site_image_alt }}" />
+        <meta property="og:type"                content="article">
         
-        <meta property="article:published_time" content="{page_published_time_xmlschema}" />
-        <meta name="description" content="{page_description}" />
-        
-        <meta name="twitter:card" content="{site_twitter_card_type}" /> <!-- summary_large_image or summary -->
-        <meta name="twitter:site" content="{site_twitter_atusername}" />
-        
-        {head_html}
+        {{ head_html }}
         <style>
-            {style_css}
+            {{ style_css }}
         </style>
     </head>
     <body>
-        {cookiesnotice_html}
-        {bodyheader_html}
+        {{ cookiesnotice_html }}
+        {{ bodyheader_html }}
         <header class="site-header notion-topbar">
-            {header_html}
+            {{ header_html }}
         </header>
         <main class="page-content" aria-label="Content">
             <div class="wrapper">
-                {main_html}
+                {{ main_html }}
             </div>
         </main>
-        {bodyfooter_html}
+        {{ bodyfooter_html }}
     </body>
 </html>
 '''

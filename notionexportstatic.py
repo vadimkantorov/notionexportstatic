@@ -1,17 +1,16 @@
 # TODO: embedded pdf in markdown and html
 # TODO: page_icon with path, not just emoji
+# TODO: option to not update published date or to choose which date to use
+# TODO: get_page_description/image
+# TODO: support toggle for Markdown
+# TODO: uncomma first notion_page_id, uncomma slugs
+
+# TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
 # TODO: reduce newlines in markdown
 # TODO: experiment with heading slug to match github slugs
 # TODO: convert download-assets to mime types?
-# TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
 # TODO: do not download an asset if already exists (if extract_assets is used)
-# TODO: support toggle for Markdown
-# TODO: support passing page meta tags from _config or from cmdline
-# TODO: rename toc to toc-global/multipage?
-# TODO: uncomma first notion_page_id, uncomma slugs
-# TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
-# TODO: when downloading several pages from slugs, make sure that there is no double-download
-# TODO: option to not update published date or to choose which date to use
+# TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
 
 import os
 import re
@@ -201,8 +200,7 @@ def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     #     pages[page_id]["icon"] = icon
     #     pages[page_id]["assets_to_download"].append(icon)
 
-    dt_modified = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_downloaded') 
-    dt_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated') 
+    datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
     src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
     src_cover = get_asset_url(src_cover, ctx)
     page_id = block.get('id', '')
@@ -216,7 +214,7 @@ def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', str
     anchor = link_to_page2html(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon') + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     #anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a>' + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     
-    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1><i><time class="notion-page-block-datetime-published dt-published" datetime="{dt_published}" title="@{dt_modified or dt_published} → @{dt_published}">@{dt_published}</time></i></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
+    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1><i><time class="notion-page-block-datetime-published dt-published" datetime="{datetime_published}">@{datetime_published}</time></i></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
 
 ##############################
 
@@ -391,13 +389,13 @@ def table2markdown(block, ctx, sanitize_table_cell = lambda md: md.replace('\n',
     return markdown_children
 
 def table_of_contents2markdown(block, ctx, tag = '* '):
-    #return '\n\n{:toc}\n\n'
     if block.get('site_table_of_contents_page_ids'):
         table_of_contents_page_tree = lambda page_ids, depth = 0: '' if not page_ids else ''.join(depth * 4 * ' ' + '{tag}{markdown_link_to_page}\n{markdown_child_pages}'.format(tag = tag, markdown_link_to_page = link_to_page2markdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), markdown_child_pages = table_of_contents_page_tree([page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, [])], depth + 1)) for page_id in page_ids)
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return table_of_contents_page_tree(root_page_ids, depth = 0)
+    
     if ctx['markdown_toc_page']:
         return ctx['markdown_toc_page']
 
@@ -435,8 +433,7 @@ def mention2markdown(block, ctx):
     return unsupported2markdown(block, ctx)
 
 def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
-    dt_modified = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_downloaded') 
-    dt_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated') 
+    datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
     src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
     src_cover = get_asset_url(src_cover, ctx)
     page_id = block.get('id', '')
@@ -449,6 +446,8 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     
     anchor = ' ' + link_to_page2markdown(block, ctx, caption = '#', line_break = False)
     
+    anchor += f'[✏️]({src_edit}) ' * bool(src_edit)
+
     res = ''
     
     if ctx['markdown_frontmatter']:
@@ -458,7 +457,8 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
     res += f'# {page_emoji} {page_title} {anchor}\n'
 
-    res += f'[✏️]({src_edit}) ' * bool(src_edit) + '*@' + ' → '.join([dt_modified, dt_published]) + '*\n\n'
+    #res += f'[✏️]({src_edit}) ' * bool(src_edit) + f'*@{datetime_published}*\n\n'
+    res += f'*@{datetime_published}*\n\n'
     res += childrenlike2markdown(block, ctx)
     
     # elif block['has_children']:
@@ -807,29 +807,27 @@ def get_page_description(block, ctx):
     return ''
 
 def get_page_image(block, ctx):
-    return dict(page_image_url = '', page_image_height = '', page_image_width = '', page_image_alt = '')
+    return dict(image_url = '', image_height = '', image_width = '', image_alt = '')
 
 def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00'):
     page_info = {}
     for page_id, page in notion_pages_flat.items():
-        page_image_info = get_page_image(page, ctx)
+        image_info = get_page_image(page, ctx)
         page_info[page_id] = dict(
-            page_image_info,
-            page_title = get_page_title(page, ctx),
-            page_url_absolute = get_page_url_absolute(get_page_url_relative(page, ctx), ctx),
-            page_description = get_page_description(page, ctx),
-            page_published_time_xmlschema = get_page_time_published(page, ctx, strftime = strftime),
+            site_name                     = ctx['site_info_name']               or '',
+            site_locale                   = ctx['site_info_locale']             or '',
+            site_twitter_card_type        = ctx['site_info_twitter_card_type']  or '',
+            site_twitter_atusername       = ctx['site_info_twitter_atusername'] or '',
+            site_title                    = ctx['site_info_title']              or get_page_title(page, ctx),
+            site_url_absolute             = ctx['site_info_description']        or get_page_url_absolute(get_page_url_relative(page, ctx), ctx),
+            site_description              = ctx['site_info_url_absolute']       or get_page_description(page, ctx),
+            site_published_time_xmlschema = ctx['site_info_time_published']     or get_page_time_published(page, ctx, strftime = strftime),
+            site_image_url                = ctx['site_info_image_url']          or image_info['image_url'],
+            site_image_height             = ctx['site_info_image_height']       or image_info['image_height'],
+            site_image_width              = ctx['site_info_image_width']        or image_info['image_width'],
+            site_image_alt                = ctx['site_info_image_alt']          or image_info['image_alt'],
         )
     return page_info
-
-def get_site_info(ctx):
-    site_info = dict(    
-        site_name = ctx['site_info_name'] or '',
-        site_twitter_card_type = ctx['site_info_twitter_card_type'] or '',
-        site_twitter_atusername = ctx['site_info_twitter_atusername'] or '',
-        site_locale = ctx['site_info_locale'] or '',
-    )
-    return site_info
 
 def sitemap_urlset_read(path):
     xmlstr = ''
@@ -1003,10 +1001,11 @@ def extractall(
 
     if ctx['extract_mode'] in extract_mode_single:
         notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = assets_dir or (output_path + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
+        meta_tags = ctx['page_info'][page_ids[0]]
         if ext == '.md':
-           notionstr = theme.sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
+           notionstr = theme.sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks, meta_tags = meta_tags), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
         if ext == '.html':
-           notionstr = theme.sitepages2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks), notion_pages = notion_pages_flat, block2html = block2html, snippets = snippets)
+           notionstr = theme.sitepages2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks, meta_tags = meta_tags), notion_pages = notion_pages_flat, block2html = block2html, snippets = snippets)
         if ext == '.json':
             notionjson = dict(
                 pages = {page_id : page for page_id, page in (notion_pages if ctx['extract_mode'] == 'single.json' else notion_pages_flat).items() if page_id in page_ids}, 
@@ -1050,13 +1049,15 @@ def extractall(
         os.makedirs(page_dir, exist_ok = True)
             
         notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
+        meta_tags = ctx['page_info'][page_id]
+
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
     
         if ext == '.html':
-            notionstr = theme.sitepages2html([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat, block2html = block2html, snippets = snippets)
+            notionstr = theme.sitepages2html([page_id], ctx = dict(ctx, assets = notion_assets_for_block, meta_tags = meta_tags), notion_pages = notion_pages_flat, block2html = block2html, snippets = snippets)
 
         if ext == '.md':
-            notionstr = theme.sitepages2markdown([page_id], ctx = dict(ctx, assets = notion_assets_for_block), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
+            notionstr = theme.sitepages2markdown([page_id], ctx = dict(ctx, assets = notion_assets_for_block, meta_tags = meta_tags), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
 
         if ext == '.json':
             notionjson = dict(
@@ -1109,6 +1110,8 @@ def notion2static(
     notion_page_id,
     extract_assets,
     download_assets_block_types,
+
+    timestamp_published,
     
     slugs,
     extract_mode,
@@ -1124,7 +1127,6 @@ def notion2static(
     log_unsupported_blocks,
     log_urls,
 
-    toc,
     html_cookies,
     html_details_open,
     html_columnlist_disable,
@@ -1133,11 +1135,19 @@ def notion2static(
     bodyfooter_html,
     articleheader_html,
     articlefooter_html,
-    
+
     site_info_name,
+    site_info_locale,
+    site_info_title,
+    site_info_description,
+    site_info_url_absolute,
+    site_info_time_published,
     site_info_twitter_card_type,
     site_info_twitter_atusername,
-    site_info_locale
+    site_info_image_url,
+    site_info_image_height,
+    site_info_image_width,
+    site_info_image_alt,
 ):
     #notionjson2html : assert args.input_json
     #notionapi2notionjson: assert args.notion_page_id
@@ -1185,7 +1195,6 @@ def notion2static(
     ctx['id2block'] = get_block_index(ctx)
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx)
     ctx['page_info'] = get_page_info(notion_pages_flat, ctx)
-    ctx['site_info'] = get_site_info(ctx)
 
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
@@ -1321,7 +1330,8 @@ if __name__ == '__main__':
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--slugs', nargs = '*', default = [])
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
-    parser.add_argument('--toc', action = 'store_true')
+    parser.add_argument('--timestamp-published', action = 'store_true')
+
     parser.add_argument('--markdown-toc-page')
     parser.add_argument('--markdown-frontmatter', action = 'store_true')
     parser.add_argument('--html-cookies', action = 'store_true')
@@ -1335,8 +1345,16 @@ if __name__ == '__main__':
 
     parser.add_argument('--site-info-name', default = 'notionexportstatic')
     parser.add_argument('--site-info-locale', default = 'en_EN')
+    parser.add_argument('--site-info-title')
+    parser.add_argument('--site-info-description')
+    parser.add_argument('--site-info-url-absolute')
+    parser.add_argument('--site-info-time-published')
     parser.add_argument('--site-info-twitter-card-type')
     parser.add_argument('--site-info-twitter-atusername')
+    parser.add_argument('--site-info-image-url')
+    parser.add_argument('--site-info-image-height')
+    parser.add_argument('--site-info-image-width')
+    parser.add_argument('--site-info-image-alt')
 
     args = parser.parse_args()
     print(args)
