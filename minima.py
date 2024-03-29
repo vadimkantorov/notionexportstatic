@@ -1,7 +1,7 @@
 # TODO: add hover style for breadcrumb
 # TODO: scroll-to-top link in bottom-right over-the-top
 # TODO: burger menu example for global toc
-# TODO: global toc nav
+# TODO: global toc: use <nav>
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
@@ -12,13 +12,15 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     snippets = snippets_default | snippets
     style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
     
+    emoji_datauri = 'data:image/svg+xml,' + emoji_svg.replace('{{ emoji }}', ctx.get('meta_tags', {}).get('emoji') or '📜').translate({ord('<') : '%3C', ord('>') : '%3E', ord('"') : "'"}).strip()
+    
     main = divider.join(block2html(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
     res = snippets.get('page_html', '') \
         .replace('{{ head_html }}', snippets.get('head_html', '')) \
         .replace('{{ style_css }}', style_css) \
         .replace('{{ header_html }}', header_breadcrumb) \
-        .replace('{{ bodyheader_html }}', snippets.get('bodyheader_html', '')) \
-        .replace('{{ bodyfooter_html }}', snippets.get('bodyfooter_html', '')) \
+        .replace('{{ bodyheader_html }}'   , snippets.get('bodyheader_html', '')) \
+        .replace('{{ bodyfooter_html }}'   , snippets.get('bodyfooter_html', '')) \
         .replace('{{ cookiesnotice_html }}', snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies', False))) \
         .replace('{{ main_html }}', main_toc + main) \
         .replace('{{ site_title }}'                   , ctx.get('meta_tags', {}).get('site_title', '')) \
@@ -32,7 +34,9 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
         .replace('{{ site_name }}'                    , ctx.get('meta_tags', {}).get('site_name', '')) \
         .replace('{{ site_locale }}'                  , ctx.get('meta_tags', {}).get('site_locale', '')) \
         .replace('{{ site_twitter_card_type }}'       , ctx.get('meta_tags', {}).get('site_twitter_card_type', '')) \
-        .replace('{{ site_twitter_atusername }}'      , ctx.get('meta_tags', {}).get('site_twitter_atusername', ''))
+        .replace('{{ site_twitter_atusername }}'      , ctx.get('meta_tags', {}).get('site_twitter_atusername', '')) \
+        .replace('{{ site_icon }}'                    , ctx.get('meta_tags', {}).get('site_icon_url') or emoji_datauri)
+    
     return res
 
 def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx, **kwargs: ''), snippets = {}):
@@ -57,11 +61,14 @@ katex_html = '''
 
 googleanalytics_html = '''
 <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={TAG_ID}"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_TAG_ID }}"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
-gtag = () => dataLayer.push(arguments);
-if(document.cookie) [gtag('js', new Date()); gtag('config', '{TAG_ID}')];
+function gtag(){dataLayer.push(arguments);}
+if(document.cookie) {
+gtag('js', new Date());
+gtag('config', '{{ GOOGLE_ANALYTICS_TAG_ID }}');
+}
 </script>
 '''
 
@@ -69,14 +76,18 @@ cookiesnotice_html = '''
 <div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice<button onclick="document.cookie = 'accepted';">Accept</button></div>
 '''
 
+emoji_svg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">{{ emoji }}</text></svg>
+'''
+
 head_html = '''
 <meta name="generator" content="notionexportstatic" />
         
-<!-- <meta name="google-site-verification" content="{site_verification_google}" /> -->
-<!-- <meta name="msvalidate.01" content="{site_verification_bing}" /> -->
-<!-- <meta name="alexaVerifyID" content="{site_verification_alexa}" /> -->
-<!-- <meta name="yandex-verification" content="{site_verification_yandex}" /> -->
-<!-- <meta name="baidu-site-verification" content="{site_verification_baidu}" /> -->
+<!-- <meta name="google-site-verification"     content="{site_verification_google}"   /> -->
+<!-- <meta name="msvalidate.01"                content="{site_verification_bing}"     /> -->
+<!-- <meta name="alexaVerifyID"                content="{site_verification_alexa}"    /> -->
+<!-- <meta name="yandex-verification"          content="{site_verification_yandex}"   /> -->
+<!-- <meta name="baidu-site-verification"      content="{site_verification_baidu}"    /> -->
 <!-- <meta name="facebook-domain-verification" content="{site_verification_facebook}" /> -->
 '''
 
@@ -84,10 +95,12 @@ page_html =  '''
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" /> <!-- , shrink-to-fit=no -->
+
         <title>{{ site_title }}</title>
         <link rel="canonical" href="{{ site_url_absolute }}" />
-        
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <link rel="icon" href="{{ site_icon }}" />
         
         <meta name="twitter:site"               content="{{ site_twitter_atusername }}" />
         <meta name="twitter:card"               content="{{ site_twitter_card_type }}" /> <!-- summary_large_image or summary -->
@@ -102,12 +115,13 @@ page_html =  '''
         <meta property="og:image:height"        content="{{ site_image_height }}" />
         <meta property="og:image:width"         content="{{ site_image_width }}" />
         <meta property="og:image:alt"           content="{{ site_image_alt }}" />
-        <meta property="og:type"                content="article">
+        <meta property="og:type"                content="article" />
         
-        {{ head_html }}
         <style>
             {{ style_css }}
         </style>
+
+        {{ head_html }}
     </head>
     <body>
         {{ cookiesnotice_html }}
@@ -157,10 +171,12 @@ notionexportstatic_css = '''
 .notion-table_of_contents-block { margin-top: 10px !important; margin-left: 0 !important; }
 .notion-table_of_contents-block { list-style-type: none !important; }
 .notion-table_of_contents-heading > a { display: block; width: inherit; color: rgb(120, 119, 116) !important; }
-.notion-table_of_contents-heading:hover { background: rgba(55, 53, 47, 0.08) !important;}
+.notion-table_of_contents-heading:hover { background: rgba(55, 53, 47, 0.08) !important; }
 .notion-table_of_contents-heading_1 { padding-left: 10px }
 .notion-table_of_contents-heading_2 { padding-left: 20px }
 .notion-table_of_contents-heading_3 { padding-left: 30px }
+
+.notion-breadcrumb-block > .notion-alias-block:hover { background: rgba(55, 53, 47, 0.08) !important; }
 
 .notion-bookmark-block { border: 0.66px solid rgba(55, 53, 47, 0.16)  !important; width: 100% !important; display: block !important; }
 
