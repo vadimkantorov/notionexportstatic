@@ -1,12 +1,12 @@
-# TODO: support toggle for Markdown
+# TODO: support toggle for Markdown (behinde a switch)
 
 # TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
 # TODO: reduce newlines in markdown
 # TODO: experiment with heading slug to match github slugs
-# TODO: convert download-assets to mime types? always download "file" block type?
+
+# TODO: convert download_assets to mime types? always download "file" block type?
 # TODO: do not download an asset if already exists (if extract_assets is used)
 # TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
-# TODO: get_asset_url: check ok
 
 import os
 import re
@@ -175,7 +175,7 @@ def headinglike2html(block, ctx, tag, class_name = ''):
 
 def linklike2html(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False, icon = '', line_break = False, download = None):
     src = get_block_url(block)
-    asset_url = get_asset_url(block)
+    asset_url = get_asset_url(block, ctx)
     download = get_url_basename(src) if download is None and is_url_datauri(asset_url) else download
     rich_text = richtext2html(block, ctx, caption = True) or html.escape(block.get(get_block_type(block), {}).get('name') or block.get('plain_text') or (src if full_url_as_caption else get_url_basename(src)))
     return blocktag2html(block, ctx, tag = tag, attrs = dict(href = src) | (dict(download = download) if download is not None else {}), class_name = class_name, set_html_contents_and_close = icon + rich_text) + '<br/>' * line_break
@@ -319,7 +319,7 @@ def synced_block2html(block, ctx, tag = 'figure', class_name = 'notion-synced_bl
 def equation2html(block, ctx, tag = 'code', class_name = 'notion-equation-block', inline = False): return blocktag2html(block, ctx, tag = tag, class_name = class_name if not inline else class_name.replace('block', 'inline'), set_html_contents_and_close = html.escape(block['equation'].get('expression', '') or block.get('plain_text', '')))
 def callout2html(block, ctx, tag = 'p', class_name = 'notion-callout-block'): return blocktag2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2html(block, ctx, tag = tag)) + '</div>\n'
 
-def pdf2html(block, ctx, tag = 'a', class_name = 'notion-pdf-block'): return embed2html(block, ctx, class_name = class_name, caption = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag))
+def pdf2html(block, ctx, tag = 'a', class_name = 'notion-pdf-block'): return embed2html(block, ctx, class_name = class_name, caption = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag) if not is_url_datauri(get_asset_url(block, ctx)) else '<div><b>{caption}</b></div>'.format(caption = html.escape(get_url_basename(get_block_url(block)))) )
 def file2html(block, ctx, tag = 'a', class_name = 'notion-file-block'): return linklike2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
 
 def breadcrumb2html(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
@@ -337,8 +337,9 @@ def textlike2markdown(block, ctx, tag = '', icon = '', checked = None, title_mod
     checkbox = '[{}] '.format('x' if checked else ' ') if checked is not None else ''
     return tag + checkbox + rich_text + icon + '\n' + childrenlike2markdown(block, ctx)
 
-def toggle2markdown(block, ctx, tag = '', icon = '', title_mode = False): return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode)  + icon + '\n' + childrenlike2markdown(block, ctx)
-# outcome_block = '\n<details markdown="1">\n<summary markdown="1">\n\n' + outcome_block + '\n\n</summary>\n\n' + ''.join(block2markdown(subblock, ctx, page_id = page_id) for subblock in block["children"]) + '\n\n</details>\n\n'
+def toggle2markdown(block, ctx, tag = '', icon = '', title_mode = False): 
+    return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike2markdown(block, ctx)
+    #return '<details markdown="1"><summary markdown="1">\n\n' + tag +  richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike2markdown(block, ctx) + '\n\n</details>'
 
 def headinglike2markdown(block, ctx, tag = ''):
     block_id_no_dashes = block['id'].replace('-', '')
@@ -349,7 +350,7 @@ def headinglike2markdown(block, ctx, tag = ''):
 
 def linklike2markdown(block, ctx, tag = '', full_url_as_caption = True, line_break = False):
     src = get_block_url(block)
-    asset_url = get_asset_url(block)
+    asset_url = get_asset_url(block, ctx)
     rich_text = richtext2markdown(block, ctx, caption = True) or (block.get(get_block_type(block), {}).get('name') or block.get('plain_text') or (src if full_url_as_caption else get_url_basename(src)))
     return (linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx) if is_url_datauri(asset_url) else f'[{tag}{rich_text}]({src})') + '\n\n' * line_break
 
@@ -561,10 +562,25 @@ def richtext2markdown(block, ctx, title_mode = False, caption = False, rich_text
 ##############################
 
 def is_url_datauri(url):
-    return url.startswith('data:')
+    return url and url.startswith('data:')
 
 def get_url_basename(url):
-    return os.path.basename(urllib.parse.urlparse(url).path)
+    try:
+        return os.path.basename(urllib.parse.urlparse(url).path)
+    except:
+        return url
+
+def sanitize_url_and_strip_querystring(url):
+    # url sanitization is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
+    urlparsed = urllib.parse.urlparse(url)
+    try:
+        urlparsed.query.encode('ascii')
+        urlparsed_query = urlparsed.query
+    except UnicodeEncodeError:
+        urlparsed_query = urllib.parse.quote(urlparsed.query)
+    urlopen_url = urllib.parse.urlunparse(urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urlparsed_query, urlparsed.fragment))
+    path = urllib.parse.urlunparse(urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, '', '', '')) 
+    return urlopen_url, path
 
 def get_block_type(block):
     return block.get('type') or block.get('object') or ''
@@ -701,14 +717,15 @@ def get_block_url(block):
 
 def get_asset_url(block, ctx):
     url = block if isinstance(block, str) else get_block_url(block)
-    src = ctx['assets'].get(url, {}).get('uri', url)
-    if src.startswith('file:///'):
-        return src.split('file:///', maxsplit = 1)[-1]
-    return src.replace('http://', 'https://')
+    asset_dict = ctx['assets'].get(url, {})
+    if asset_dict.get('ok'):
+        url = asset_dict.get('uri', '')
+        if url.startswith('file:///'):
+            return url.split('file:///', maxsplit = 1)[-1]
+    return url.replace('http://', 'https://')
 
 def normalize_youtube_url(url, embed = False):
     is_youtube = url.startswith('https://youtube.com/') or url.startswith('https://www.youtube.com/') or url.startswith('https://youtu.be/')
-
     if is_youtube:
         url_youtube_embed = url.replace('/watch?v=', '/embed/').split('&')[0]
         url_youtube_watch = url.replace('/embed/', '/watch?v=').split('&')[0]
@@ -717,7 +734,6 @@ def normalize_youtube_url(url, embed = False):
     else:
         url_youtube = url 
         id_youtube = ''
-
     urlimg_youtube = f'https://img.youtube.com/vi/{id_youtube}/0.jpg' * is_youtube
     return is_youtube, url_youtube, urlimg_youtube
 
@@ -882,89 +898,6 @@ def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}
             else:
                 pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = parent_id)
 
-def discover_assets(blocks, asset_urls = [], exclude_datauri = True, block_types = []):
-    for block in blocks:
-        for key in ['children', 'blocks']:
-            if block.get(key, []):
-                discover_assets(block[key], asset_urls = asset_urls, exclude_datauri = exclude_datauri, block_types = block_types)
-        block_type = get_block_type(block)
-        urls = [
-            get_block_url(block.get('cover') or {}),
-            get_block_url(block.get('icon') or {})
-        ]
-        
-        url = get_block_url(block)
-        if block_type in block_types:
-            urls.append(url)
-        asset_urls.extend( url for url in urls if url and (exclude_datauri is False or not url.startswith('data:')) )
-    return asset_urls
-
-def download_asset_as_datauri(url, basename = '', mimedb = {}, mimedefault = 'application/octet-stream', headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'}):
-    basename = basename or os.path.basename(url)
-    ext = os.path.splitext(basename.lower())[-1]
-    mime = mimedb.get(ext, mimedefault)
-    print(url)
-    req = urllib.request.Request(url, headers = headers)
-    with urllib.request.urlopen(req) as f:
-        file_bytes = f.read()
-    datauri = f'data:{mime};base64,' + base64.b64encode(file_bytes).decode()
-    return datauri
-
-def download_assets(blocks, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}, mimedefault = 'application/octet-stream', block_types = []):
-    urls = discover_assets(blocks, [], exclude_datauri = False, block_types = block_types)
-    notion_assets = {} 
-    for url in urls:
-        ok = True
-        if url.startswith('data:'):
-            ext = ([k for k, v in mimedb.items() if url.startswith('data:' + v)] or ['.' + url.split(';', maxsplit = 1)[0].replace('/', '_')])[0]
-            basename = 'datauri'
-            path = url
-            datauri = url
-        else:
-            # url sanitization is non-trivial https://github.com/python/cpython/pull/103855#issuecomment-1906481010, a basic hack below, for proper punycode support need requests module instead
-            urlparsed = urllib.parse.urlparse(url)
-            try:
-                urlparsed.query.encode('ascii')
-                urlparsed_query = urlparsed.query
-            except UnicodeEncodeError:
-                urlparsed_query = urllib.parse.quote(urlparsed.query)
-            urlparsed_unicode_sanitized_query = urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, urlparsed.params, urlparsed_query, urlparsed.fragment)
-            urlopen_url = urllib.parse.urlunparse(urlparsed_unicode_sanitized_query)
-            ext = os.path.splitext(urlparsed.path.lower())[-1]
-            basename = os.path.basename(urlparsed.path)
-            path = urlparsed.scheme + '://' + urlparsed.netloc + urlparsed.path
-            try:
-                print(url, urlopen_url)
-                datauri = download_asset_as_datauri(urlopen_url, basename, mimedb = mimedb, mimedefault = mimedefault)
-            except Exception as exc: # urllib.error.HTTPError is first effort, but url encoding is UnicodeEncodeError
-                print(f'cannot download [{basename}] from link {url}, unparsed {urlopen_url}', exc)
-                datauri = 'data:text/plain;base64,' + base64.b64encode(str(exc).encode()).decode()
-                ok = False
-
-        sha1 = hashlib.sha1()
-        sha1.update(path.encode())
-        url_hash = sha1.hexdigest()
-        basename_hashed = basename + '.' + url_hash + ext
-        notion_assets[url] = dict(basename = basename, basename_hashed = basename_hashed, uri = datauri, ok = ok)
-        print(url, basename, basename_hashed, ok)
-    return notion_assets
-
-def prepare_and_extract_assets(notion_pages, ctx, assets_dir, notion_assets = {}, extract_assets = False, block_types = []):
-    urls = discover_assets(notion_pages.values(), [], block_types = block_types)
-    print('\n'.join('URL ' + url for url in urls), file = ctx['log_urls_file'])
-    assets = {url : notion_assets[url] for url in set(urls) & notion_assets.keys()}
-    if extract_assets and assets:
-        os.makedirs(assets_dir, exist_ok = True)
-        print(assets_dir)
-        for asset in assets.values():
-            asset_path = os.path.join(assets_dir, asset['basename_hashed'])
-            with open(asset_path, 'wb') as f:
-                f.write(base64.b64decode(asset['uri'].split('base64,', maxsplit = 1)[-1].encode()))
-            #asset['uri'] = 'file:///' +  '/'.join(asset_path.split(os.path.sep))
-            asset['uri'] = 'file:///./' + os.path.sep.join(asset_path.split(os.path.sep)[-2:])
-            print(asset_path)
-    return assets
-
 def slugify(s, space = '_', lower = True):
     s = unicodedata.normalize('NFKC', s)
     s = s.strip()
@@ -986,23 +919,108 @@ def block2(block, ctx = {}, block2render = {}, block2render_with_begin_end = {},
 
 ##############################
 
-def extractall(
-    output_path, 
-    ctx,
-    theme,
-    page_ids = [], 
-    notion_pages = {}, 
-    notion_pages_flat = {}, 
-    snippets = {}
-):
+def download_asset_if_not_exists(url, asset_path = '', datauri = False, mimedb = {}, mimedefault = 'application/octet-stream', headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'}):
+    asset_path = asset_path or os.path.basename(asset_path)
+    asset_path_file_protocol = 'file:///./' + os.path.sep.join(asset_path.split(os.path.sep)[-2:])
+    ext = os.path.splitext(asset_path.lower())[-1]
+    mime = mimedb.get(ext, mimedefault)
+    if not datauri and os.path.exists(asset_path):
+        return asset_path_file_protocol
+
+    req = urllib.request.Request(url, headers = headers)
+    with urllib.request.urlopen(req) as f:
+        file_bytes = f.read()
+    if datauri:
+        return f'data:{mime};base64,' + base64.b64encode(file_bytes).decode()
+    with open(asset_path, 'wb') as f:
+        f.write(file_bytes)
+    return asset_path_file_protocol
+
+def discover_assets(blocks, assets_urls, exclude_datauri = True, block_types = []):
+    for block in blocks:
+        discover_assets(block.get('children', []) + block.get('blocks', []), assets_urls, exclude_datauri = exclude_datauri, block_types = block_types)
+        block_type = get_block_type(block)
+        urls = [get_block_url(block.get('cover') or {}), get_block_url(block.get('icon') or {}), get_block_url(block)][:(2 if block_type not in block_types else None)]
+        assets_urls.extend( url for url in urls if url and (exclude_datauri is False or not is_url_datauri(url)) )
+    return assets_urls
+
+def hash_path(path):
+    sha1 = hashlib.sha1()
+    sha1.update(path.encode())
+    return sha1.hexdigest()
+
+def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_assets = {}, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}, extdefault = '.bin'):
+    print('\n'.join('URL ' + url for url in assets_urls), file = ctx['log_urls_file'])
+    if assets_dir:
+        print(assets_dir)
+    
+    assets = {}
+
+    for url in set(assets_urls) & (notion_assets.keys() or set(assets_urls)):
+        asset = notion_assets.get(url, {})
+        asset_uri = asset.get('uri', '')
+        asset_basename = asset.get('basename', '')
+        asset_basename_hashed = asset.get('basename_hashed', '')
+        asset_ext = os.path.splitext(asset.get('basename', ''))[-1]
+        ok = bool(asset.get('ok')) if asset.get('ok') is not None else True
+        
+        if is_url_datauri(asset_uri):
+            urlopen_url, path = url, url
+            basename, datauri = (asset_basename or 'datauri'), asset_uri
+            ext = asset_ext
+            basename_hashed = asset_basename_hashed
+
+        elif is_url_datauri(url):
+            urlopen_url, path = url, url
+            basename, datauri = 'datauri', url
+            ext = ([k for k, v in mimedb.items() if datauri.startswith('data:' + v)] or [extdefault])[0]
+            basename_hashed = basename + '.' + hash_path(path) + ext
+
+        else:
+            urlopen_url, path = sanitize_url_and_strip_querystring(url)
+            basename, datauri = os.path.basename(path), None
+            ext = os.path.splitext(path.lower())[-1]
+            basename_hashed = basename + '.' + hash_path(path) + ext
+
+        extract_assets_and_assets_dir = bool(ctx['extract_assets'] and ctx['assets_dir'])
+        if extract_assets_and_assets_dir:
+            os.makedirs(ctx['assets_dir'], exist_ok = True)
+        asset_path = os.path.join(ctx['assets_dir'] or '', basename_hashed)
+
+        if datauri is None:
+            try:
+                if not extract_assets_and_assets_dir or not os.path.exists(asset_path):
+                    print(url, urlopen_url, asset_path)
+                
+                datauri = download_asset_if_not_exists(urlopen_url, asset_path, datauri = not extract_assets_and_assets_dir)
+            except Exception as exc:
+                print(f'ERROR: cannot download [{basename}] from link {url}, unparsed {urlopen_url}', exc)
+                datauri = 'data:text/plain;base64,' + base64.b64encode(str(exc).encode()).decode()
+                ok = False
+                if os.path.exists(asset_path):
+                    os.remove(asset_path)
+
+        elif is_url_datauri(datauri) and extract_assets_and_assets_dir:
+            if not os.path.exists(asset_path):
+                with open(asset_path, 'wb') as f:
+                    f.write(base64.b64decode(datauri.split('base64,', maxsplit = 1)[-1].encode()))
+                print(asset_path)
+            datauri = 'file:///./' + os.path.sep.join(asset_path.split(os.path.sep)[-2:])
+
+        assets[url] = dict(basename = basename, basename_hashed = basename_hashed, uri = datauri, ok = ok)
+
+    return assets
+
+##############################
+
+def extractall(output_path, ctx, theme, page_ids = [], notion_pages = {}, notion_pages_flat = {},  snippets = {}):
     ext = os.path.splitext(ctx['extract_mode'])[-1]
     notion_assets = ctx.get('assets', {})
     index_html = ctx['extract_mode'] in extract_mode_index_html
     
-    assets_dir = os.path.join(output_path, 'assets') if ctx['extract_mode'] in extract_mode_flat[:-1] else None
-
     if ctx['extract_mode'] in extract_mode_single:
-        notion_assets_for_blocks = prepare_and_extract_assets(ctx['pages'], ctx, assets_dir = assets_dir or (output_path + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
+        assets_urls = discover_assets(ctx['pages'].values(), [], block_types = ctx['download_assets_block_types'])
+        notion_assets_for_blocks = download_and_extract_assets(assets_urls, ctx, assets_dir = ctx['assets_dir'], notion_assets = notion_assets)
         meta_tags = ctx['page_info'][page_ids[0]]
         if ext == '.md':
            notionstr = theme.sitepages2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks, meta_tags = meta_tags), notion_pages = notion_pages_flat, block2markdown = block2markdown, snippets = snippets)
@@ -1029,11 +1047,12 @@ def extractall(
             f.write(notionstr)
         return print(output_path)
 
-    os.makedirs(output_path, exist_ok = True)
+    assert ctx['extract_mode'] in extract_mode_flat
 
     if page_ids and ctx['sitemap_xml']:
         print(ctx['sitemap_xml'])
         
+    os.makedirs(output_path, exist_ok = True)
     for page_id in page_ids:
         page_block = notion_pages_flat[page_id]
         page_url_relative = get_page_url_relative(page_block, ctx)
@@ -1042,15 +1061,14 @@ def extractall(
             sitemap_urlset_update(ctx['sitemap'], page_id, loc = page_url_absolute, locrel = page_url_relative)
             sitemap_urlset_write(ctx['sitemap'], ctx['sitemap_xml'])
 
-        os.makedirs(output_path, exist_ok = True)
-        
         page_slug = get_page_slug(page_id, ctx, use_page_title_for_missing_slug = ctx['use_page_title_for_missing_slug'])
         page_nested_dir = os.path.join(output_path, page_slug)
         page_dir = page_nested_dir if (index_html and page_slug != 'index') else output_path
         
         os.makedirs(page_dir, exist_ok = True)
             
-        notion_assets_for_block = prepare_and_extract_assets({page_id : page_block}, ctx = ctx, assets_dir = assets_dir or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets, extract_assets = ctx['extract_assets'], block_types = ctx['download_assets_block_types'])
+        assets_urls = discover_assets([page_block], [], block_types = ctx['download_assets_block_types'])
+        notion_assets_for_block = download_and_extract_assets(assets_urls, ctx, assets_dir = ctx['assets_dir'] or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets)
         meta_tags = ctx['page_info'][page_id]
 
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
@@ -1120,6 +1138,7 @@ def notion2static(
     theme_py,
     sitemap_xml,
     snippets_dir,
+    assets_dir,
     base_url,
     base_url_removesuffix,
     edit_url,
@@ -1160,14 +1179,9 @@ def notion2static(
     notion_slugs = config.get('slugs', {})
     notion_page_id = config.get('notion_page_id', [])
 
-    if input_json:
-        notionjson = json.load(open(input_json)) if input_json else {}
-    else:
-        notionjson = notionapi_retrieve_page_list(notion_token, resolve_page_ids_no_dashes(notion_page_id, notion_slugs)) if notion_page_id else {}
+    notionjson = json.load(open(input_json)) if input_json else notionapi_retrieve_page_list(notion_token, resolve_page_ids_no_dashes(notion_page_id, notion_slugs)) if notion_page_id else {}
 
     notion_pages = notionjson.get('pages', {})
-    notion_assets = notionjson.get('assets', {}) or download_assets(notion_pages.values(), block_types = config['download_assets_block_types'])
-
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
 
     notion_pages_flat = copy.deepcopy(notion_pages)
@@ -1181,15 +1195,12 @@ def notion2static(
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if child_page['id'] not in root_page_ids]
     assert all(page_id in notion_pages_flat for page_id in root_page_ids), f'{notion_pages_flat.keys()=}, {root_page_ids=}'
     
-    ext = os.path.splitext(extract_mode)[-1]
-    output_path = output_path or ('_'.join(notion_page_id) + ext if extract_mode not in extract_mode_single else (input_json.removesuffix('.json') + ext))
-
     ctx = config.copy()
-    ctx['output_path'] = output_path
+    ctx['output_path'] = ctx['output_path'] or ('_'.join(notion_page_id) if ctx['extract_mode'] not in extract_mode_single else input_json.removesuffix('.json')) + os.path.splitext(extract_mode)[-1]
+    ctx['assets_dir'] = ctx['assets_dir'] if ctx['assets_dir'] else os.path.join(ctx['output_path'], 'assets') if ctx['extract_mode'] in extract_mode_flat[:-1] else (ctx['output_path'] + '_files') if ctx['extract_mode'] in extract_mode_single else None
     ctx['log_unsupported_blocks_file'] = open(log_unsupported_blocks if log_unsupported_blocks else os.devnull , 'w')
     ctx['log_urls_file'] = open(log_urls if log_urls else os.devnull , 'w')
     ctx['sitemap'] = sitemap
-    ctx['assets'] = notion_assets
     ctx['unix_seconds_downloaded'] = notionjson.get('unix_seconds_downloaded', 0)
     ctx['unix_seconds_generated'] = int(time.time())
     ctx['pages'] = notion_pages_flat
@@ -1198,11 +1209,12 @@ def notion2static(
     ctx['id2block'] = get_block_index(ctx)
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx)
     ctx['page_info'] = get_page_info(notion_pages_flat, ctx)
+    ctx['assets'] = notionjson.get('assets', {}) or download_and_extract_assets(discover_assets(notion_pages.values(), [], exclude_datauri = False, block_types = ctx['download_assets_block_types']), ctx, notion_assets = {})
 
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
     except:
-        assert os.path.isfile(theme_py)
+        assert os.path.exists(theme_py) and os.path.isfile(theme_py)
         sys.path.append(os.path.dirname(theme_py))
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
@@ -1300,11 +1312,8 @@ markdown_block2render = dict(
 )
 markdown_block2render_with_begin_end = {}
 
-def block2html(block, ctx = {}, begin = False, end = False, **kwargs):
-    return block2(block, ctx, block2render = html_block2render, block2render_with_begin_end = html_block2render_with_begin_end, begin = begin, end = end, **kwargs)
-
-def block2markdown(block, ctx = {}, begin = False, end = False, **kwargs):
-    return block2(block, ctx, block2render = markdown_block2render, block2render_with_begin_end = markdown_block2render_with_begin_end, begin = begin, end = end, **kwargs)
+def block2html(block, ctx = {}, begin = False, end = False, **kwargs): return block2(block, ctx, block2render = html_block2render, block2render_with_begin_end = html_block2render_with_begin_end, begin = begin, end = end, **kwargs)
+def block2markdown(block, ctx = {}, begin = False, end = False, **kwargs): return block2(block, ctx, block2render = markdown_block2render, block2render_with_begin_end = markdown_block2render_with_begin_end, begin = begin, end = end, **kwargs)
 
 ##############################
 
@@ -1323,6 +1332,7 @@ if __name__ == '__main__':
     parser.add_argument('--theme-py', default = 'minima.py')
     parser.add_argument('--extract-mode', default = 'single.html', choices = extract_mode_single + extract_mode_flat)
     parser.add_argument('--snippets-dir')
+    parser.add_argument('--assets-dir')
     parser.add_argument('--sitemap-xml')
     parser.add_argument('--base-url-removesuffix')
     parser.add_argument('--base-url')
