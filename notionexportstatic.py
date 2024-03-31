@@ -56,9 +56,7 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
             for subblock in block['children']:
                 notionapi_blocks_children_list(subblock, notionapi)
         return block
-   
     page_type, page = None, {}
-
     for k, f in [('page', notionapi.pages.retrieve), ('database', notionapi.databases.retrieve), ('child_page', notionapi.blocks.retrieve)]:
         try:
             page_type, page = k, f(notion_page_id_no_dashes)
@@ -68,10 +66,8 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
         except Exception as exc:
             print(exc)
             break
-
     if not page_type:
         return
-
     print(page_type, page['id'])
     start_cursor = None
     notion_pages_and_databases[page['id']] = page
@@ -926,7 +922,6 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False, mimedb =
     mime = mimedb.get(ext, mimedefault)
     if not datauri and os.path.exists(asset_path):
         return asset_path_file_protocol
-
     req = urllib.request.Request(url, headers = headers)
     with urllib.request.urlopen(req) as f:
         file_bytes = f.read()
@@ -951,7 +946,8 @@ def hash_path(path):
 
 def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_assets = {}, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}, extdefault = '.bin'):
     print('\n'.join('URL ' + url for url in assets_urls), file = ctx['log_urls_file'])
-    if assets_dir:
+    extract_assets_and_assets_dir = bool(ctx['extract_assets'] and ctx['assets_dir'])
+    if extract_assets_and_assets_dir:
         print(assets_dir)
     
     assets = {}
@@ -982,7 +978,6 @@ def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_asse
             ext = os.path.splitext(path.lower())[-1]
             basename_hashed = basename + '.' + hash_path(path) + ext
 
-        extract_assets_and_assets_dir = bool(ctx['extract_assets'] and ctx['assets_dir'])
         if extract_assets_and_assets_dir:
             os.makedirs(ctx['assets_dir'], exist_ok = True)
         asset_path = os.path.join(ctx['assets_dir'] or '', basename_hashed)
