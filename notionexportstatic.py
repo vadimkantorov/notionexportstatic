@@ -5,7 +5,6 @@
 # TODO: experiment with heading slug to match github slugs
 
 # TODO: convert download_assets to mime types? always download "file" block type?
-# TODO: do not download an asset if already exists (if extract_assets is used)
 # TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
 
 import os
@@ -578,6 +577,11 @@ def sanitize_url_and_strip_querystring(url):
     path = urllib.parse.urlunparse(urllib.parse.ParseResult(urlparsed.scheme, urlparsed.netloc, urlparsed.path, '', '', '')) 
     return urlopen_url, path
 
+def hash_url(path):
+    sha1 = hashlib.sha1()
+    sha1.update(path.encode())
+    return sha1.hexdigest()
+
 def get_block_type(block):
     return block.get('type') or block.get('object') or ''
 
@@ -932,17 +936,19 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False, mimedb =
     return asset_path_file_protocol
 
 def discover_assets(blocks, assets_urls, exclude_datauri = True, block_types = []):
+    # TODO: convert download_assets to mime types? always download "file" block type?
+    # choices = ['image', 'video', 'pdf', 'file']
+    # image-external image-file
+    # video-external video-file
+    # pdf-external pdf-file
+    # file-external file-file
+
     for block in blocks:
         discover_assets(block.get('children', []) + block.get('blocks', []), assets_urls, exclude_datauri = exclude_datauri, block_types = block_types)
         block_type = get_block_type(block)
         urls = [get_block_url(block.get('cover') or {}), get_block_url(block.get('icon') or {}), get_block_url(block)][:(2 if block_type not in block_types else None)]
         assets_urls.extend( url for url in urls if url and (exclude_datauri is False or not is_url_datauri(url)) )
     return assets_urls
-
-def hash_path(path):
-    sha1 = hashlib.sha1()
-    sha1.update(path.encode())
-    return sha1.hexdigest()
 
 def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_assets = {}, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}, extdefault = '.bin'):
     print('\n'.join('URL ' + url for url in assets_urls), file = ctx['log_urls_file'])
@@ -970,13 +976,13 @@ def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_asse
             urlopen_url, path = url, url
             basename, datauri = 'datauri', url
             ext = ([k for k, v in mimedb.items() if datauri.startswith('data:' + v)] or [extdefault])[0]
-            basename_hashed = basename + '.' + hash_path(path) + ext
+            basename_hashed = basename + '.' + hash_url(path) + ext
 
         else:
             urlopen_url, path = sanitize_url_and_strip_querystring(url)
             basename, datauri = os.path.basename(path), None
             ext = os.path.splitext(path.lower())[-1]
-            basename_hashed = basename + '.' + hash_path(path) + ext
+            basename_hashed = basename + '.' + hash_url(path) + ext
 
         if extract_assets_and_assets_dir:
             os.makedirs(ctx['assets_dir'], exist_ok = True)
