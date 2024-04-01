@@ -1,10 +1,7 @@
-# TODO: support toggle for Markdown (behinde a switch)
-
 # TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
 # TODO: reduce newlines in markdown
 # TODO: experiment with heading slug to match github slugs
 
-# TODO: convert download_assets to mime types? always download "file" block type?
 # TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
 
 import os
@@ -333,8 +330,10 @@ def textlike2markdown(block, ctx, tag = '', icon = '', checked = None, title_mod
     return tag + checkbox + rich_text + icon + '\n' + childrenlike2markdown(block, ctx)
 
 def toggle2markdown(block, ctx, tag = '', icon = '', title_mode = False): 
+    if ctx['markdown_toggle']:
+        return '<details markdown="1"><summary markdown="1">\n\n' + tag + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike2markdown(block, ctx) + '\n\n</details>'
+
     return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike2markdown(block, ctx)
-    #return '<details markdown="1"><summary markdown="1">\n\n' + tag +  richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike2markdown(block, ctx) + '\n\n</details>'
 
 def headinglike2markdown(block, ctx, tag = ''):
     block_id_no_dashes = block['id'].replace('-', '')
@@ -935,7 +934,7 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False, mimedb =
         f.write(file_bytes)
     return asset_path_file_protocol
 
-def discover_assets(blocks, assets_urls, exclude_datauri = True, block_types = []):
+def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets_types = []):
     # TODO: convert download_assets to mime types? always download "file" block type?
     # choices = ['image', 'video', 'pdf', 'file']
     # image-external image-file
@@ -944,16 +943,25 @@ def discover_assets(blocks, assets_urls, exclude_datauri = True, block_types = [
     # file-external file-file
 
     for block in blocks:
-        discover_assets(block.get('children', []) + block.get('blocks', []), assets_urls, exclude_datauri = exclude_datauri, block_types = block_types)
+        discover_assets(block.get('children', []) + block.get('blocks', []), assets_urls, exclude_datauri = exclude_datauri, download_assets_types = download_assets_types)
         block_type = get_block_type(block)
-        urls = [get_block_url(block.get('cover') or {}), get_block_url(block.get('icon') or {}), get_block_url(block)][:(2 if block_type not in block_types else None)]
-        assets_urls.extend( url for url in urls if url and (exclude_datauri is False or not is_url_datauri(url)) )
+        payload = block.get(block_type) or {}
+        payload_type = payload.get('type', '')
+        
+        assets_types_urls = [
+            ('cover', get_block_url(block.get('cover') or {})),
+            ('icon', get_block_url(block.get('icon') or {})),
+            (block_type + '-' + payload_type, get_block_url(block)),
+        ]
+
+        assets_urls.extend( url for asset_type, asset_url in assets_types_urls if url and asset_type in download_assets_types and (exclude_datauri is False or not is_url_datauri(url)) )
     return assets_urls
 
 def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_assets = {}, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}, extdefault = '.bin'):
     print('\n'.join('URL ' + url for url in assets_urls), file = ctx['log_urls_file'])
     extract_assets_and_assets_dir = bool(ctx['extract_assets'] and ctx['assets_dir'])
     if extract_assets_and_assets_dir:
+        os.makedirs(ctx['assets_dir'], exist_ok = True)
         print(assets_dir)
     
     assets = {}
@@ -984,8 +992,6 @@ def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_asse
             ext = os.path.splitext(path.lower())[-1]
             basename_hashed = basename + '.' + hash_url(path) + ext
 
-        if extract_assets_and_assets_dir:
-            os.makedirs(ctx['assets_dir'], exist_ok = True)
         asset_path = os.path.join(ctx['assets_dir'] or '', basename_hashed)
 
         if datauri is None:
@@ -1020,7 +1026,7 @@ def extractall(output_path, ctx, theme, page_ids = [], notion_pages = {}, notion
     index_html = ctx['extract_mode'] in extract_mode_index_html
     
     if ctx['extract_mode'] in extract_mode_single:
-        assets_urls = discover_assets(ctx['pages'].values(), [], block_types = ctx['download_assets_block_types'])
+        assets_urls = discover_assets(ctx['pages'].values(), [], download_assets_types = ctx['download_assets_types'])
         notion_assets_for_blocks = download_and_extract_assets(assets_urls, ctx, assets_dir = ctx['assets_dir'], notion_assets = notion_assets)
         meta_tags = ctx['page_info'][page_ids[0]]
         if ext == '.md':
@@ -1068,7 +1074,7 @@ def extractall(output_path, ctx, theme, page_ids = [], notion_pages = {}, notion
         
         os.makedirs(page_dir, exist_ok = True)
             
-        assets_urls = discover_assets([page_block], [], block_types = ctx['download_assets_block_types'])
+        assets_urls = discover_assets([page_block], [], download_assets_types = ctx['download_assets_types'])
         notion_assets_for_block = download_and_extract_assets(assets_urls, ctx, assets_dir = ctx['assets_dir'] or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets)
         meta_tags = ctx['page_info'][page_id]
 
@@ -1130,7 +1136,7 @@ def notion2static(
     notion_token,
     notion_page_id,
     extract_assets,
-    download_assets_block_types,
+    download_assets_types,
 
     timestamp_published,
     
@@ -1144,6 +1150,7 @@ def notion2static(
     base_url_removesuffix,
     edit_url,
     markdown_frontmatter,
+    markdown_toggle,
     markdown_toc_page,
     use_page_title_for_missing_slug,
     log_unsupported_blocks,
@@ -1210,7 +1217,7 @@ def notion2static(
     ctx['id2block'] = get_block_index(ctx)
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx)
     ctx['page_info'] = get_page_info(notion_pages_flat, ctx)
-    ctx['assets'] = notionjson.get('assets', {}) or download_and_extract_assets(discover_assets(notion_pages.values(), [], exclude_datauri = False, block_types = ctx['download_assets_block_types']), ctx, notion_assets = {})
+    ctx['assets'] = notionjson.get('assets', {}) or download_and_extract_assets(discover_assets(notion_pages.values(), [], exclude_datauri = False, download_assets_types = ctx['download_assets_types']), ctx, notion_assets = {})
 
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
@@ -1340,13 +1347,14 @@ if __name__ == '__main__':
     parser.add_argument('--edit-url')
     parser.add_argument('--log-unsupported-blocks')
     parser.add_argument('--log-urls')
-    parser.add_argument('--download-assets-block-types', nargs = '*', choices = ['image', 'video', 'pdf', 'file'], default = ['image', 'pdf', 'file'])
+    parser.add_argument('--download-assets-types', nargs = '*', choices = ['icon', 'cover', 'image-external', 'image-file', 'video-external', 'video-file', 'pdf-external', 'pdf-file', 'file-external', 'file-file'], default = ['cover', 'icon', 'image-file', 'image-external' 'pdf-file', 'file-file', 'video-file'])
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--slugs', nargs = '*', default = [])
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
     parser.add_argument('--timestamp-published', action = 'store_true')
 
     parser.add_argument('--markdown-toc-page')
+    parser.add_argument('--markdown-toggle', action = 'store_true')
     parser.add_argument('--markdown-frontmatter', action = 'store_true')
     parser.add_argument('--html-cookies', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
