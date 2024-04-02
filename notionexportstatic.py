@@ -1,7 +1,5 @@
-# TODO: for page2html h1+h1 may have both id="page_id_no_dashes"
 # TODO: reduce newlines in markdown
 # TODO: experiment with heading slug to match github slugs
-
 # TODO: for a single page should work within flat structure (for both HTML and Markdown), and generate into a passed directory, where to extract assets for single.md?
 
 import os
@@ -98,13 +96,13 @@ def blocktag2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = F
     return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) if tag else ''
 
 def childrenlike2html(block, ctx, tag = ''):
-    html = ''
+    res = ''
     subblocks = sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], [])
     for i, subblock in enumerate(subblocks):
         same_block_type_as_prev = i > 0 and subblock.get('type') == subblocks[i - 1].get('type')
         same_block_type_as_next = i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type')
-        html += ((f'<{tag}>') if tag else '') + block2html(subblock, ctx, begin = not same_block_type_as_prev, end = not same_block_type_as_next) + (f'</{tag}>\n' if tag else '')
-    return html
+        res += ((f'<{tag}>') if tag else '') + block2html(subblock, ctx, begin = not same_block_type_as_prev, end = not same_block_type_as_next) + (f'</{tag}>\n' if tag else '')
+    return res
 
 def richtext2html(block, ctx = {}, title_mode = False, caption = False, rich_text = False):
     # https://www.notion.so/help/customize-and-style-your-content#markdown
@@ -160,7 +158,7 @@ def toggle2html(block, ctx, tag = 'span', class_name = 'notion-toggle-block', at
     return blocktag2html(block, ctx, tag = 'details', class_name = f'notion-color-{color} notion-toggle-like ' + class_name, attrs = dict(attrs, open = None) if ctx['html_details_open'] else attrs, set_html_contents_and_close = f'<summary><{tag}>{rich_text}{icon}</{tag}></summary>\n' + childrenlike2html(block, ctx))
 
 def headinglike2html(block, ctx, tag, class_name = ''):
-    block_id_no_dashes = block['id'].replace('-', '')
+    block_id_no_dashes = get_block_id_no_dashes(block)
     block_slug = get_heading_slug(block, ctx)
     anchor = f'<a href="#{block_slug}"></a><a href="#{block_id_no_dashes}" class="notion-heading-like-icon"></a>'
     return (textlike2html if block.get(get_block_type(block), {}).get('is_toggleable') is not True else toggle2html)(block, ctx, tag = tag, class_name = 'notion-heading-like ' + class_name, attrs = dict(id = block_id_no_dashes), icon = anchor)
@@ -174,22 +172,33 @@ def linklike2html(block, ctx, tag = 'a', class_name = '', full_url_as_caption = 
 
 def page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
     datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
-    src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
-    src_cover = get_asset_url(src_cover, ctx)
+    src_cover = get_asset_url(get_page_cover_url(block), ctx)
     page_id = block.get('id', '')
-    page_id_no_dashes = page_id.replace('-', '')
+    page_id_no_dashes = get_block_id_no_dashes(block)
     page_title = html.escape(get_page_title(block, ctx))
     page_emoji, page_icon_url = get_page_icon(block, ctx)
     page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx)
     src_edit = get_page_edit_url(page_id, ctx, page_slug = page_slug)
+    children = childrenlike2html(block, ctx)
 
     anchor = link_to_page2html(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon') + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
-    #anchor = f'<a href="#{page_slug}" class="notion-page-like-icon"></a>' + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
+    page_icon_id = f'id="{page_id_no_dashes}"' * bool(page_id_no_dashes != page_slug)
+    page_icon = f'<img src="{page_icon_url}"></img>' * bool(page_icon_url)
     
-    # <span class="miniicon"><img src="{page_icon_url}"></img></span>
-    
-    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'{html_prefix}<header class="{class_name_header}"><img src="{src_cover}" class="notion-page-cover"></img><h1 id="{page_id_no_dashes}" class="notion-record-icon">{page_emoji}</h1><h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1><i><time class="notion-page-block-datetime-published dt-published" datetime="{datetime_published}">@{datetime_published}</time></i></p></header><div class="notion-page-content {class_name_page_content}">\n' + childrenlike2html(block, ctx) + f'\n</div>{html_suffix}')
+    return blocktag2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'''
+        {html_prefix}
+        <header class="{class_name_header}">
+            <img src="{src_cover}" class="notion-page-cover"></img>
+            <h1 {page_icon_id} class="notion-record-icon">{page_emoji}{page_icon}</h1> 
+            <h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1>
+            <i><time class="notion-page-block-datetime-published dt-published" datetime="{datetime_published}">@{datetime_published}</time></i>
+        </header>
+        <div class="notion-page-content {class_name_page_content}">
+            {children}
+        </div>
+        {html_suffix}
+    ''')
 
 ##############################
 
@@ -208,7 +217,7 @@ def table_of_contents2html(block, ctx, tag = 'ul', class_name = 'notion-table_of
     nominal_heading_type, effective_heading_type = 'heading_0', 'heading_0'
     children = ''
     for block in headings:
-        block_id_no_dashes = block.get('id', '').replace('-', '')
+        block_id_no_dashes = get_block_id_no_dashes(block)
         block_slug = get_heading_slug(block, ctx)
         block_hash = block_slug if ctx['extract_mode'] in ['flat.html', 'flat/index.html'] else block_id_no_dashes
         heading_type = block.get('type', '')
@@ -336,7 +345,7 @@ def toggle2markdown(block, ctx, tag = '', icon = '', title_mode = False):
     return tag + '▼ ' + richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike2markdown(block, ctx)
 
 def headinglike2markdown(block, ctx, tag = ''):
-    block_id_no_dashes = block['id'].replace('-', '')
+    block_id_no_dashes = get_block_id_no_dashes(block)
     block_slug = get_heading_slug(block, ctx)
     block_hash = block_slug if ctx['extract_mode'] == 'flat.md' else block_id_no_dashes
     anchor = f' [#](#{block_hash})'
@@ -381,7 +390,7 @@ def table_of_contents2markdown(block, ctx, tag = '* '):
     heading_type2depth = dict(heading_0 = 0, heading_1 = 1, heading_2 = 2, heading_3 = 3)
     children = '---\n'
     for block in headings:
-        block_id_no_dashes = block.get('id', '').replace('-', '')
+        block_id_no_dashes = get_block_id_no_dashes(block)
         block_slug = get_heading_slug(block, ctx)
         block_hash = block_slug if ctx['extract_mode'] == 'flat.md' else block_id_no_dashes
         heading_type = block.get('type', '')
@@ -408,32 +417,27 @@ def mention2markdown(block, ctx):
 
 def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
-    src_cover = (block.get('cover') or {}).get((block.get('cover') or {}).get('type'), {}).get('url', '')
-    src_cover = get_asset_url(src_cover, ctx)
+    src_cover = get_asset_url(get_page_cover_url(block), ctx)
     page_id = block.get('id', '')
-    page_id_no_dashes = page_id.replace('-', '')
+    page_id_no_dashes = get_block_id_no_dashes(block)
     page_title = (get_page_title(block, ctx))
     page_emoji, page_icon_url = get_page_icon(block, ctx)
     page_url = get_page_url(block, ctx)
     page_slug = get_page_slug(page_id, ctx)
     src_edit = get_page_edit_url(page_id, ctx, page_slug = page_slug)
+    children = childrenlike2markdown(block, ctx)
     
     anchor = ' ' + link_to_page2markdown(block, ctx, caption = '#', line_break = False)
-    
     anchor += f'[✏️]({src_edit}) ' * bool(src_edit)
 
-    res = ''
-    
-    if ctx['markdown_frontmatter']:
-        res += f'''---\ntitle: "{page_title}"\ncover: {src_cover}\nemoji: {page_emoji}\n---\n\n'''
-
+    res  = f'''---\ntitle: "{page_title}"\ncover: {src_cover}\nemoji: {page_emoji}\n---\n\n''' * bool(ctx['markdown_frontmatter'])
     res += f'![cover]({src_cover})\n\n' * bool(src_cover)
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
     res += f'# {page_emoji} {page_title} {anchor}\n'
 
     #res += f'[✏️]({src_edit}) ' * bool(src_edit) + f'*@{datetime_published}*\n\n'
     res += f'*@{datetime_published}*\n\n'
-    res += childrenlike2markdown(block, ctx)
+    res += children
     
     # elif block['has_children']:
     #     depth += 1
@@ -587,8 +591,8 @@ def get_block_type(block):
 def get_page_link_info(block, ctx, untitled = '???'):
     payload = block.get(block.get('type'), {})
     page_id = payload.get(payload.get('type'), '') or block.get('id', '')
-    page_id_no_dashes = page_id.replace('-', '') or (block.get('href', '').lstrip('/') if block.get('href', '').startswith('/') else '') 
-    page_ids_no_dashes = set(page_id.replace('-', '') for page_id in ctx['page_ids'])
+    page_id_no_dashes = get_block_id_no_dashes(page_id) or (block.get('href', '').lstrip('/') if block.get('href', '').startswith('/') else '') 
+    page_ids_no_dashes = set(get_block_id_no_dashes(page_id) for page_id in ctx['page_ids'])
     page_slug = get_page_slug(page_id_no_dashes, ctx) 
     page_block = get_page_current(block, ctx)
     page_url_base = get_page_url_relative(page_block, ctx)
@@ -618,7 +622,7 @@ def get_page_icon(block, ctx):
         if subblock.get('type') == 'callout':
             payload_icon = subblock.get('callout', {}).get('icon') or {}
             icon_emoji = icon_emoji or payload_icon.get('emoji', '')
-            icon_url = icon_url or payload_icon.get('file', {}).get('url', '')
+            icon_url = icon_url or get_block_url(payload_icon)
             if bool(icon_emoji or icon_url):
                 break
 
@@ -653,24 +657,25 @@ def resolve_page_ids(root_page_ids, all_page_and_child_page_ids, notion_slugs):
     for i in range(len(root_page_ids)):
         for k, v in notion_slugs.items():
             if root_page_ids[i].lower() == v.lower():
-                root_page_ids[i] = k.replace('-', '')
+                root_page_ids[i] = get_block_id_no_dashes(k)
         for k in all_page_and_child_page_ids:
-            if root_page_ids[i] == k.replace('-', ''):
+            if root_page_ids[i] == get_block_id_no_dashes(k):
                 root_page_ids[i] = k
     return root_page_ids
 
 def resolve_page_ids_no_dashes(notion_page_id, notion_slugs):
-    return  [([k for k, v in notion_slugs.items() if v.lower() == page_id.lower()] or [page_id])[0].replace('-', '') for page_id in notion_page_id]
+    return  [ get_block_id_no_dashes( ([k for k, v in notion_slugs.items() if v.lower() == page_id.lower()] or [page_id])[0] ) for page_id in notion_page_id]
 
 def get_page_edit_url(page_id, ctx, page_slug, base_url = 'https://notion.so'):
-    page_id_no_dashes = page_id.replace('-', '')
+    page_id_no_dashes = get_block_id_no_dashes(page_id)
     return ctx['edit_url'].format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx['edit_url'] else os.path.join(base_url, page_id_no_dashes)
 
 def get_page_url(block, ctx, base_url = 'https://www.notion.so'):
-    page_id_no_dashes = block.get('id', '').replace('-', '')
+    page_id_no_dashes = get_block_id_no_dashes(block)
     return block.get('url', os.path.join(base_url, page_id_no_dashes))
 
-def get_page_url_absolute(page_url_relative, ctx):
+def get_page_url_absolute(block, ctx):
+    page_url_relative = get_page_url_relative(block, ctx) if isinstance(block, dict) else block
     page_url_absolute = (os.path.join(ctx['base_url'], page_url_relative.removeprefix('./'))) if ctx['base_url'] else ('file:///' + page_url_relative.removeprefix('file:///'))
     if ctx['base_url_removesuffix']:
         page_url_absolute = page_url_absolute.removesuffix(ctx['base_url_removesuffix'])
@@ -678,7 +683,7 @@ def get_page_url_absolute(page_url_relative, ctx):
 
 def get_page_url_relative(block, ctx):
     page_id = block.get('link_to_page', {}).get('page_id', '') or (block.get('href', '').removeprefix('/') if block.get('href', '').startswith('/') else '') or block.get('id', '')
-    page_id_no_dashes = page_id.replace('-', '')
+    page_id_no_dashes = get_block_id_no_dashes(page_id)
     
     page_slug = get_page_slug(page_id, ctx)
     page_slug_only = get_page_slug(page_id, ctx, only_slug = True)
@@ -714,6 +719,11 @@ def get_block_url(block):
     url = block.get('file', {}).get('url') or block.get('external', {}).get('url') or payload.get('file', {}).get('url') or payload.get('external', {}).get('url') or block.get('url') or block.get('href') or payload.get('url') or '' 
     return url
 
+def get_page_cover_url(block, ctx):
+    payload = block.get('cover') or {}
+    payload_type = payload.get('type', '')
+    return payload.get(payload_type, {}).get('url', '')
+
 def get_asset_url(block, ctx):
     url = block if isinstance(block, str) else get_block_url(block)
     asset_dict = ctx['assets'].get(url, {})
@@ -736,8 +746,11 @@ def normalize_youtube_url(url, embed = False):
     urlimg_youtube = f'https://img.youtube.com/vi/{id_youtube}/0.jpg' * is_youtube
     return is_youtube, url_youtube, urlimg_youtube
 
+def get_block_id_no_dashes(block):
+    return (block.get('id', '') if isinstance(block, dict) else block).replace('-', '')
+
 def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_slug = False):
-    page_id_no_dashes = page_id.replace('-', '')
+    page_id_no_dashes = get_block_id_no_dashes(page_id)
     page_title_slug = slugify(get_page_title(ctx['id2block'].get(page_id), ctx)) or page_id_no_dashes
     return ctx['slugs'].get(page_id) or ctx['slugs'].get(page_id_no_dashes) or (None if only_slug else (page_title_slug if use_page_title_for_missing_slug else page_id_no_dashes))
 
@@ -778,7 +791,7 @@ def get_block_index(ctx):
         top = stack.pop()
         id2block[top.get('id', '')] = top
         stack.extend(top.get('blocks', []) + top.get('children', []))
-    id2block_no_dashes = {block_id.replace('-', '') : block for block_id, block in id2block.items()}
+    id2block_no_dashes = {get_block_id_no_dashes(block_id) : block for block_id, block in id2block.items()}
     return id2block | id2block_no_dashes
 
 def get_page_relative_link(page_url_base, page_url_target):
@@ -826,7 +839,7 @@ def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', 
             site_twitter_card_type        = ctx['site_info_twitter_card_type']  or '',
             site_twitter_atusername       = ctx['site_info_twitter_atusername'] or '',
             site_title                    = ctx['site_info_title']              or get_page_title(page, ctx),
-            site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(get_page_url_relative(page, ctx), ctx),
+            site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(page, ctx),
             site_description              = ctx['site_info_description']        or get_page_description(page, ctx),
             site_published_time_xmlschema = ctx['site_info_time_published']     or get_page_time_published(page, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded'),
             site_image_url                = ctx['site_info_image_url']          or image_info['image_url'],
@@ -845,7 +858,6 @@ def sitemap_urlset_read(path):
             xmlstr = fp.read()
     if not xmlstr.strip():
         return []
-
     node_doc = xml.dom.minidom.parseString(xmlstr)
     assert node_doc.documentElement.nodeName == 'urlset'
     return [dict({n.nodeName : ''.join(nn.nodeValue for nn in n.childNodes if nn.nodeType == nn.TEXT_NODE) for n in node_url.childNodes if n.nodeType == n.ELEMENT_NODE}, id = node_url.getAttribute('id')) for node_url in node_doc.documentElement.getElementsByTagName('url')]
@@ -864,12 +876,11 @@ def sitemap_urlset_write(urlset, path):
             node_url.setAttribute('id', entry.pop('id'))
         for field, value in entry.items():
             node_url.appendChild(node_doc.createElement(field)).appendChild(node_doc.createTextNode(str(value)))
-    
     with open(path, 'w') as fp:
         node_doc.writexml(fp, addindent = '  ', newl = '\n')
 
 def sitemap_urlset_index(urlset, id):
-    return ([i for i, u in enumerate(urlset) if u['id'] == id or u['id'].replace('-', '') == id] or [-1])[0]
+    return ([i for i, u in enumerate(urlset) if u['id'] == id or get_block_id_no_dashes(u['id']) == id] or [-1])[0]
 
 def sitemap_urlset_update(urlset, id, loc, locrel = ''):
     k = sitemap_urlset_index(urlset, id)
@@ -904,6 +915,12 @@ def slugify(s, space = '_', lower = True):
     s = re.sub(r'[^-_\w]', space, s, flags = re.U)
     s = s.lower() if lower else s
     return s
+
+def slugify2(value, maintainCase = False): # python port of https://github.com/Flet/github-slugger
+    regex = r'[\0-\x1F!-,\.\/:-@\[-\^`\{-\xA9\xAB-\xB4\xB6-\xB9\xBB-\xBF\xD7\xF7\u02C2-\u02C5\u02D2-\u02DF\u02E5-\u02EB\u02ED\u02EF-\u02FF\u0375\u0378\u0379\u037E\u0380-\u0385\u0387\u038B\u038D\u03A2\u03F6\u0482\u0530\u0557\u0558\u055A-\u055F\u0589-\u0590\u05BE\u05C0\u05C3\u05C6\u05C8-\u05CF\u05EB-\u05EE\u05F3-\u060F\u061B-\u061F\u066A-\u066D\u06D4\u06DD\u06DE\u06E9\u06FD\u06FE\u0700-\u070F\u074B\u074C\u07B2-\u07BF\u07F6-\u07F9\u07FB\u07FC\u07FE\u07FF\u082E-\u083F\u085C-\u085F\u086B-\u089F\u08B5\u08C8-\u08D2\u08E2\u0964\u0965\u0970\u0984\u098D\u098E\u0991\u0992\u09A9\u09B1\u09B3-\u09B5\u09BA\u09BB\u09C5\u09C6\u09C9\u09CA\u09CF-\u09D6\u09D8-\u09DB\u09DE\u09E4\u09E5\u09F2-\u09FB\u09FD\u09FF\u0A00\u0A04\u0A0B-\u0A0E\u0A11\u0A12\u0A29\u0A31\u0A34\u0A37\u0A3A\u0A3B\u0A3D\u0A43-\u0A46\u0A49\u0A4A\u0A4E-\u0A50\u0A52-\u0A58\u0A5D\u0A5F-\u0A65\u0A76-\u0A80\u0A84\u0A8E\u0A92\u0AA9\u0AB1\u0AB4\u0ABA\u0ABB\u0AC6\u0ACA\u0ACE\u0ACF\u0AD1-\u0ADF\u0AE4\u0AE5\u0AF0-\u0AF8\u0B00\u0B04\u0B0D\u0B0E\u0B11\u0B12\u0B29\u0B31\u0B34\u0B3A\u0B3B\u0B45\u0B46\u0B49\u0B4A\u0B4E-\u0B54\u0B58-\u0B5B\u0B5E\u0B64\u0B65\u0B70\u0B72-\u0B81\u0B84\u0B8B-\u0B8D\u0B91\u0B96-\u0B98\u0B9B\u0B9D\u0BA0-\u0BA2\u0BA5-\u0BA7\u0BAB-\u0BAD\u0BBA-\u0BBD\u0BC3-\u0BC5\u0BC9\u0BCE\u0BCF\u0BD1-\u0BD6\u0BD8-\u0BE5\u0BF0-\u0BFF\u0C0D\u0C11\u0C29\u0C3A-\u0C3C\u0C45\u0C49\u0C4E-\u0C54\u0C57\u0C5B-\u0C5F\u0C64\u0C65\u0C70-\u0C7F\u0C84\u0C8D\u0C91\u0CA9\u0CB4\u0CBA\u0CBB\u0CC5\u0CC9\u0CCE-\u0CD4\u0CD7-\u0CDD\u0CDF\u0CE4\u0CE5\u0CF0\u0CF3-\u0CFF\u0D0D\u0D11\u0D45\u0D49\u0D4F-\u0D53\u0D58-\u0D5E\u0D64\u0D65\u0D70-\u0D79\u0D80\u0D84\u0D97-\u0D99\u0DB2\u0DBC\u0DBE\u0DBF\u0DC7-\u0DC9\u0DCB-\u0DCE\u0DD5\u0DD7\u0DE0-\u0DE5\u0DF0\u0DF1\u0DF4-\u0E00\u0E3B-\u0E3F\u0E4F\u0E5A-\u0E80\u0E83\u0E85\u0E8B\u0EA4\u0EA6\u0EBE\u0EBF\u0EC5\u0EC7\u0ECE\u0ECF\u0EDA\u0EDB\u0EE0-\u0EFF\u0F01-\u0F17\u0F1A-\u0F1F\u0F2A-\u0F34\u0F36\u0F38\u0F3A-\u0F3D\u0F48\u0F6D-\u0F70\u0F85\u0F98\u0FBD-\u0FC5\u0FC7-\u0FFF\u104A-\u104F\u109E\u109F\u10C6\u10C8-\u10CC\u10CE\u10CF\u10FB\u1249\u124E\u124F\u1257\u1259\u125E\u125F\u1289\u128E\u128F\u12B1\u12B6\u12B7\u12BF\u12C1\u12C6\u12C7\u12D7\u1311\u1316\u1317\u135B\u135C\u1360-\u137F\u1390-\u139F\u13F6\u13F7\u13FE-\u1400\u166D\u166E\u1680\u169B-\u169F\u16EB-\u16ED\u16F9-\u16FF\u170D\u1715-\u171F\u1735-\u173F\u1754-\u175F\u176D\u1771\u1774-\u177F\u17D4-\u17D6\u17D8-\u17DB\u17DE\u17DF\u17EA-\u180A\u180E\u180F\u181A-\u181F\u1879-\u187F\u18AB-\u18AF\u18F6-\u18FF\u191F\u192C-\u192F\u193C-\u1945\u196E\u196F\u1975-\u197F\u19AC-\u19AF\u19CA-\u19CF\u19DA-\u19FF\u1A1C-\u1A1F\u1A5F\u1A7D\u1A7E\u1A8A-\u1A8F\u1A9A-\u1AA6\u1AA8-\u1AAF\u1AC1-\u1AFF\u1B4C-\u1B4F\u1B5A-\u1B6A\u1B74-\u1B7F\u1BF4-\u1BFF\u1C38-\u1C3F\u1C4A-\u1C4C\u1C7E\u1C7F\u1C89-\u1C8F\u1CBB\u1CBC\u1CC0-\u1CCF\u1CD3\u1CFB-\u1CFF\u1DFA\u1F16\u1F17\u1F1E\u1F1F\u1F46\u1F47\u1F4E\u1F4F\u1F58\u1F5A\u1F5C\u1F5E\u1F7E\u1F7F\u1FB5\u1FBD\u1FBF-\u1FC1\u1FC5\u1FCD-\u1FCF\u1FD4\u1FD5\u1FDC-\u1FDF\u1FED-\u1FF1\u1FF5\u1FFD-\u203E\u2041-\u2053\u2055-\u2070\u2072-\u207E\u2080-\u208F\u209D-\u20CF\u20F1-\u2101\u2103-\u2106\u2108\u2109\u2114\u2116-\u2118\u211E-\u2123\u2125\u2127\u2129\u212E\u213A\u213B\u2140-\u2144\u214A-\u214D\u214F-\u215F\u2189-\u24B5\u24EA-\u2BFF\u2C2F\u2C5F\u2CE5-\u2CEA\u2CF4-\u2CFF\u2D26\u2D28-\u2D2C\u2D2E\u2D2F\u2D68-\u2D6E\u2D70-\u2D7E\u2D97-\u2D9F\u2DA7\u2DAF\u2DB7\u2DBF\u2DC7\u2DCF\u2DD7\u2DDF\u2E00-\u2E2E\u2E30-\u3004\u3008-\u3020\u3030\u3036\u3037\u303D-\u3040\u3097\u3098\u309B\u309C\u30A0\u30FB\u3100-\u3104\u3130\u318F-\u319F\u31C0-\u31EF\u3200-\u33FF\u4DC0-\u4DFF\u9FFD-\u9FFF\uA48D-\uA4CF\uA4FE\uA4FF\uA60D-\uA60F\uA62C-\uA63F\uA673\uA67E\uA6F2-\uA716\uA720\uA721\uA789\uA78A\uA7C0\uA7C1\uA7CB-\uA7F4\uA828-\uA82B\uA82D-\uA83F\uA874-\uA87F\uA8C6-\uA8CF\uA8DA-\uA8DF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA954-\uA95F\uA97D-\uA97F\uA9C1-\uA9CE\uA9DA-\uA9DF\uA9FF\uAA37-\uAA3F\uAA4E\uAA4F\uAA5A-\uAA5F\uAA77-\uAA79\uAAC3-\uAADA\uAADE\uAADF\uAAF0\uAAF1\uAAF7-\uAB00\uAB07\uAB08\uAB0F\uAB10\uAB17-\uAB1F\uAB27\uAB2F\uAB5B\uAB6A-\uAB6F\uABEB\uABEE\uABEF\uABFA-\uABFF\uD7A4-\uD7AF\uD7C7-\uD7CA\uD7FC-\uD7FF\uE000-\uF8FF\uFA6E\uFA6F\uFADA-\uFAFF\uFB07-\uFB12\uFB18-\uFB1C\uFB29\uFB37\uFB3D\uFB3F\uFB42\uFB45\uFBB2-\uFBD2\uFD3E-\uFD4F\uFD90\uFD91\uFDC8-\uFDEF\uFDFC-\uFDFF\uFE10-\uFE1F\uFE30-\uFE32\uFE35-\uFE4C\uFE50-\uFE6F\uFE75\uFEFD-\uFF0F\uFF1A-\uFF20\uFF3B-\uFF3E\uFF40\uFF5B-\uFF65\uFFBF-\uFFC1\uFFC8\uFFC9\uFFD0\uFFD1\uFFD8\uFFD9\uFFDD-\uFFFF]|\uD800[\uDC0C\uDC27\uDC3B\uDC3E\uDC4E\uDC4F\uDC5E-\uDC7F\uDCFB-\uDD3F\uDD75-\uDDFC\uDDFE-\uDE7F\uDE9D-\uDE9F\uDED1-\uDEDF\uDEE1-\uDEFF\uDF20-\uDF2C\uDF4B-\uDF4F\uDF7B-\uDF7F\uDF9E\uDF9F\uDFC4-\uDFC7\uDFD0\uDFD6-\uDFFF]|\uD801[\uDC9E\uDC9F\uDCAA-\uDCAF\uDCD4-\uDCD7\uDCFC-\uDCFF\uDD28-\uDD2F\uDD64-\uDDFF\uDF37-\uDF3F\uDF56-\uDF5F\uDF68-\uDFFF]|\uD802[\uDC06\uDC07\uDC09\uDC36\uDC39-\uDC3B\uDC3D\uDC3E\uDC56-\uDC5F\uDC77-\uDC7F\uDC9F-\uDCDF\uDCF3\uDCF6-\uDCFF\uDD16-\uDD1F\uDD3A-\uDD7F\uDDB8-\uDDBD\uDDC0-\uDDFF\uDE04\uDE07-\uDE0B\uDE14\uDE18\uDE36\uDE37\uDE3B-\uDE3E\uDE40-\uDE5F\uDE7D-\uDE7F\uDE9D-\uDEBF\uDEC8\uDEE7-\uDEFF\uDF36-\uDF3F\uDF56-\uDF5F\uDF73-\uDF7F\uDF92-\uDFFF]|\uD803[\uDC49-\uDC7F\uDCB3-\uDCBF\uDCF3-\uDCFF\uDD28-\uDD2F\uDD3A-\uDE7F\uDEAA\uDEAD-\uDEAF\uDEB2-\uDEFF\uDF1D-\uDF26\uDF28-\uDF2F\uDF51-\uDFAF\uDFC5-\uDFDF\uDFF7-\uDFFF]|\uD804[\uDC47-\uDC65\uDC70-\uDC7E\uDCBB-\uDCCF\uDCE9-\uDCEF\uDCFA-\uDCFF\uDD35\uDD40-\uDD43\uDD48-\uDD4F\uDD74\uDD75\uDD77-\uDD7F\uDDC5-\uDDC8\uDDCD\uDDDB\uDDDD-\uDDFF\uDE12\uDE38-\uDE3D\uDE3F-\uDE7F\uDE87\uDE89\uDE8E\uDE9E\uDEA9-\uDEAF\uDEEB-\uDEEF\uDEFA-\uDEFF\uDF04\uDF0D\uDF0E\uDF11\uDF12\uDF29\uDF31\uDF34\uDF3A\uDF45\uDF46\uDF49\uDF4A\uDF4E\uDF4F\uDF51-\uDF56\uDF58-\uDF5C\uDF64\uDF65\uDF6D-\uDF6F\uDF75-\uDFFF]|\uD805[\uDC4B-\uDC4F\uDC5A-\uDC5D\uDC62-\uDC7F\uDCC6\uDCC8-\uDCCF\uDCDA-\uDD7F\uDDB6\uDDB7\uDDC1-\uDDD7\uDDDE-\uDDFF\uDE41-\uDE43\uDE45-\uDE4F\uDE5A-\uDE7F\uDEB9-\uDEBF\uDECA-\uDEFF\uDF1B\uDF1C\uDF2C-\uDF2F\uDF3A-\uDFFF]|\uD806[\uDC3B-\uDC9F\uDCEA-\uDCFE\uDD07\uDD08\uDD0A\uDD0B\uDD14\uDD17\uDD36\uDD39\uDD3A\uDD44-\uDD4F\uDD5A-\uDD9F\uDDA8\uDDA9\uDDD8\uDDD9\uDDE2\uDDE5-\uDDFF\uDE3F-\uDE46\uDE48-\uDE4F\uDE9A-\uDE9C\uDE9E-\uDEBF\uDEF9-\uDFFF]|\uD807[\uDC09\uDC37\uDC41-\uDC4F\uDC5A-\uDC71\uDC90\uDC91\uDCA8\uDCB7-\uDCFF\uDD07\uDD0A\uDD37-\uDD39\uDD3B\uDD3E\uDD48-\uDD4F\uDD5A-\uDD5F\uDD66\uDD69\uDD8F\uDD92\uDD99-\uDD9F\uDDAA-\uDEDF\uDEF7-\uDFAF\uDFB1-\uDFFF]|\uD808[\uDF9A-\uDFFF]|\uD809[\uDC6F-\uDC7F\uDD44-\uDFFF]|[\uD80A\uD80B\uD80E-\uD810\uD812-\uD819\uD824-\uD82B\uD82D\uD82E\uD830-\uD833\uD837\uD839\uD83D\uD83F\uD87B-\uD87D\uD87F\uD885-\uDB3F\uDB41-\uDBFF][\uDC00-\uDFFF]|\uD80D[\uDC2F-\uDFFF]|\uD811[\uDE47-\uDFFF]|\uD81A[\uDE39-\uDE3F\uDE5F\uDE6A-\uDECF\uDEEE\uDEEF\uDEF5-\uDEFF\uDF37-\uDF3F\uDF44-\uDF4F\uDF5A-\uDF62\uDF78-\uDF7C\uDF90-\uDFFF]|\uD81B[\uDC00-\uDE3F\uDE80-\uDEFF\uDF4B-\uDF4E\uDF88-\uDF8E\uDFA0-\uDFDF\uDFE2\uDFE5-\uDFEF\uDFF2-\uDFFF]|\uD821[\uDFF8-\uDFFF]|\uD823[\uDCD6-\uDCFF\uDD09-\uDFFF]|\uD82C[\uDD1F-\uDD4F\uDD53-\uDD63\uDD68-\uDD6F\uDEFC-\uDFFF]|\uD82F[\uDC6B-\uDC6F\uDC7D-\uDC7F\uDC89-\uDC8F\uDC9A-\uDC9C\uDC9F-\uDFFF]|\uD834[\uDC00-\uDD64\uDD6A-\uDD6C\uDD73-\uDD7A\uDD83\uDD84\uDD8C-\uDDA9\uDDAE-\uDE41\uDE45-\uDFFF]|\uD835[\uDC55\uDC9D\uDCA0\uDCA1\uDCA3\uDCA4\uDCA7\uDCA8\uDCAD\uDCBA\uDCBC\uDCC4\uDD06\uDD0B\uDD0C\uDD15\uDD1D\uDD3A\uDD3F\uDD45\uDD47-\uDD49\uDD51\uDEA6\uDEA7\uDEC1\uDEDB\uDEFB\uDF15\uDF35\uDF4F\uDF6F\uDF89\uDFA9\uDFC3\uDFCC\uDFCD]|\uD836[\uDC00-\uDDFF\uDE37-\uDE3A\uDE6D-\uDE74\uDE76-\uDE83\uDE85-\uDE9A\uDEA0\uDEB0-\uDFFF]|\uD838[\uDC07\uDC19\uDC1A\uDC22\uDC25\uDC2B-\uDCFF\uDD2D-\uDD2F\uDD3E\uDD3F\uDD4A-\uDD4D\uDD4F-\uDEBF\uDEFA-\uDFFF]|\uD83A[\uDCC5-\uDCCF\uDCD7-\uDCFF\uDD4C-\uDD4F\uDD5A-\uDFFF]|\uD83B[\uDC00-\uDDFF\uDE04\uDE20\uDE23\uDE25\uDE26\uDE28\uDE33\uDE38\uDE3A\uDE3C-\uDE41\uDE43-\uDE46\uDE48\uDE4A\uDE4C\uDE50\uDE53\uDE55\uDE56\uDE58\uDE5A\uDE5C\uDE5E\uDE60\uDE63\uDE65\uDE66\uDE6B\uDE73\uDE78\uDE7D\uDE7F\uDE8A\uDE9C-\uDEA0\uDEA4\uDEAA\uDEBC-\uDFFF]|\uD83C[\uDC00-\uDD2F\uDD4A-\uDD4F\uDD6A-\uDD6F\uDD8A-\uDFFF]|\uD83E[\uDC00-\uDFEF\uDFFA-\uDFFF]|\uD869[\uDEDE-\uDEFF]|\uD86D[\uDF35-\uDF3F]|\uD86E[\uDC1E\uDC1F]|\uD873[\uDEA2-\uDEAF]|\uD87A[\uDFE1-\uDFFF]|\uD87E[\uDE1E-\uDFFF]|\uD884[\uDF4B-\uDFFF]|\uDB40[\uDC00-\uDCFF\uDDF0-\uDFFF]'
+    if not maintainCase:
+        value = value.lower()
+    return re.sub(regex, '', value).replace(' ', '-')
 
 def block2(block, ctx = {}, block2render = {}, block2render_with_begin_end = {}, begin = False, end = False, newline = '', **kwargs):
     # https://developers.notion.com/reference/block
@@ -1203,9 +1220,10 @@ def notion2static(
     page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if child_page['id'] not in root_page_ids]
     assert all(page_id in notion_pages_flat for page_id in root_page_ids), f'{notion_pages_flat.keys()=}, {root_page_ids=}'
     
+    ext = os.path.splitext(extract_mode)[-1]
     ctx = config.copy()
-    ctx['output_path'] = ctx['output_path'] or ('_'.join(notion_page_id) if ctx['extract_mode'] not in extract_mode_single else input_json.removesuffix('.json')) + os.path.splitext(extract_mode)[-1]
-    ctx['assets_dir'] = ctx['assets_dir'] if ctx['assets_dir'] else os.path.join(ctx['output_path'], 'assets') if ctx['extract_mode'] in extract_mode_flat[:-1] else (ctx['output_path'] + '_files') if ctx['extract_mode'] in extract_mode_single else None
+    ctx['output_path'] = ctx['output_path'] or ('_'.join(notion_page_id) if ctx['extract_mode'] not in extract_mode_single else input_json.removesuffix('.json')) + ext
+    ctx['assets_dir'] = ctx['assets_dir'] if ctx['assets_dir'] else os.path.join(ctx['output_path'], 'assets') if ctx['extract_mode'] in extract_mode_flat[:-1] else (ctx['output_path'].removesuffix(ext) + '_files') if ctx['extract_mode'] in extract_mode_single else None
     ctx['log_unsupported_blocks_file'] = open(log_unsupported_blocks if log_unsupported_blocks else os.devnull , 'w')
     ctx['log_urls_file'] = open(log_urls if log_urls else os.devnull , 'w')
     ctx['sitemap'] = sitemap
