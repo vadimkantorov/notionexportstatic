@@ -1,7 +1,5 @@
-# TODO: add hover style for breadcrumb
 # TODO: scroll-to-top link in bottom-right over-the-top
 # TODO: burger menu example for global toc
-# TODO: global toc: use <nav>
 
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]

@@ -207,7 +207,7 @@ def table_of_contents2html(block, ctx, tag = 'ul', class_name = 'notion-table_of
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
-        return '<div class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr/></div>\n'
+        return '<nav class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr/></nav>\n'
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
     color = block['table_of_contents'].get('color', '')
