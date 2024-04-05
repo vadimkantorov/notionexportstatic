@@ -19,6 +19,23 @@ import urllib.error
 import urllib.request
 import xml.dom.minidom
 
+mimedb = {
+    '.gif' : 'image/gif', 
+    '.jpg' : 'image/jpeg', 
+    '.jpeg' : 'image/jpeg', 
+    '.png' : 'image/png', 
+    '.svg' : 'image/svg+xml', 
+    '.webp': 'image/webp', 
+    '.pdf' : 'application/pdf', 
+    '.txt' : 'text/plain'
+}
+
+mimedefault = 'application/octet-stream'
+
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+}
+
 def notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes):
     import notion_client
     notionapi = notion_client.Client(auth = notion_token)
@@ -158,8 +175,9 @@ def toggle2html(block, ctx, tag = 'span', class_name = 'notion-toggle-block', at
 def headinglike2html(block, ctx, tag, class_name = ''):
     block_id_no_dashes = get_block_id_no_dashes(block)
     block_slug = get_heading_slug(block, ctx)
+    is_toggleable = block.get(get_block_type(block), {}).get('is_toggleable')
     anchor = f'<a href="#{block_slug}"></a><a href="#{block_id_no_dashes}" class="notion-heading-like-icon"></a>'
-    return (textlike2html if block.get(get_block_type(block), {}).get('is_toggleable') is not True else toggle2html)(block, ctx, tag = tag, class_name = 'notion-heading-like ' + class_name, attrs = dict(id = block_id_no_dashes), icon = anchor)
+    return (textlike2html if not is_toggleable else toggle2html)(block, ctx, tag = tag, class_name = 'notion-heading-like ' + class_name, attrs = dict(id = block_id_no_dashes), icon = anchor)
 
 def linklike2html(block, ctx, tag = 'a', class_name = '', full_url_as_caption = False, icon = '', line_break = False, download = None):
     src = get_block_url(block)
@@ -345,9 +363,10 @@ def toggle2markdown(block, ctx, tag = '', icon = '', title_mode = False):
 def headinglike2markdown(block, ctx, tag = ''):
     block_id_no_dashes = get_block_id_no_dashes(block)
     block_slug = get_heading_slug(block, ctx)
+    is_toggleable = block.get(get_block_type(block), {}).get('is_toggleable')
     block_hash = block_slug if ctx['extract_mode'] == 'flat.md' else block_id_no_dashes
     anchor = f' [#](#{block_hash})'
-    return (textlike2markdown if block.get(get_block_type(block), {}).get('is_toggleable') is not True else toggle2markdown)(block, ctx, tag = f'<i id="{block_id_no_dashes}"></i><i id="{block_slug}"></i>\n' + tag, icon = anchor)
+    return (textlike2markdown if not is_toggleable else toggle2markdown)(block, ctx, tag = f'<i id="{block_id_no_dashes}"></i><i id="{block_slug}"></i>\n' + tag, icon = anchor)
 
 def linklike2markdown(block, ctx, tag = '', full_url_as_caption = True, line_break = False):
     src = get_block_url(block)
@@ -927,7 +946,7 @@ def block2(block, ctx = {}, block2render = {}, block2render_with_begin_end = {},
 
 ##############################
 
-def download_asset_if_not_exists(url, asset_path = '', datauri = False, mimedb = {}, mimedefault = 'application/octet-stream', headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'}):
+def download_asset_if_not_exists(url, asset_path = '', datauri = False):
     asset_path = asset_path or os.path.basename(asset_path)
     asset_path_file_protocol = 'file:///./' + os.path.sep.join(asset_path.split(os.path.sep)[-2:])
     ext = os.path.splitext(asset_path.lower())[-1]
@@ -944,13 +963,6 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False, mimedb =
     return asset_path_file_protocol
 
 def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets_types = []):
-    # TODO: convert download_assets to mime types? always download "file" block type?
-    # choices = ['image', 'video', 'pdf', 'file']
-    # image-external image-file
-    # video-external video-file
-    # pdf-external pdf-file
-    # file-external file-file
-
     for block in blocks:
         discover_assets(block.get('children', []) + block.get('blocks', []), assets_urls, exclude_datauri = exclude_datauri, download_assets_types = download_assets_types)
         block_type = get_block_type(block)
@@ -966,7 +978,7 @@ def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets
         assets_urls.extend( url for asset_type, asset_url in assets_types_urls if url and asset_type in download_assets_types and (exclude_datauri is False or not is_url_datauri(url)) )
     return assets_urls
 
-def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_assets = {}, mimedb = {'.gif' : 'image/gif', '.jpg' : 'image/jpeg', '.jpeg' : 'image/jpeg', '.png' : 'image/png', '.svg' : 'image/svg+xml', '.webp': 'image/webp', '.pdf' : 'application/pdf', '.txt' : 'text/plain'}, extdefault = '.bin'):
+def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_assets = {}, extdefault = '.bin'):
     print('\n'.join('URL ' + url for url in assets_urls), file = ctx['log_urls_file'])
     extract_assets_and_assets_dir = bool(ctx['extract_assets'] and ctx['assets_dir'])
     if extract_assets_and_assets_dir:

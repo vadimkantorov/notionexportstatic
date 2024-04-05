@@ -56,17 +56,18 @@ python ./notionexportstatic/notionexportstatic.py -i ./everything.json -o ./flat
 python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json -o ./flat.md/my_page_slug.md --sitemap-xml ./flat.md/sitemap.xml --config-json _config.json --extract-mode single.md --edit-url 'https://github.com/vadimkantorov/notionexportstatic/edit/gh-pages/markdown/{page_slug}.md' 
 ```
 
-### Example `_config.json` file for page slugs and other options
-See [`_config.yml`](../gh-pages/_config.json)
+- Example [`_config.json`](../gh-pages/_config.json) file for page slugs and other options
+- Example [`_config.yml`](../gh-pages/_config.yml) file for https://github.com/jekyll/minima theme
+- Example [`.github/workflows/render_notion_pages.yml`](../gh-pages/.github/workflows/render_notion_pages.yml)
+- Example [`.github/workflows/import_notion_page_as_markdown.yml`](../gh-pages/.github/workflows/import_notion_page_as_markdown.yml)
 
-### Example `_config.yml` file for https://github.com/jekyll/minima theme
-See [`_config.yml`](../gh-pages/_config.yml)
+# CSS classes
 
-### Example `.github/workflows/render_notion_pages.yml`
-See [`.github/workflows/render_notion_pages.yml`](../gh-pages/.github/workflows/render_notion_pages.yml)
-
-### Example `.github/workflows/import_notion_page_as_markdown.yml`
-See [`.github/workflows/import_notion_page_as_markdown.yml`](../gh-pages/.github/workflows/import_notion_page_as_markdown.yml)
+| CSS class     | Usage         | Cool  |
+| ------------- |:-------------:| -----:|
+| col 3 is      | right-aligned | $1600 |
+| col 2 is      | centered      |   $12 |
+| zebra stripes | are neat      |    $1 | 
 
 # References
 - https://github.com/jekyll/minima
