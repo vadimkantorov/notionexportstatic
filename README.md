@@ -63,50 +63,50 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 # CSS classes
 
-| CSS class     | Usage         |
-| ------------- | ------------- |
-|notion-toggle-block||
-|notion-page-block||
-|notion-page-like-icon||
-|notion-page-like-edit-icon||
-|notion-page||
-|notion-table_of_contents-block||
-|notion-table-block||
-|notion-video-block||
-|notion-image-block||
-|notion-embed-block||
-|notion-bookmark-block||
-|notion-page-mention-token||
-|notion-database-mention-token||
-|notion-link-mention-token||
-|notion-user-mention-token||
-|notion-date-mention-token||
-|notion-alias-block||
-|notion-page-block||
-|notion-unsupported-block||
-|notion-divider-block||
-|notion-header-block||
-|notion-sub_header-block||
-|notion-sub_sub_header-block||
-|notion-text-block||
-|notion-column_list-block||
-|notion_column_list-block-vertical||
-|notion-column-block||
-|notion-bulleted_list-block||
-|notion-numbered_list-block||
-|notion-quote-block||
-|notion-code-block||
-|notion-to_do-block||
-|notion-synced_block-block||
-|notion-equation-block||
-|notion-callout-block||
-|notion-pdf-block||
-|notion-file-block||
-|notion-breadcrumb-block||
-|notion-template-block||
-|notion-child_database-block||
-|notion-link_preview-block||
-|notion-video-block||
+| CSS class     | Usage         | Tag |
+| ------------- | ------------- | --- |
+|notion-toggle-block|||
+|notion-page-block|||
+|notion-page-like-icon|||
+|notion-page-like-edit-icon|||
+|notion-page|||
+|notion-table_of_contents-block|||
+|notion-table-block|||
+|notion-video-block|||
+|notion-image-block|||
+|notion-embed-block|||
+|notion-bookmark-block|||
+|notion-page-mention-token|||
+|notion-database-mention-token|||
+|notion-link-mention-token|||
+|notion-user-mention-token|||
+|notion-date-mention-token|||
+|notion-alias-block|||
+|notion-page-block|||
+|notion-unsupported-block|||
+|notion-divider-block|||
+|notion-header-block|||
+|notion-sub_header-block|||
+|notion-sub_sub_header-block|||
+|notion-text-block|||
+|notion-column_list-block|||
+|notion_column_list-block-vertical|||
+|notion-column-block|||
+|notion-bulleted_list-block|||
+|notion-numbered_list-block|||
+|notion-quote-block|||
+|notion-code-block|||
+|notion-to_do-block|||
+|notion-synced_block-block|||
+|notion-equation-block|||
+|notion-callout-block|||
+|notion-pdf-block|||
+|notion-file-block|||
+|notion-breadcrumb-block|||
+|notion-template-block|||
+|notion-child_database-block|||
+|notion-link_preview-block|||
+|notion-video-block|||
 
 # References
 - https://github.com/jekyll/minima
