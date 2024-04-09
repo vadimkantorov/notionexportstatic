@@ -65,46 +65,46 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 | Notion block  | CSS class     | HTML tag      | Usage |
 | ------------- | ------------- | ------------- | ----- |
-||notion-page-block|`<article>`||
-||notion-page-like-icon|||
-||notion-page-like-edit-icon|||
-||notion-page|||
-||notion-toggle-block|`<details>`||
-||notion-table_of_contents-block|`<ul>`||
-||notion-table-block|`<table>`||
-||notion-video-block|`<video>`, `<iframe>`||
-||notion-image-block|`<img>`||
-||notion-embed-block|`<figure><iframe>`||
-||notion-bookmark-block|`<a><figure>`||
-||notion-text-block|||
-||notion-page-mention-token|||
-||notion-database-mention-token|||
-||notion-link-mention-token|||
-||notion-user-mention-token|||
-||notion-date-mention-token|||
-||notion-alias-block|`<a>`||
-||notion-unsupported-block|`<!-- -->`, `<br>`||
-||notion-divider-block|`<hr>`||
-||notion-header-block|`<h1>`||
-||notion-sub_header-block|`<h2>`||
-||notion-sub_sub_header-block|`<h3>`||
-||notion-column_list-block|`<div>`||
-||notion_column_list-block-vertical|`<div>`||
-||notion-column-block|`<div>`||
-||notion-bulleted_list-block|`<ul>`||
-||notion-numbered_list-block|`<ol>`||
-||notion-quote-block|`<blockquote>`||
-||notion-code-block|`<pre><code>`||
-||notion-to_do-block|`<div><input type="checbkox">`||
-||notion-equation-block|`<code>`||
-||notion-callout-block|`<div>`||
-||notion-pdf-block|`<figure><a>`||
-||notion-file-block|`<figure><a>`||
-||notion-link_preview-block|`<a>`||
-||notion-breadcrumb-block|`<div>`||
-||notion-template-block|`<figure>`||
-||notion-child_database-block|`<figure>`||
-||notion-synced_block-block|`<figure>`||
+||`.notion-page-block`|`<article>`||
+||`.notion-page-like-icon`|||
+||`.notion-page-like-edit-icon`|||
+||`.notion-page`|||
+||`.notion-toggle-block`|`<details>`||
+||`.notion-table_of_contents-block`|`<ul>`||
+||`.notion-table-block`|`<table>`||
+||`.notion-video-block`|`<video>`, `<iframe>`||
+||`.notion-image-block`|`<img>`||
+||`.notion-embed-block`|`<figure><iframe>`||
+||`.notion-bookmark-block`|`<a><figure>`||
+||`.notion-text-block`|||
+||`.notion-page-mention-token`|||
+||`.notion-database-mention-token`|||
+||`.notion-link-mention-token`|||
+||`.notion-user-mention-token`|||
+||`.notion-date-mention-token`|||
+||`.notion-alias-block`|`<a>`||
+||`.notion-unsupported-block`|`<!-- -->`, `<br>`||
+||`.notion-divider-block`|`<hr>`||
+||`.notion-header-block`|`<h1>`||
+||`.notion-sub_header-block`|`<h2>`||
+||`.notion-sub_sub_header-block`|`<h3>`||
+||`.notion-column_list-block`|`<div>`||
+||`.notion_column_list-block-vertical`|`<div>`||
+||`.notion-column-block`|`<div>`||
+||`.notion-bulleted_list-block`|`<ul>`||
+||`.notion-numbered_list-block`|`<ol>`||
+||`.notion-quote-block`|`<blockquote>`||
+||`.notion-code-block`|`<pre><code>`||
+||`.notion-to_do-block`|`<div><input type="checbkox">`||
+||`.notion-equation-block`|`<code>`||
+||`.notion-callout-block`|`<div>`||
+||`.notion-pdf-block`|`<figure><a>`||
+||`.notion-file-block`|`<figure><a>`||
+||`.notion-link_preview-block`|`<a>`||
+||`.notion-breadcrumb-block`|`<div>`||
+||`.notion-template-block`|`<figure>`||
+||`.notion-child_database-block`|`<figure>`||
+||`.notion-synced_block-block`|`<figure>`||
 
 # References
 - https://github.com/jekyll/minima
