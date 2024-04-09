@@ -65,11 +65,11 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 | CSS class     | HTML tag      | Usage |
 | ------------- | ------------- | --- |
-|notion-toggle-block|`<details>`||
 |notion-page-block|`<article>`||
 |notion-page-like-icon|||
 |notion-page-like-edit-icon|||
 |notion-page|||
+|notion-toggle-block|`<details>`||
 |notion-table_of_contents-block|||
 |notion-table-block|`<table>`||
 |notion-video-block|`<video>`, `<iframe>`||
@@ -81,31 +81,30 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-link-mention-token|||
 |notion-user-mention-token|||
 |notion-date-mention-token|||
-|notion-alias-block|||
-|notion-page-block|||
+|notion-alias-block|`<a>`||
 |notion-unsupported-block|||
 |notion-divider-block|`<hr>`||
 |notion-header-block|`<h1>`||
 |notion-sub_header-block|`<h2>`||
 |notion-sub_sub_header-block|`<h3>`||
 |notion-text-block|||
-|notion-column_list-block|||
-|notion_column_list-block-vertical|||
-|notion-column-block|||
+|notion-column_list-block|`<div>`||
+|notion_column_list-block-vertical|`<div>`||
+|notion-column-block|`<div>`||
 |notion-bulleted_list-block|`<ul>`||
 |notion-numbered_list-block|`<ol>`||
 |notion-quote-block|`<blockquote>`||
 |notion-code-block|`<pre><code>`||
 |notion-to_do-block|||
-|notion-synced_block-block|||
-|notion-equation-block|||
+|notion-equation-block|`<code>`||
 |notion-callout-block|||
 |notion-pdf-block|||
 |notion-file-block|||
+|notion-link_preview-block|`<a>`||
 |notion-breadcrumb-block|||
-|notion-template-block|||
-|notion-child_database-block|||
-|notion-link_preview-block|||
+|notion-template-block|`<figure>`||
+|notion-child_database-block|`<figure>`||
+|notion-synced_block-block|`<figure>`||
 
 # References
 - https://github.com/jekyll/minima
