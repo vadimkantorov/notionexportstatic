@@ -65,10 +65,10 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 | Notion block  | CSS class     | HTML tag      |
 | ------------- | ------------- | ------------- |
-||`.notion-page-block`|`<article>`|
-||`.notion-page-like-icon`||
-||`.notion-page-like-edit-icon`||
-||`.notion-page`||
+|`page`|`.notion-page-block`|`<article>`|
+|`page`|`.notion-page-like-icon`||
+|`page`|`.notion-page-like-edit-icon`||
+|`page`|`.notion-page`||
 |`toggle`|`.notion-toggle-block`|`<details>`|
 |`table_of_contents`|`.notion-table_of_contents-block`|`<ul>`|
 |`table`|`.notion-table-block`|`<table>`|
@@ -76,7 +76,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`image`|`.notion-image-block`|`<img>`|
 |`embed`|`.notion-embed-block`|`<figure><iframe>`|
 |`bookmark`|`.notion-bookmark-block`|`<a><figure>`|
-||`.notion-text-block`||
+|`paragraph`|`.notion-text-block`||
 |`mention`|`.notion-page-mention-token`||
 |`mention`|`.notion-database-mention-token`||
 |`mention`|`.notion-link-mention-token`||
@@ -91,8 +91,8 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`column_list`|`.notion-column_list-block`|`<div>`|
 |`column_list`|`.notion_column_list-block-vertical`|`<div>`|
 |`column`|`.notion-column-block`|`<div>`|
-||`.notion-bulleted_list-block`|`<ul>`|
-||`.notion-numbered_list-block`|`<ol>`|
+|`bulleted_list_item`|`.notion-bulleted_list-block`|`<ul>`|
+|`numbered_list_item`|`.notion-numbered_list-block`|`<ol>`|
 |`quote`|`.notion-quote-block`|`<blockquote>`|
 |`code`|`.notion-code-block`|`<pre><code>`|
 |`to_do`|`.notion-to_do-block`|`<div><input type="checbkox">`|
@@ -105,12 +105,6 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`template`|`.notion-template-block`|`<figure>`|
 |`child_database`|`.notion-child_database-block`|`<figure>`|
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
-
-numbered_list_item
-bulleted_list_item
-child_page
-paragraph
-page
 
 # References
 - https://github.com/jekyll/minima
