@@ -64,7 +64,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 # CSS classes
 
 | CSS class     | Usage         |
-| ------------- | -------------:|
+| ------------- | ------------- |
 |notion-toggle-block||
 |notion-page-block||
 |notion-page-like-icon||
@@ -107,37 +107,6 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-child_database-block||
 |notion-link_preview-block||
 |notion-video-block||
-|||
-|notion-color-text-default||
-|notion-color-bg-default ||
-|notion-color-pill-default||
-|notion-color-text-gray   ||
-|notion-color-bg-gray     ||
-|notion-color-pill-gray   ||
-|notion-color-text-brown  ||
-|notion-color-bg-brown    ||
-|notion-color-pill-brown  ||
-|notion-color-text-orange ||
-|notion-color-bg-orange   ||
-|notion-color-pill-orange ||
-|notion-color-text-yellow ||
-|notion-color-bg-yellow   ||
-|notion-color-pill-yellow ||
-|notion-color-text-green  ||
-|notion-color-bg-green    ||
-|notion-color-pill-green  ||
-|notion-color-text-blue   ||
-|notion-color-bg-blue     ||
-|notion-color-pill-blue   ||
-|notion-color-text-purple ||
-|notion-color-bg-purple   ||
-|notion-color-pill-purple ||
-|notion-color-text-pink   ||
-|notion-color-bg-pink     ||
-|notion-color-pill-pink   ||
-|notion-color-text-red    ||
-|notion-color-bg-red      ||
-|notion-color-pill-red    ||
 
 # References
 - https://github.com/jekyll/minima
