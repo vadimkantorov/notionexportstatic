@@ -74,8 +74,8 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-table-block|`<table>`||
 |notion-video-block|`<video>`, `<iframe>`||
 |notion-image-block|`<img>`||
-|notion-embed-block|`<iframe>`||
-|notion-bookmark-block|`<a>`||
+|notion-embed-block|`<figure><iframe>`||
+|notion-bookmark-block|`<a><figure>`||
 |notion-page-mention-token|||
 |notion-database-mention-token|||
 |notion-link-mention-token|||
@@ -98,8 +98,8 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-to_do-block|||
 |notion-equation-block|`<code>`||
 |notion-callout-block|||
-|notion-pdf-block|||
-|notion-file-block|||
+|notion-pdf-block|`<figure><a>`||
+|notion-file-block|`<figure><a>`||
 |notion-link_preview-block|`<a>`||
 |notion-breadcrumb-block|||
 |notion-template-block|`<figure>`||
