@@ -76,7 +76,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`image`|`.notion-image-block`|`<img>`|
 |`embed`|`.notion-embed-block`|`<figure><iframe>`|
 |`bookmark`|`.notion-bookmark-block`|`<a><figure>`|
-|`paragraph`|`.notion-text-block`||
+|`paragraph`|`.notion-text-block`|`<p>`, `<br>`|
 |`mention`|`.notion-page-mention-token`||
 |`mention`|`.notion-database-mention-token`||
 |`mention`|`.notion-link-mention-token`||
