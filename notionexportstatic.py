@@ -320,7 +320,7 @@ def get_block_rich_text(block): return block.get('rich_text', []) or block.get('
 def paragraph_is_empty(block, ctx): return block.get('has_children') is False and not get_plain_text(get_block_rich_text(block)).strip()
 
 def child_page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', **kwargs): return page2html(block, ctx, tag = tag, class_name = class_name, **kwargs)
-def unsupported2html(block, ctx, tag = 'div', class_name = 'notion-unsupported-block', comment = True, **ignored): return '\n<!--\n' * comment + html.escape(blocktag2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block.get('type', '') or block.get('object', '')}, selfclose = True)) + '\n-->\n' * comment
+def unsupported2html(block, ctx, tag = 'br', class_name = 'notion-unsupported-block', comment = True, **ignored): return '\n<!--\n' * comment + html.escape(blocktag2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block.get('type', '') or block.get('object', '')}, selfclose = True)) + '\n-->\n' * comment
 def divider2html(block, ctx, tag = 'hr', class_name = 'notion-divider-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, selfclose = True)
 def heading_12html(block, ctx, tag = 'h1', class_name = 'notion-header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
 def heading_22html(block, ctx, tag = 'h2', class_name = 'notion-sub_header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)

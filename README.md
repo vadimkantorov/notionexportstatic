@@ -70,19 +70,19 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-page-like-edit-icon|||
 |notion-page|||
 |notion-toggle-block|`<details>`||
-|notion-table_of_contents-block|||
+|notion-table_of_contents-block|`<ul>`||
 |notion-table-block|`<table>`||
 |notion-video-block|`<video>`, `<iframe>`||
 |notion-image-block|`<img>`||
 |notion-embed-block|`<iframe>`||
-|notion-bookmark-block|||
+|notion-bookmark-block|`<a>`||
 |notion-page-mention-token|||
 |notion-database-mention-token|||
 |notion-link-mention-token|||
 |notion-user-mention-token|||
 |notion-date-mention-token|||
 |notion-alias-block|`<a>`||
-|notion-unsupported-block|||
+|notion-unsupported-block|`<!-- -->`, `<br>`||
 |notion-divider-block|`<hr>`||
 |notion-header-block|`<h1>`||
 |notion-sub_header-block|`<h2>`||
