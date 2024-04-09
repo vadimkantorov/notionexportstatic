@@ -76,6 +76,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-image-block|`<img>`||
 |notion-embed-block|`<figure><iframe>`||
 |notion-bookmark-block|`<a><figure>`||
+|notion-text-block|||
 |notion-page-mention-token|||
 |notion-database-mention-token|||
 |notion-link-mention-token|||
@@ -87,7 +88,6 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-header-block|`<h1>`||
 |notion-sub_header-block|`<h2>`||
 |notion-sub_sub_header-block|`<h3>`||
-|notion-text-block|||
 |notion-column_list-block|`<div>`||
 |notion_column_list-block-vertical|`<div>`||
 |notion-column-block|`<div>`||
@@ -95,9 +95,9 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-numbered_list-block|`<ol>`||
 |notion-quote-block|`<blockquote>`||
 |notion-code-block|`<pre><code>`||
-|notion-to_do-block|||
+|notion-to_do-block|`<div><input type="checbkox">`||
 |notion-equation-block|`<code>`||
-|notion-callout-block|||
+|notion-callout-block|`<div>`||
 |notion-pdf-block|`<figure><a>`||
 |notion-file-block|`<figure><a>`||
 |notion-link_preview-block|`<a>`||
