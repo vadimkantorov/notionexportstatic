@@ -1,4 +1,5 @@
 # TODO: markdown: quote-tab
+# TODO: test.json does not download assets
 
 import os
 import re
@@ -330,7 +331,7 @@ def column2html(block, ctx, tag = 'div', class_name = 'notion-column-block'): re
 def bulleted_list_item2html(block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block'): return f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
 def numbered_list_item2html(block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block'): return f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end 
 def quote2html(block, ctx, tag = 'blockquote', class_name = 'notion-quote-block'): return textlike2html(block, ctx, tag = tag, class_name = class_name)
-def code2html(block, ctx, tag = 'code', class_name = 'notion-code-block'): return blocktag2html(block, ctx, tag = 'figure', attrs = {'data-language' : block['code'].get('language', '')}, class_name = class_name, set_html_contents_and_close = '<figcaption>{html_caption}</figcaption>\n<pre><{tag}>'.format(html_caption = richtext2html(block, ctx, caption = True), tag = tag) + richtext2html(block, ctx, rich_text = True) + f'</{tag}></pre>')
+def code2html(block, ctx, tag = 'code', class_name = 'notion-code-block'): return blocktag2html(block, ctx, tag = 'figure', attrs = {'data-language' : block['code'].get('language', '')}, class_name = class_name, set_html_contents_and_close = '<figcaption>{caption}</figcaption>\n<pre><{tag} class="language-{language}">\n'.format(language = block['code'].get('language', ''), caption = richtext2html(block, ctx, caption = True), tag = tag) + richtext2html(block, ctx, rich_text = True) + f'\n</{tag}></pre>')
 def to_do2html(block, ctx, tag = 'div', class_name = 'notion-to_do-block'): return textlike2html(block, ctx, tag = tag, class_name = class_name, checked = block.get(get_block_type(block), {}).get('checked', False))
 def synced_block2html(block, ctx, tag = 'figure', class_name = 'notion-synced_block-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{synced_from_block_id}</figcaption>\n{children}'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike2html(block, ctx)))
 def equation2html(block, ctx, tag = 'code', class_name = 'notion-equation-block', inline = False): return blocktag2html(block, ctx, tag = tag, class_name = class_name if not inline else class_name.replace('block', 'inline'), set_html_contents_and_close = html.escape(block['equation'].get('expression', '') or block.get('plain_text', '')))
@@ -733,7 +734,7 @@ def get_block_url(block):
     url = block.get('file', {}).get('url') or block.get('external', {}).get('url') or payload.get('file', {}).get('url') or payload.get('external', {}).get('url') or block.get('url') or block.get('href') or payload.get('url') or '' 
     return url
 
-def get_page_cover_url(block, ctx):
+def get_page_cover_url(block):
     payload = block.get('cover') or {}
     payload_type = payload.get('type', '')
     return payload.get(payload_type, {}).get('url', '')
@@ -928,7 +929,7 @@ def slugify(s, space = '_', lower = True):
     
     s = unicodedata.normalize('NFKC', s)
     s = s.lower() if lower else s
-    s = re.sub(regex, '', s)
+    s = re.sub(regex_bad_chars, '', s)
     #s = re.sub(r'[^-_\w]', space, s)
     s = re.sub(r'\s', space, s)
     return s
@@ -975,7 +976,7 @@ def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets
             (block_type + '-' + payload_type, get_block_url(block)),
         ]
 
-        assets_urls.extend( url for asset_type, asset_url in assets_types_urls if url and asset_type in download_assets_types and (exclude_datauri is False or not is_url_datauri(url)) )
+        assets_urls.extend( asset_url for asset_type, asset_url in assets_types_urls if asset_url and asset_type in download_assets_types and (exclude_datauri is False or not is_url_datauri(asset_url)) )
     return assets_urls
 
 def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_assets = {}, extdefault = '.bin'):
@@ -1177,7 +1178,6 @@ def notion2static(
     log_unsupported_blocks,
     log_urls,
 
-    html_cookies,
     html_details_open,
     html_columnlist_disable,
     html_link_to_page_index_html,
@@ -1378,7 +1378,6 @@ if __name__ == '__main__':
     parser.add_argument('--markdown-toc-page')
     parser.add_argument('--markdown-toggle', action = 'store_true')
     parser.add_argument('--markdown-frontmatter', action = 'store_true')
-    parser.add_argument('--html-cookies', action = 'store_true')
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
     parser.add_argument('--html-link-to-page-index-html', action = 'store_true')

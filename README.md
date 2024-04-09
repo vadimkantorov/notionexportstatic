@@ -63,11 +63,81 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 # CSS classes
 
-| CSS class     | Usage         | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 | 
+| CSS class     | Usage         |
+| ------------- | -------------:|
+|notion-toggle-block||
+|notion-page-block||
+|notion-page-like-icon||
+|notion-page-like-edit-icon||
+|notion-page||
+|notion-table_of_contents-block||
+|notion-table-block||
+|notion-video-block||
+|notion-image-block||
+|notion-embed-block||
+|notion-bookmark-block||
+|notion-page-mention-token||
+|notion-database-mention-token||
+|notion-link-mention-token||
+|notion-user-mention-token||
+|notion-date-mention-token||
+|notion-alias-block||
+|notion-page-block||
+|notion-unsupported-block||
+|notion-divider-block||
+|notion-header-block||
+|notion-sub_header-block||
+|notion-sub_sub_header-block||
+|notion-text-block||
+|notion-column_list-block||
+|notion_column_list-block-vertical||
+|notion-column-block||
+|notion-bulleted_list-block||
+|notion-numbered_list-block||
+|notion-quote-block||
+|notion-code-block||
+|notion-to_do-block||
+|notion-synced_block-block||
+|notion-equation-block||
+|notion-callout-block||
+|notion-pdf-block||
+|notion-file-block||
+|notion-breadcrumb-block||
+|notion-template-block||
+|notion-child_database-block||
+|notion-link_preview-block||
+|notion-video-block||
+|||
+|notion-color-text-default||
+|notion-color-bg-default ||
+|notion-color-pill-default||
+|notion-color-text-gray   ||
+|notion-color-bg-gray     ||
+|notion-color-pill-gray   ||
+|notion-color-text-brown  ||
+|notion-color-bg-brown    ||
+|notion-color-pill-brown  ||
+|notion-color-text-orange ||
+|notion-color-bg-orange   ||
+|notion-color-pill-orange ||
+|notion-color-text-yellow ||
+|notion-color-bg-yellow   ||
+|notion-color-pill-yellow ||
+|notion-color-text-green  ||
+|notion-color-bg-green    ||
+|notion-color-pill-green  ||
+|notion-color-text-blue   ||
+|notion-color-bg-blue     ||
+|notion-color-pill-blue   ||
+|notion-color-text-purple ||
+|notion-color-bg-purple   ||
+|notion-color-pill-purple ||
+|notion-color-text-pink   ||
+|notion-color-bg-pink     ||
+|notion-color-pill-pink   ||
+|notion-color-text-red    ||
+|notion-color-bg-red      ||
+|notion-color-pill-red    ||
 
 # References
 - https://github.com/jekyll/minima

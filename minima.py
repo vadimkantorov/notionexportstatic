@@ -4,7 +4,7 @@
 def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
     divider = block2html(dict(type = 'divider'), ctx, class_name = '')
-    header_breadcrumb = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
+    nav = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
     main_toc = block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * bool(len(page_ids) > 1)
     
     snippets = snippets_default | snippets
@@ -16,10 +16,9 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     res = snippets.get('page_html', '') \
         .replace('{{ head_html }}', snippets.get('head_html', '')) \
         .replace('{{ style_css }}', style_css) \
-        .replace('{{ header_html }}', header_breadcrumb) \
+        .replace('{{ nav_html }}', nav) \
         .replace('{{ bodyheader_html }}'   , snippets.get('bodyheader_html', '')) \
         .replace('{{ bodyfooter_html }}'   , snippets.get('bodyfooter_html', '')) \
-        .replace('{{ cookiesnotice_html }}', snippets.get('cookiesnotice_html', '') * bool(ctx.get('html_cookies', False))) \
         .replace('{{ main_html }}', main_toc + main) \
         .replace('{{ site_title }}'                   , ctx.get('meta_tags', {}).get('site_title', '')) \
         .replace('{{ site_url_absolute }}'            , ctx.get('meta_tags', {}).get('site_url_absolute', '')) \
@@ -40,42 +39,49 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
 def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
     divider = '\n' + block2markdown(dict(type = 'divider'), ctx) + '\n'
-    header_breadcrumb = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = (header_breadcrumb + divider + '\n' + block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * bool(len(page_ids) > 1)
+    nav = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
+    main_toc = (nav + divider + '\n' + block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * bool(len(page_ids) > 1)
 
     main = divider.join(block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
     res = main_toc + main
     return res
 
-katex_html = '''
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+emoji_svg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">{{ emoji }}</text></svg>
+'''
 
-<!-- The loading of KaTeX is deferred to speed up page rendering -->
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
-
-<!-- To automatically render math in text elements, include the auto-render extension: -->
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+privacynotice_html = '''
+<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a href="{{ PRIVACYNOTICE_URL }}">privacy and privacy notice</a>:&nbsp;<button onclick="document.cookie='accepted';">Accept</button></div>
 '''
 
 googleanalytics_html = '''
-<!-- Google tag (gtag.js) -->
+<!-- https://developers.google.com/tag-platform/gtagjs/install -->
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_TAG_ID }}"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 if(document.cookie) {
-gtag('js', new Date());
-gtag('config', '{{ GOOGLE_ANALYTICS_TAG_ID }}');
+console.log("docookie");
+//gtag('js', new Date());
+//gtag('config', '{{ GOOGLE_ANALYTICS_TAG_ID }}');
+}
+else
+{
+console.log("nocookie");
 }
 </script>
 '''
 
-cookiesnotice_html = '''
-<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: red; color: white; text-align: center;">this is a GDPR cookies notice<button onclick="document.cookie = 'accepted';">Accept</button></div>
+katex_html = '''
+<!-- https://katex.org/docs/autorender -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous" onload="document.querySelectorAll('code.notion-equation-block').forEach(elem=>katex.render(elem.innerText,elem,{displayMode:true,throwOnError:false}));document.querySelectorAll('code.notion-equation-inline').forEach(elem=>katex.render(elem.innerText,elem,{displayMode:false,throwOnError:false}));"></script>
 '''
 
-emoji_svg = '''
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">{{ emoji }}</text></svg>
+highlightjs_html = '''
+<!-- https://highlightjs.org/#as-html-tags -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" defer onload="hljs.highlightAll();"></script>
 '''
 
 head_html = '''
@@ -87,7 +93,7 @@ head_html = '''
 <!-- <meta name="yandex-verification"          content="{site_verification_yandex}"   /> -->
 <!-- <meta name="baidu-site-verification"      content="{site_verification_baidu}"    /> -->
 <!-- <meta name="facebook-domain-verification" content="{site_verification_facebook}" /> -->
-'''
+''' + privacynotice_html.replace('{{ PRIVACYNOTICE_URL }}', '/privacynotice.html') + googleanalytics_html.replace('{{ GOOGLE_ANALYTICS_ID }}', 'my_google_analytics_id') + katex_html + highlightjs_html
 
 page_html =  '''
 <!DOCTYPE html>
@@ -122,11 +128,10 @@ page_html =  '''
         {{ head_html }}
     </head>
     <body>
-        {{ cookiesnotice_html }}
         {{ bodyheader_html }}
         <header class="site-header notion-topbar">
             <nav>
-                {{ header_html }}
+                {{ nav_html }}
             </nav>
             
             <nav class="site-nav">
@@ -1738,8 +1743,7 @@ snippets_default = dict(
     notioncolors_classic_css = notioncolors_classic_css,
     minimacss_classic_css = minimacss_classic_css,
     page_html = page_html,
-    cookiesnotice_html = cookiesnotice_html,
-    head_html = head_html
+    head_html = head_html,
 )
 
 if __name__ == '__main__':
