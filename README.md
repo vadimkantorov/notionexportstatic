@@ -63,7 +63,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 # CSS classes
 
-| CSS class     | Usage         | Tag |
+| CSS class     | HTML tag      | Usage |
 | ------------- | ------------- | --- |
 |notion-toggle-block|||
 |notion-page-block|||
