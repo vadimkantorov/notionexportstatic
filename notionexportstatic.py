@@ -1,5 +1,6 @@
 # TODO: markdown: quote-tab
 # TODO: test.json does not download assets
+# TODO: child_page CSS block
 
 import os
 import re
@@ -21,16 +22,15 @@ import urllib.request
 import xml.dom.minidom
 
 mimedb = {
-    '.gif' : 'image/gif', 
-    '.jpg' : 'image/jpeg', 
+    '.gif'  : 'image/gif', 
+    '.jpg'  : 'image/jpeg', 
     '.jpeg' : 'image/jpeg', 
-    '.png' : 'image/png', 
-    '.svg' : 'image/svg+xml', 
-    '.webp': 'image/webp', 
-    '.pdf' : 'application/pdf', 
-    '.txt' : 'text/plain'
+    '.png'  : 'image/png', 
+    '.svg'  : 'image/svg+xml', 
+    '.webp' : 'image/webp', 
+    '.pdf'  : 'application/pdf', 
+    '.txt'  : 'text/plain'
 }
-
 mimedefault = 'application/octet-stream'
 
 headers = {

@@ -65,10 +65,10 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 | Notion block  | CSS class     | HTML tag      |
 | ------------- | ------------- | ------------- |
-|`page`|`.notion-page-block`|`<article>`|
-|`page`|`.notion-page-like-icon`||
-|`page`|`.notion-page-like-edit-icon`||
-|`page`|`.notion-page`||
+|`page`|`.notion-page-block`|`<h1>`|
+|`page`|`.notion-page-like-icon`|`<a>`|
+|`page`|`.notion-page-like-edit-icon`|`<a>`|
+|`page`|`.notion-page`|`<article>`|
 |`toggle`|`.notion-toggle-block`|`<details>`|
 |`table_of_contents`|`.notion-table_of_contents-block`|`<ul>`|
 |`table`|`.notion-table-block`|`<table>`|
@@ -95,7 +95,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`numbered_list_item`|`.notion-numbered_list-block`|`<ol>`|
 |`quote`|`.notion-quote-block`|`<blockquote>`|
 |`code`|`.notion-code-block`|`<pre><code>`|
-|`to_do`|`.notion-to_do-block`|`<div><input type="checbkox">`|
+|`to_do`|`.notion-to_do-block`|`<div><input type="checkbox">`|
 |`equation`|`.notion-equation-block`|`<code>`|
 |`callout`|`.notion-callout-block`|`<div>`|
 |`pdf`|`.notion-pdf-block`|`<figure><a>`|
