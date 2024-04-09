@@ -65,16 +65,16 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 | CSS class     | HTML tag      | Usage |
 | ------------- | ------------- | --- |
-|notion-toggle-block|||
-|notion-page-block|||
+|notion-toggle-block|`<details>`||
+|notion-page-block|`<article>`||
 |notion-page-like-icon|||
 |notion-page-like-edit-icon|||
 |notion-page|||
 |notion-table_of_contents-block|||
-|notion-table-block|||
-|notion-video-block|||
-|notion-image-block|||
-|notion-embed-block|||
+|notion-table-block|`<table>`||
+|notion-video-block|`<video>`, `<iframe>`||
+|notion-image-block|`<img>`||
+|notion-embed-block|`<iframe>`||
 |notion-bookmark-block|||
 |notion-page-mention-token|||
 |notion-database-mention-token|||
@@ -84,18 +84,18 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-alias-block|||
 |notion-page-block|||
 |notion-unsupported-block|||
-|notion-divider-block|||
-|notion-header-block|||
-|notion-sub_header-block|||
-|notion-sub_sub_header-block|||
+|notion-divider-block|`<hr>`||
+|notion-header-block|`<h1>`||
+|notion-sub_header-block|`<h2>`||
+|notion-sub_sub_header-block|`<h3>`||
 |notion-text-block|||
 |notion-column_list-block|||
 |notion_column_list-block-vertical|||
 |notion-column-block|||
-|notion-bulleted_list-block|||
-|notion-numbered_list-block|||
-|notion-quote-block|||
-|notion-code-block|||
+|notion-bulleted_list-block|`<ul>`||
+|notion-numbered_list-block|`<ol>`||
+|notion-quote-block|`<blockquote>`||
+|notion-code-block|`<pre><code>`||
 |notion-to_do-block|||
 |notion-synced_block-block|||
 |notion-equation-block|||
@@ -106,7 +106,6 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-template-block|||
 |notion-child_database-block|||
 |notion-link_preview-block|||
-|notion-video-block|||
 
 # References
 - https://github.com/jekyll/minima
