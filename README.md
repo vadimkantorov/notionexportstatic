@@ -77,11 +77,11 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`embed`|`.notion-embed-block`|`<figure><iframe>`|
 |`bookmark`|`.notion-bookmark-block`|`<a><figure>`|
 |`paragraph`|`.notion-text-block`|`<p>`, `<br>`|
-|`mention`|`.notion-page-mention-token`||
-|`mention`|`.notion-database-mention-token`||
-|`mention`|`.notion-link-mention-token`||
-|`mention`|`.notion-user-mention-token`||
-|`mention`|`.notion-date-mention-token`||
+|`mention`|`.notion-page-mention-token`|`<a>`|
+|`mention`|`.notion-database-mention-token`|`<a>`|
+|`mention`|`.notion-link-mention-token`|`<a>`|
+|`mention`|`.notion-user-mention-token`|`<strong>`|
+|`mention`|`.notion-date-mention-token`|`<strong>`|
 |`link_to_page`|`.notion-alias-block`|`<a>`|
 |`unsupported`|`.notion-unsupported-block`|`<!-- -->`, `<br>`|
 |`divider`|`.notion-divider-block`|`<hr>`|
