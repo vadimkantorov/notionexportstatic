@@ -101,7 +101,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |notion-pdf-block|`<figure><a>`||
 |notion-file-block|`<figure><a>`||
 |notion-link_preview-block|`<a>`||
-|notion-breadcrumb-block|||
+|notion-breadcrumb-block|`<div>`||
 |notion-template-block|`<figure>`||
 |notion-child_database-block|`<figure>`||
 |notion-synced_block-block|`<figure>`||
