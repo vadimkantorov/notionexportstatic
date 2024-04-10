@@ -65,6 +65,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 | Notion block  | CSS class     | HTML tag      |
 | ------------- | ------------- | ------------- |
+||`.notion-block`||
 |`page`|`.notion-page-block`|`<h1>`|
 |`page`|`.notion-page-like-icon`|`<a>`|
 |`page`|`.notion-page-like-edit-icon`|`<a>`|

@@ -22,20 +22,22 @@ import urllib.request
 import xml.dom.minidom
 
 mimedb = {
-    '.gif'  : 'image/gif', 
-    '.jpg'  : 'image/jpeg', 
-    '.jpeg' : 'image/jpeg', 
-    '.png'  : 'image/png', 
-    '.svg'  : 'image/svg+xml', 
-    '.webp' : 'image/webp', 
-    '.pdf'  : 'application/pdf', 
-    '.txt'  : 'text/plain'
+    '.gif'      : 'image/gif', 
+    '.jpg'      : 'image/jpeg', 
+    '.jpeg'     : 'image/jpeg', 
+    '.png'      : 'image/png', 
+    '.svg'      : 'image/svg+xml', 
+    '.webp'     : 'image/webp', 
+    '.pdf'      : 'application/pdf', 
+    '.txt'      : 'text/plain'
 }
-mimedefault = 'application/octet-stream'
+mimedefault     = 'application/octet-stream'
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
 }
+
+##############################
 
 def notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes):
     import notion_client
@@ -46,26 +48,41 @@ def notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes):
     notionjson = dict(pages = notion_pages_and_databases, unix_seconds_downloaded = int(time.time()))
     return notionjson
 
+def notionapi_retrieve_children_inplace(block, notionapi):
+    print('block', block.get('id'), block.get('type'))
+    if block['has_children']:
+        block['children'] = []
+        while True:
+            if start_cursor is None:
+                blocks = notionapi.blocks.children.list(block['id'])
+            prev_cursor = blocks['next_cursor']
+            block['children'].extend(blocks['results'])
+            if start_cursor is None or blocks['has_more'] is False:
+                break  
+        for subblock in block['children']:
+            notionapi_retrieve_children_inplace(subblock, notionapi)
+
+def notionapi_retrieve_children(notion_page_id_no_dashes, notionapi)
+    children = []
+    start_cursor = None
+    while True:
+        if page_type == 'page' or page_type == 'child_page':
+            blocks = notionapi.blocks.children.list(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+        elif page_type == 'database':
+            blocks = notionapi.databases.query(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+        start_cursor = blocks['next_cursor']
+        children += blocks['results']
+        if start_cursor is None or blocks['has_more'] is False:
+            break 
+    return children
+
 def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_dashes, notion_pages_and_databases = {}):
     # https://developers.notion.com/reference/retrieve-a-page
     # https://developers.notion.com/reference/retrieve-a-page-property
     # https://developers.notion.com/reference/retrieve-a-block
     # https://developers.notion.com/reference/get-block-children
     # https://developers.notion.com/reference/retrieve-a-database
-    def notionapi_blocks_children_list(block, notionapi):
-        print('block', block.get('id'), block.get('type'))
-        if block['has_children']:
-            block['children'] = []
-            while True:
-                if start_cursor is None:
-                    blocks = notionapi.blocks.children.list(block['id'])
-                prev_cursor = blocks['next_cursor']
-                block['children'].extend(blocks['results'])
-                if start_cursor is None or blocks['has_more'] is False:
-                    break  
-            for subblock in block['children']:
-                notionapi_blocks_children_list(subblock, notionapi)
-        return block
+
     page_type, page = None, {}
     for k, f in [('page', notionapi.pages.retrieve), ('database', notionapi.databases.retrieve), ('child_page', notionapi.blocks.retrieve)]:
         try:
@@ -79,24 +96,17 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
     if not page_type:
         return
     print(page_type, page['id'])
-    start_cursor = None
     notion_pages_and_databases[page['id']] = page
-    notion_pages_and_databases[page['id']]['blocks'] = []
-    while True:
-        if page_type == 'page' or page_type == 'child_page':
-            blocks = notionapi.blocks.children.list(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
-        elif page_type == 'database':
-            blocks = notionapi.databases.query(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
-        start_cursor = blocks['next_cursor']
-        notion_pages_and_databases[page['id']]['blocks'].extend(blocks['results'])
-        if start_cursor is None or blocks['has_more'] is False:
-            break  
+    notion_pages_and_databases[page['id']]['blocks'] = notionapi_retrieve_children(notion_page_id_no_dashes, notionapi)
+
     for i_block, block in enumerate(notion_pages_and_databases[page['id']]['blocks']):
+        print(page_type, page['id'], 'childblock', block['id'], block['type'])
+
         if page_type == 'page':
             if block['type'] in ['page', 'child_page', 'child_database']:
                 notionapi_retrieve_recursively(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
             else:
-                block = notionapi_blocks_children_list(block, notionapi)
+                notionapi_retrieve_children_inplace(block, notionapi)
                 notion_pages_and_databases[page['id']]['blocks'][i_block] = block
         elif page_type == 'database':
             block['type'] = 'db_entry'
@@ -965,6 +975,7 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False):
 
 def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets_types = []):
     for block in blocks:
+        print('discover_assets', get_block_type(block), block['id'])
         discover_assets(block.get('children', []) + block.get('blocks', []), assets_urls, exclude_datauri = exclude_datauri, download_assets_types = download_assets_types)
         block_type = get_block_type(block)
         payload = block.get(block_type) or {}
@@ -975,6 +986,8 @@ def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets
             ('icon', get_block_url(block.get('icon') or {})),
             (block_type + '-' + payload_type, get_block_url(block)),
         ]
+
+        print(assets_types_urls)
 
         assets_urls.extend( asset_url for asset_type, asset_url in assets_types_urls if asset_url and asset_type in download_assets_types and (exclude_datauri is False or not is_url_datauri(asset_url)) )
     return assets_urls
@@ -1209,10 +1222,14 @@ def notion2static(
     notion_page_id = config.get('notion_page_id', [])
 
     notionjson = json.load(open(input_json)) if input_json else notionapi_retrieve_page_list(notion_token, resolve_page_ids_no_dashes(notion_page_id, notion_slugs)) if notion_page_id else {}
+    
+    json.dump(notionjson, open('debug2.json', 'w'), ensure_ascii = False, indent = 4)
+    import sys; sys.exit(1)
 
     notion_pages = notionjson.get('pages', {})
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
 
+    breakpoint()
     notion_pages_flat = copy.deepcopy(notion_pages)
     child_pages_by_parent_id = {}
     for page_id, page in notion_pages_flat.items():
@@ -1238,8 +1255,11 @@ def notion2static(
     ctx['child_pages_by_parent_id'] = child_pages_by_parent_id
     ctx['id2block'] = get_block_index(ctx)
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx)
-    ctx['page_info'] = get_page_info(notion_pages_flat, ctx)
+    ctx['page_info'] = get_page_info(ctx['pages'], ctx)
     ctx['assets'] = notionjson.get('assets', {}) or download_and_extract_assets(discover_assets(notion_pages.values(), [], exclude_datauri = False, download_assets_types = ctx['download_assets_types']), ctx, notion_assets = {})
+    
+    json.dump(dict(ctx_pages = ctx['pages'], notion_pages = notion_pages), open('debug.json', 'w'), ensure_ascii = False, indent = 4)
+    import sys; sys.exit(1)
 
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
@@ -1369,7 +1389,7 @@ if __name__ == '__main__':
     parser.add_argument('--edit-url')
     parser.add_argument('--log-unsupported-blocks')
     parser.add_argument('--log-urls')
-    parser.add_argument('--download-assets-types', nargs = '*', choices = ['icon', 'cover', 'image-external', 'image-file', 'video-external', 'video-file', 'pdf-external', 'pdf-file', 'file-external', 'file-file'], default = ['cover', 'icon', 'image-file', 'image-external' 'pdf-file', 'file-file', 'video-file'])
+    parser.add_argument('--download-assets-types', nargs = '*', choices = ['icon', 'cover', 'image-external', 'image-file', 'video-external', 'video-file', 'pdf-external', 'pdf-file', 'file-external', 'file-file'], default = ['cover', 'icon', 'image-file', 'image-external', 'pdf-file', 'file-file', 'video-file'])
     parser.add_argument('--extract-assets', action = 'store_true')
     parser.add_argument('--slugs', nargs = '*', default = [])
     parser.add_argument('--use-page-title-for-missing-slug', action = 'store_true')
