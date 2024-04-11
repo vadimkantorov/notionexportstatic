@@ -1,18 +1,18 @@
 # TODO: scroll-to-top link in bottom-right over-the-top
 # TODO: burger menu example for global toc
 
-def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lambda page, ctx, **kwargs: ''), snippets = {}):
+def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
-    divider = block2html(dict(type = 'divider'), ctx, class_name = '')
-    nav = block2html(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = block2html(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * bool(len(page_ids) > 1)
+    divider = render_block(dict(type = 'divider'), ctx, class_name = '')
+    nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
+    main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * bool(len(page_ids) > 1)
     
     snippets = snippets_default | snippets
     style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
     
     emoji_datauri = 'data:image/svg+xml,' + emoji_svg.replace('{{ emoji }}', ctx.get('meta_tags', {}).get('emoji') or '📜').translate({ord('<') : '%3C', ord('>') : '%3E', ord('"') : "'"}).strip()
     
-    main = divider.join(block2html(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
+    main = divider.join(render_block(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
     res = snippets.get('page_html', '') \
         .replace('{{ head_html }}', snippets.get('head_html', '')) \
         .replace('{{ style_css }}', style_css) \
@@ -36,13 +36,13 @@ def sitepages2html(page_ids = [], ctx = {}, notion_pages = {}, block2html = (lam
     
     return res
 
-def sitepages2markdown(page_ids = [], ctx = {}, notion_pages = {}, block2markdown = (lambda page, ctx, **kwargs: ''), snippets = {}):
+def sitepages_2markdown(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
-    divider = '\n' + block2markdown(dict(type = 'divider'), ctx) + '\n'
-    nav = block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = (nav + divider + '\n' + block2markdown(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * bool(len(page_ids) > 1)
+    divider = '\n' + render_block(dict(type = 'divider'), ctx) + '\n'
+    nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
+    main_toc = (nav + divider + '\n' + render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * bool(len(page_ids) > 1)
 
-    main = divider.join(block2markdown(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + block2markdown(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+    main = divider.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
     res = main_toc + main
     return res
 
