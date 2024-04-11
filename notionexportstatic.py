@@ -325,39 +325,37 @@ def link_to_page2html(block, ctx, tag = 'a', caption = None, line_break = True, 
     caption = caption if caption is not None else '{icon}{page_emoji} {page_title}'.format(icon = icon, page_title = html.escape(link_to_page_info['page_title']), page_emoji = link_to_page_info['page_emoji'])
     return blocktag2html(block, ctx, tag = tag, attrs = dict(href = link_to_page_info['href']), class_name = class_name, set_html_contents_and_close = caption) + '<br/>' * line_break
 
-def get_block_rich_text(block): return block.get('rich_text', []) or block.get('text', []) or block.get(get_block_type(block), {}).get('rich_text', []) or block.get(get_block_type(block), {}).get('text', []) or []
+get_block_rich_text = lambda block: block.get('rich_text', []) or block.get('text', []) or block.get(get_block_type(block), {}).get('rich_text', []) or block.get(get_block_type(block), {}).get('text', []) or []
 
-def paragraph_is_empty(block, ctx): return block.get('has_children') is False and not get_plain_text(get_block_rich_text(block)).strip()
+paragraph_is_empty = lambda block, ctx: block.get('has_children') is False and not get_plain_text(get_block_rich_text(block)).strip()
 
-def child_page2html(block, ctx, tag = 'article', class_name = 'notion-page-block', **kwargs): return page2html(block, ctx, tag = tag, class_name = class_name, **kwargs)
-def unsupported2html(block, ctx, tag = 'br', class_name = 'notion-unsupported-block', comment = True, **ignored): return '\n<!--\n' * comment + html.escape(blocktag2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block.get('type', '') or block.get('object', '')}, selfclose = True)) + '\n-->\n' * comment
-def divider2html(block, ctx, tag = 'hr', class_name = 'notion-divider-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, selfclose = True)
-def heading_12html(block, ctx, tag = 'h1', class_name = 'notion-header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
-def heading_22html(block, ctx, tag = 'h2', class_name = 'notion-sub_header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
-def heading_32html(block, ctx, tag = 'h3', class_name = 'notion-sub_sub_header-block'): return headinglike2html(block, ctx, tag = tag, class_name = class_name)
-def paragraph2html(block, ctx, tag = 'p', class_name = 'notion-text-block'): return blocktag2html(block, ctx, tag = 'br', class_name = class_name, selfclose = True) if paragraph_is_empty(block, ctx) else textlike2html(block, ctx, tag = tag, class_name = class_name)
-def column_list2html(block, ctx, tag = 'div', class_name = 'notion-column_list-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name + ' notion_column_list-block-vertical' * (ctx['html_columnlist_disable'] is True), set_html_contents_and_close = childrenlike2html(block, ctx))
-def column2html(block, ctx, tag = 'div', class_name = 'notion-column-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = childrenlike2html(block, ctx, tag = tag)) 
-def bulleted_list_item2html(block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block'): return f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
-def numbered_list_item2html(block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block'): return f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end 
-def quote2html(block, ctx, tag = 'blockquote', class_name = 'notion-quote-block'): return textlike2html(block, ctx, tag = tag, class_name = class_name)
-def code2html(block, ctx, tag = 'code', class_name = 'notion-code-block'): return blocktag2html(block, ctx, tag = 'figure', attrs = {'data-language' : block['code'].get('language', '')}, class_name = class_name, set_html_contents_and_close = '<figcaption>{caption}</figcaption>\n<pre><{tag} class="language-{language}">\n'.format(language = block['code'].get('language', ''), caption = richtext2html(block, ctx, caption = True), tag = tag) + richtext2html(block, ctx, rich_text = True) + f'\n</{tag}></pre>')
-def to_do2html(block, ctx, tag = 'div', class_name = 'notion-to_do-block'): return textlike2html(block, ctx, tag = tag, class_name = class_name, checked = block.get(get_block_type(block), {}).get('checked', False))
-def synced_block2html(block, ctx, tag = 'figure', class_name = 'notion-synced_block-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{synced_from_block_id}</figcaption>\n{children}'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike2html(block, ctx)))
-def equation2html(block, ctx, tag = 'code', class_name = 'notion-equation-block', inline = False): return blocktag2html(block, ctx, tag = tag, class_name = class_name if not inline else class_name.replace('block', 'inline'), set_html_contents_and_close = html.escape(block['equation'].get('expression', '') or block.get('plain_text', '')))
-def callout2html(block, ctx, tag = 'p', class_name = 'notion-callout-block'): return blocktag2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2html(block, ctx, tag = tag)) + '</div>\n'
-
-def pdf2html(block, ctx, tag = 'a', class_name = 'notion-pdf-block'): return embed2html(block, ctx, class_name = class_name, caption = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag) if not is_url_datauri(get_asset_url(block, ctx)) else '<div><b>{caption}</b></div>'.format(caption = html.escape(get_url_basename(get_block_url(block)))) )
-def file2html(block, ctx, tag = 'a', class_name = 'notion-file-block'): return linklike2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
-
-def breadcrumb2html(block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
-def template2html(block, ctx, tag = 'figure', class_name = 'notion-template-block'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{rich_text}</figcaption>\n{children}'.format(rich_text = richtext2html(block, ctx, rich_text = True), children = childrenlike2html(block, ctx)))
-def child_database2html(block, ctx, tag = 'figure', class_name = 'notion-child_database-block', untitled = '???'): return blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption><strong>{child_database_title}</strong></figcaption>'.format(child_database_title = html.escape(block['child_database'].get('title') or untitled)))
-def link_preview2html(block, ctx, tag = 'a', class_name = 'notion-link_preview-block'): return linklike2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
+child_page2html = lambda block, ctx, tag = 'article', class_name = 'notion-page-block', **kwargs: page2html(block, ctx, tag = tag, class_name = class_name, **kwargs)
+unsupported2html = lambda block, ctx, tag = 'br', class_name = 'notion-unsupported-block', comment = True, **ignored: '\n<!--\n' * comment + html.escape(blocktag2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block.get('type', '') or block.get('object', '')}, selfclose = True)) + '\n-->\n' * comment
+divider2html = lambda block, ctx, tag = 'hr', class_name = 'notion-divider-block': blocktag2html(block, ctx, tag = tag, class_name = class_name, selfclose = True)
+heading_12html = lambda block, ctx, tag = 'h1', class_name = 'notion-header-block': headinglike2html(block, ctx, tag = tag, class_name = class_name)
+heading_22html = lambda block, ctx, tag = 'h2', class_name = 'notion-sub_header-block': headinglike2html(block, ctx, tag = tag, class_name = class_name)
+heading_32html = lambda block, ctx, tag = 'h3', class_name = 'notion-sub_sub_header-block': headinglike2html(block, ctx, tag = tag, class_name = class_name)
+paragraph2html = lambda block, ctx, tag = 'p', class_name = 'notion-text-block': blocktag2html(block, ctx, tag = 'br', class_name = class_name, selfclose = True) if paragraph_is_empty(block, ctx) else textlike2html(block, ctx, tag = tag, class_name = class_name)
+column_list2html = lambda block, ctx, tag = 'div', class_name = 'notion-column_list-block': blocktag2html(block, ctx, tag = tag, class_name = class_name + ' notion_column_list-block-vertical' * (ctx['html_columnlist_disable'] is True), set_html_contents_and_close = childrenlike2html(block, ctx))
+column2html = lambda block, ctx, tag = 'div', class_name = 'notion-column-block': blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = childrenlike2html(block, ctx, tag = tag)) 
+bulleted_list_item2html = lambda block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block': f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
+numbered_list_item2html = lambda block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block': f'<{tag} class="{class_name}">\n' * begin + textlike2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end 
+quote2html = lambda block, ctx, tag = 'blockquote', class_name = 'notion-quote-block': textlike2html(block, ctx, tag = tag, class_name = class_name)
+code2html = lambda block, ctx, tag = 'code', class_name = 'notion-code-block': blocktag2html(block, ctx, tag = 'figure', attrs = {'data-language' : block['code'].get('language', '')}, class_name = class_name, set_html_contents_and_close = '<figcaption>{caption}</figcaption>\n<pre><{tag} class="language-{language}">\n'.format(language = block['code'].get('language', ''), caption = richtext2html(block, ctx, caption = True), tag = tag) + richtext2html(block, ctx, rich_text = True) + f'\n</{tag}></pre>')
+to_do2html = lambda block, ctx, tag = 'div', class_name = 'notion-to_do-block': textlike2html(block, ctx, tag = tag, class_name = class_name, checked = block.get(get_block_type(block), {}).get('checked', False))
+synced_block2html = lambda block, ctx, tag = 'figure', class_name = 'notion-synced_block-block': blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{synced_from_block_id}</figcaption>\n{children}'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike2html(block, ctx)))
+equation2html = lambda block, ctx, tag = 'code', class_name = 'notion-equation-block', inline = False: blocktag2html(block, ctx, tag = tag, class_name = class_name if not inline else class_name.replace('block', 'inline'), set_html_contents_and_close = html.escape(block['equation'].get('expression', '') or block.get('plain_text', '')))
+callout2html = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2html(block, ctx, tag = tag)) + '</div>\n'
+pdf2html = lambda block, ctx, tag = 'a', class_name = 'notion-pdf-block': embed2html(block, ctx, class_name = class_name, caption = linklike2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag) if not is_url_datauri(get_asset_url(block, ctx)) else '<div><b>{caption}</b></div>'.format(caption = html.escape(get_url_basename(get_block_url(block)))) )
+file2html = lambda block, ctx, tag = 'a', class_name = 'notion-file-block': linklike2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
+breadcrumb2html = lambda block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;': blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
+template2html = lambda block, ctx, tag = 'figure', class_name = 'notion-template-block': blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{rich_text}</figcaption>\n{children}'.format(rich_text = richtext2html(block, ctx, rich_text = True), children = childrenlike2html(block, ctx)))
+child_database2html = lambda block, ctx, tag = 'figure', class_name = 'notion-child_database-block', untitled = '???': blocktag2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption><strong>{child_database_title}</strong></figcaption>'.format(child_database_title = html.escape(block['child_database'].get('title') or untitled)))
+link_preview2html = lambda block, ctx, tag = 'a', class_name = 'notion-link_preview-block': linklike2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
 
 ##############################
 
-def childrenlike2markdown(block, ctx, tag = '', newline = '\n'): return newline.join(block2markdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
+childrenlike2markdown = lambda block, ctx, tag = '', newline = '\n': newline.join(block2markdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
 
 def textlike2markdown(block, ctx, tag = '', icon = '', checked = None, title_mode = False):
     rich_text = richtext2markdown(block, ctx, rich_text = True, title_mode = title_mode)
@@ -492,37 +490,31 @@ def page2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     #res = res.replace('\n\n\n', '\n\n')
     return res
 
-def child_page2markdown(block, ctx): return page2markdown(block, ctx)
-def unsupported2markdown(block, ctx): return ' *unsupported notion block [{block_id}]* '.format(block_id = block.get('id', ''))
-def divider2markdown(block, ctx, tag = '---'): return tag
-def heading_12markdown(block, ctx, tag = '# '  ): return headinglike2markdown(block, ctx, tag = tag) 
-def heading_22markdown(block, ctx, tag = '## ' ): return headinglike2markdown(block, ctx, tag = tag) 
-def heading_32markdown(block, ctx, tag = '### '): return headinglike2markdown(block, ctx, tag = tag) 
-def paragraph2markdown(block, ctx): return '\n\n' if paragraph_is_empty(block, ctx) else textlike2markdown(block, ctx)
-def column_list2markdown(block, ctx): return childrenlike2markdown(block, ctx)
-def column2markdown(block, ctx):      return childrenlike2markdown(block, ctx)
-def bulleted_list_item2markdown(block, ctx, tag = '* '): return tag + textlike2markdown(block, ctx)
-def numbered_list_item2markdown(block, ctx, tag = '1. '): return tag + textlike2markdown(block, ctx)
-def quote2markdown(block, ctx, tag = '> '): return  tag + textlike2markdown(block, ctx)
-def to_do2markdown(block, ctx, tag = '- [{x}] '): return textlike2markdown(block, ctx, tag = tag.format(x = 'x' if block.get('checked', '') else ' '), checked = block.get(get_block_type(block), {}).get('checked', False))
-def synced_block2markdown(block, ctx): return '---\n**{synced_from_block_id}**\n{children}\n---'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike2markdown(block, ctx))
-def equation2markdown(block, ctx, inline = False): return ('```math\n' if not inline else '`' ) + (block['equation'].get('expression', '') or block.get('plain_text', '')) + ('\n```' if not inline else '`')
-def file2markdown(block, ctx, tag = '📎'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
-def pdf2markdown(block, ctx, tag = '📄'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
-def bookmark2markdown(block, ctx, tag = '🔖'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
-def link_preview2markdown(block, ctx, tag = '🌐'): return linklike2markdown(block, ctx, tag = tag, line_break = True)
-def embed2markdown(block, ctx): return embed2html(block, ctx)
-def child_database2markdown(block, ctx, untitled = '???', tag = '**'): return ' {tag}{child_database_title}{tag} '.format(tag = tag, child_database_title = (block['child_database'].get('title') or untitled))
-def template2markdown(block, ctx): return '---\n{rich_text}\n{children}\n---'.format(rich_text = richtext2markdown(block, ctx, rich_text = True), children = childrenlike2markdown(block, ctx))
-def breadcrumb2markdown(block, ctx, sep = ' / '): return sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
-
-def code2markdown(block, ctx): return '{caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), caption = richtext2html(block, ctx, caption = True)) + richtext2markdown(block, ctx, rich_text = True) + '\n```'
-# outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
-
-
-def callout2markdown(block, ctx):
-    return '> {icon_emoji} '.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2markdown(block, ctx).rstrip() 
-    #outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block2markdown(subblock, ctx, page_id = page_id).splitlines()) + '>\n' for subblock in block["children"])
+child_page2markdown = lambda block, ctx: page2markdown(block, ctx)
+unsupported2markdown = lambda block, ctx, tag = '*': ' {tag}unsupported notion block [{block_id}, {block_type}]{tag} '.format(tag = tag, block_id = block.get('id', ''), block_type = get_block_type(block))
+divider2markdown = lambda block, ctx, tag: '---': tag
+heading_12markdown = lambda block, ctx, tag: '# '  : headinglike2markdown(block, ctx, tag = tag) 
+heading_22markdown = lambda block, ctx, tag: '## ' : headinglike2markdown(block, ctx, tag = tag) 
+heading_32markdown = lambda block, ctx, tag: '### ': headinglike2markdown(block, ctx, tag = tag) 
+paragraph2markdown = lambda block, ctx: '\n\n' if paragraph_is_empty(block, ctx) else textlike2markdown(block, ctx)
+column_list2markdown = lambda block, ctx: childrenlike2markdown(block, ctx)
+column2markdown      = lambda block, ctx: childrenlike2markdown(block, ctx)
+bulleted_list_item2markdown = lambda block, ctx, tag = '* ' : tag + textlike2markdown(block, ctx)
+numbered_list_item2markdown = lambda block, ctx, tag = '1. ': tag + textlike2markdown(block, ctx)
+quote2markdown = lambda block, ctx, tag = '> '      : tag + textlike2markdown(block, ctx)
+to_do2markdown = lambda block, ctx, tag = '- [{x}] ': textlike2markdown(block, ctx, tag = tag.format(x = 'x' if block.get('checked', '') else ' '), checked = block.get(get_block_type(block), {}).get('checked', False))
+synced_block2markdown = lambda block, ctx: '---\n**{synced_from_block_id}**\n{children}\n---'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike2markdown(block, ctx))
+equation2markdown = lambda block, ctx, inline = False: ('```math\n' if not inline else '`' ) + (block['equation'].get('expression', '') or block.get('plain_text', '')) + ('\n```' if not inline else '`')
+file2markdown         = lambda block, ctx, tag = '📎': linklike2markdown(block, ctx, tag = tag, line_break = True)
+pdf2markdown          = lambda block, ctx, tag = '📄': linklike2markdown(block, ctx, tag = tag, line_break = True)
+bookmark2markdown     = lambda block, ctx, tag = '🔖': linklike2markdown(block, ctx, tag = tag, line_break = True)
+link_preview2markdown = lambda block, ctx, tag = '🌐': linklike2markdown(block, ctx, tag = tag, line_break = True)
+embed2markdown = lambda block, ctx: embed2html(block, ctx)
+child_database2markdown = lambda block, ctx, untitled = '???', tag = '**': ' {tag}{child_database_title}{tag} '.format(tag = tag, child_database_title = (block['child_database'].get('title') or untitled))
+template2markdown = lambda block, ctx: '---\n{rich_text}\n{children}\n---'.format(rich_text = richtext2markdown(block, ctx, rich_text = True), children = childrenlike2markdown(block, ctx))
+breadcrumb2markdown = lambda block, ctx, sep = ' / ': sep.join(link_to_page2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
+code2markdown = lambda block, ctx: '{caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), caption = richtext2html(block, ctx, caption = True)) + richtext2markdown(block, ctx, rich_text = True) + '\n```' # outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
+callout2markdown = lambda block, ctx: '> {icon_emoji} '.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike2markdown(block, ctx).rstrip()  #outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block2markdown(subblock, ctx, page_id = page_id).splitlines()) + '>\n' for subblock in block["children"])
 
 def image2markdown(block, ctx): 
     src = get_asset_url(block, ctx)
