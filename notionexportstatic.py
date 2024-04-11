@@ -1221,7 +1221,6 @@ def notion2static(
     notion_pages = notionjson.get('pages', {})
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
 
-    breakpoint()
     notion_pages_flat = copy.deepcopy(notion_pages)
     child_pages_by_parent_id = {}
     for page_id, page in notion_pages_flat.items():
