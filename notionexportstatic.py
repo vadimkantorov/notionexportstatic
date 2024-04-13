@@ -1,6 +1,9 @@
 # TODO: markdown: quote-tab
 # TODO: test.json does not download assets
 # TODO: child_page CSS block
+# TODO: notionjson_2html : assert args.input_json
+# TODO: notionapi2notionjson: assert args.notion_page_id
+# TODO: textlike_2markdown: color unused
 
 import os
 import re
@@ -133,7 +136,6 @@ def childrenlike_2html(block, ctx, tag = ''):
 def richtext_2html(block, ctx = {}, title_mode = False, caption = False, rich_text = False):
     # https://www.notion.so/help/customize-and-style-your-content#markdown
     # https://developers.notion.com/reference/rich-text
-    # default_annotations = dict(bold = False, italic = False, strikethrough = False, underline = False, code = False, color = "default")
     if isinstance(block, dict):
         block_type = get_block_type(block)
         if rich_text:
@@ -257,7 +259,7 @@ def table_2html(block, ctx, tag = 'table', class_name = 'notion-table-block'):
     table_width = block['table'].get('table_width', 0)
     has_row_header = block['table'].get('has_row_header', False)
     has_column_header = block['table'].get('has_column_header', False)
-    rows = block.get('children', [])
+    rows = get_block_children(block)
     children = ''
     for i, subblock in enumerate(rows):
         if i == 0:
@@ -282,11 +284,7 @@ def video_2html(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     html_contents = f'<div><iframe width="640" height="480" src="{url}" frameborder="0" allowfullscreen></iframe></div>' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
     return blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
 
-def image_2html(block, ctx, tag = 'img', class_name = 'notion-image-block'):
-    src = get_asset_url(block, ctx)
-    rich_text = richtext_2html(block, ctx, caption = True, title_mode = False)
-    rich_text_alt = richtext_2html(block, ctx, caption = True, title_mode = True)
-    return blocktag_2html(block, ctx, tag = 'figure', class_name = class_name, set_html_contents_and_close = f'<{tag} src="{src}" alt="{rich_text_alt}"></{tag}><figcaption>{rich_text}</figcaption>')
+image_2html = lambda block, ctx, tag = 'img', class_name = 'notion-image-block': blocktag_2html(block, ctx, tag = 'figure', class_name = class_name, set_html_contents_and_close = '<{tag} src="{src}" alt="{rich_text_alt}"></{tag}><figcaption>{rich_text}</figcaption>'.format(src = get_asset_url(block, ctx), rich_text_alt = richtext_2html(block, ctx, caption = True, title_mode = True), rich_text = richtext_2html(block, ctx, caption = True, title_mode = False)))
 
 def embed_2html(block, ctx, tag = 'iframe', class_name = 'notion-embed-block', caption = '', attrs = dict(width = 640, height = 480)):
     block_type = get_block_type(block)
@@ -340,18 +338,19 @@ column_list_2html = lambda block, ctx, tag = 'div', class_name = 'notion-column_
 column_2html = lambda block, ctx, tag = 'div', class_name = 'notion-column-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = childrenlike_2html(block, ctx, tag = tag)) 
 bulleted_list_item_2html = lambda block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block': f'<{tag} class="{class_name}">\n' * begin + textlike_2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
 numbered_list_item_2html = lambda block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block': f'<{tag} class="{class_name}">\n' * begin + textlike_2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end 
-quote_2html = lambda block, ctx, tag = 'blockquote', class_name = 'notion-quote-block': textlike_2html(block, ctx, tag = tag, class_name = class_name)
 code_2html = lambda block, ctx, tag = 'code', class_name = 'notion-code-block': blocktag_2html(block, ctx, tag = 'figure', attrs = {'data-language' : block['code'].get('language', '')}, class_name = class_name, set_html_contents_and_close = '<figcaption>{caption}</figcaption>\n<pre><{tag} class="language-{language}">\n'.format(language = block['code'].get('language', ''), caption = richtext_2html(block, ctx, caption = True), tag = tag) + richtext_2html(block, ctx, rich_text = True) + f'\n</{tag}></pre>')
 to_do_2html = lambda block, ctx, tag = 'div', class_name = 'notion-to_do-block': textlike_2html(block, ctx, tag = tag, class_name = class_name, checked = block.get(get_block_type(block), {}).get('checked', False))
 synced_block_2html = lambda block, ctx, tag = 'figure', class_name = 'notion-synced_block-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{synced_from_block_id}</figcaption>\n{children}'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike_2html(block, ctx)))
 equation_2html = lambda block, ctx, tag = 'code', class_name = 'notion-equation-block', inline = False: blocktag_2html(block, ctx, tag = tag, class_name = class_name if not inline else class_name.replace('block', 'inline'), set_html_contents_and_close = html.escape(block['equation'].get('expression', '') or block.get('plain_text', '')))
-callout_2html = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag_2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike_2html(block, ctx, tag = tag)) + '</div>\n'
 pdf_2html = lambda block, ctx, tag = 'a', class_name = 'notion-pdf-block': embed_2html(block, ctx, class_name = class_name, caption = linklike_2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag) if not is_url_datauri(get_asset_url(block, ctx)) else '<div><b>{caption}</b></div>'.format(caption = html.escape(get_url_basename(get_block_url(block)))) )
 file_2html = lambda block, ctx, tag = 'a', class_name = 'notion-file-block': linklike_2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
 breadcrumb_2html = lambda block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page_2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
 template_2html = lambda block, ctx, tag = 'figure', class_name = 'notion-template-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{rich_text}</figcaption>\n{children}'.format(rich_text = richtext_2html(block, ctx, rich_text = True), children = childrenlike_2html(block, ctx)))
 child_database_2html = lambda block, ctx, tag = 'figure', class_name = 'notion-child_database-block', untitled = '???': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption><strong>{child_database_title}</strong></figcaption>'.format(child_database_title = html.escape(block['child_database'].get('title') or untitled)))
 link_preview_2html = lambda block, ctx, tag = 'a', class_name = 'notion-link_preview-block': linklike_2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
+
+quote_2html = lambda block, ctx, tag = 'blockquote', class_name = 'notion-quote-block': textlike_2html(block, ctx, tag = tag, class_name = class_name)
+callout_2html = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag_2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = get_callout_emoji(block)) + textlike_2html(block, ctx, tag = tag)) + '</div>\n'
 
 ##############################
 
@@ -387,7 +386,7 @@ def table_2markdown(block, ctx, sanitize_table_cell = lambda md: md.replace('\n'
     table_width = block['table'].get('table_width', 0)
     has_row_header = block['table'].get('has_row_header', False)
     has_column_header = block['table'].get('has_column_header', False)
-    rows = block.get('children', [])
+    rows = get_block_children(block)
     children = '\n'
     for i, subblock in enumerate(rows):
         cells = subblock.get('table_row', {}).get('cells', [])
@@ -501,7 +500,6 @@ column_list_2markdown = lambda block, ctx: childrenlike_2markdown(block, ctx)
 column_2markdown      = lambda block, ctx: childrenlike_2markdown(block, ctx)
 bulleted_list_item_2markdown = lambda block, ctx, tag = '* ' : tag + textlike_2markdown(block, ctx)
 numbered_list_item_2markdown = lambda block, ctx, tag = '1. ': tag + textlike_2markdown(block, ctx)
-quote_2markdown = lambda block, ctx, tag = '> '      : tag + textlike_2markdown(block, ctx)
 to_do_2markdown = lambda block, ctx, tag = '- [{x}] ': textlike_2markdown(block, ctx, tag = tag.format(x = 'x' if block.get('checked', '') else ' '), checked = block.get(get_block_type(block), {}).get('checked', False))
 synced_block_2markdown = lambda block, ctx: '---\n**{synced_from_block_id}**\n{children}\n---'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike_2markdown(block, ctx))
 equation_2markdown = lambda block, ctx, inline = False: ('```math\n' if not inline else '`' ) + (block['equation'].get('expression', '') or block.get('plain_text', '')) + ('\n```' if not inline else '`')
@@ -513,14 +511,14 @@ embed_2markdown = lambda block, ctx: embed_2html(block, ctx)
 child_database_2markdown = lambda block, ctx, untitled = '???', tag = '**': ' {tag}{child_database_title}{tag} '.format(tag = tag, child_database_title = (block['child_database'].get('title') or untitled))
 template_2markdown = lambda block, ctx: '---\n{rich_text}\n{children}\n---'.format(rich_text = richtext_2markdown(block, ctx, rich_text = True), children = childrenlike_2markdown(block, ctx))
 breadcrumb_2markdown = lambda block, ctx, sep = ' / ': sep.join(link_to_page_2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
-code_2markdown = lambda block, ctx: '{caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), caption = richtext_2html(block, ctx, caption = True)) + richtext_2markdown(block, ctx, rich_text = True) + '\n```' # outcome_block = outcome_block.rstrip('\n').replace('\n', '\n'+'\t'*depth) + '\n\n'
-callout_2markdown = lambda block, ctx: '> {icon_emoji} '.format(icon_emoji = block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')) + textlike_2markdown(block, ctx).rstrip()  #outcome_block += '>\n'.join(''.join(f'> {line}\n' for line in block_2markdown(subblock, ctx, page_id = page_id).splitlines()) + '>\n' for subblock in block["children"])
+code_2markdown = lambda block, ctx: '{caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), caption = richtext_2html(block, ctx, caption = True)) + richtext_2markdown(block, ctx, rich_text = True) + '\n```'
+image_2markdown = lambda block, ctx: '![{rich_text_alt}]({src})\n{rich_text}'.format(src = get_asset_url(block, ctx), rich_text_alt = richtext_2markdown(block, ctx, caption = True, title_mode = True), rich_text = richtext_2markdown(block, ctx, caption = True, title_mode = False))
 
-def image_2markdown(block, ctx): 
-    src = get_asset_url(block, ctx)
-    rich_text = richtext_2markdown(block, ctx, caption = True, title_mode = False)
-    rich_text_alt = richtext_2markdown(block, ctx, caption = True, title_mode = True)
-    return f'![{rich_text_alt}]({src})\n' + rich_text
+quote_2markdown = lambda block, ctx, tag = '> ': tag + textlike_2markdown(block, ctx)
+def callout_2markdown(block, ctx):
+    res = '> {icon_emoji} '.format(icon_emoji = get_callout_icon(block)) + richtext_2markdown(block, ctx, rich_text = True, title_mode = False).rstrip()
+    res += '>\n'.join(''.join(f'> {line}\n' for line in block_2markdown(subblock, ctx).splitlines()) + '>\n' for subblock in get_block_children(block))
+    return res
 
 def video_2markdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     url = get_asset_url(block, ctx)
@@ -625,7 +623,11 @@ def get_page_title(block, ctx, untitled = 'Untitled'):
     if not block: 
         return ''
     return ' '.join(t['plain_text'] for t in block.get('properties', {}).get('title', {}).get('title', [])).strip() or block.get('child_page', {}).get('title', '').strip() or block.get('title', '').strip() or ' '.join(t['plain_text'] for t in block.get('properties', {}).get('Name', {}).get('title', [])).strip() or block.get('plain_text') or untitled
-   
+  
+
+def get_block_children(block):
+    return block.get('children', []) + block.get('blocks', [])
+
 def get_page_icon(block, ctx):
     if not block:
         return '', ''
@@ -634,7 +636,7 @@ def get_page_icon(block, ctx):
     icon_emoji = payload_icon.get('emoji', '')
     icon_url = get_block_url(payload_icon)
     
-    children = block.get('children', []) or block.get('blocks', [])
+    children = get_block_children(block)
     for subblock in children * (not bool(icon_emoji or icon_url)):
         if subblock.get('type') == 'callout':
             payload_icon = subblock.get('callout', {}).get('icon') or {}
@@ -658,7 +660,7 @@ def get_plain_text(block):
             plain_text.append(top['plain_text'])
         else:
             stack.extend(reversed(get_block_rich_text(top)))
-            stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
+            stack.extend(reversed(get_block_children(top)))
     return ' '.join(plain_text).strip()
 
 def get_page_current(block, ctx):
@@ -807,7 +809,7 @@ def get_block_index(ctx):
     while stack:
         top = stack.pop()
         id2block[top.get('id', '')] = top
-        stack.extend(top.get('blocks', []) + top.get('children', []))
+        stack.extend(get_block_children(top))
     id2block_no_dashes = {get_block_id_no_dashes(block_id) : block for block_id, block in id2block.items()}
     return id2block | id2block_no_dashes
 
@@ -836,7 +838,7 @@ def get_page_headings(block, ctx):
         if is_heading:
             headings.append(top)
         if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
-            stack.extend(reversed(top.get('blocks', []) + top.get('children', [])))
+            stack.extend(reversed(get_block_children(top)))
     return headings
 
 def get_page_time_published(block, ctx, strftime = '', key = 'unix_seconds_generated'):
@@ -845,6 +847,8 @@ def get_page_time_published(block, ctx, strftime = '', key = 'unix_seconds_gener
 def get_page_image(block, ctx):
     # {% if page.cover %} {{page.cover}} {% else %} {{site['pages'][site['root_page_id']]['cover']}} {% endif %} 
     return dict(image_url = '', image_height = '', image_width = '', image_alt = '')
+
+get_callout_icon = lambda block: block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')
 
 def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', translate = {ord('"') : ' ', ord("'") : ' ', ord('#') : ' ', ord('<') : ' ', ord('>') : ' ', ord('#') : ' '}):
     page_info = {}
@@ -968,7 +972,7 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False):
 def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets_types = []):
     for block in blocks:
         print('discover_assets', get_block_type(block), block['id'])
-        discover_assets(block.get('children', []) + block.get('blocks', []), assets_urls, exclude_datauri = exclude_datauri, download_assets_types = download_assets_types)
+        discover_assets(get_block_children(block), assets_urls, exclude_datauri = exclude_datauri, download_assets_types = download_assets_types)
         block_type = get_block_type(block)
         payload = block.get(block_type) or {}
         payload_type = payload.get('type', '')
@@ -1204,8 +1208,6 @@ def notion2static(
     site_info_image_width,
     site_info_image_alt,
 ):
-    #notionjson_2html : assert args.input_json
-    #notionapi2notionjson: assert args.notion_page_id
     slugs = {k.lower().strip() : v.lower().strip() for s in slugs for kv in s.split(',') for k, v in [kv.split('=')]}
     notion_page_id = [page_id.lower().strip() for comma_separated_page_ids in notion_page_id for page_id in comma_separated_page_ids.split(',')]
     config = read_and_write_config(args.config_json, locals())

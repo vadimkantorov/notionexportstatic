@@ -93,7 +93,9 @@ head_html = '''
 <!-- <meta name="yandex-verification"          content="{site_verification_yandex}"   /> -->
 <!-- <meta name="baidu-site-verification"      content="{site_verification_baidu}"    /> -->
 <!-- <meta name="facebook-domain-verification" content="{site_verification_facebook}" /> -->
-''' + privacynotice_html.replace('{{ PRIVACYNOTICE_URL }}', '/privacynotice.html') + googleanalytics_html.replace('{{ GOOGLE_ANALYTICS_ID }}', 'my_google_analytics_id') + katex_html + highlightjs_html
+''' + googleanalytics_html.replace('{{ GOOGLE_ANALYTICS_ID }}', 'my_google_analytics_id') + katex_html + highlightjs_html
+
+boydheader_html = privacynotice_html.replace('{{ PRIVACYNOTICE_URL }}', '/privacynotice.html') 
 
 page_html =  '''
 <!DOCTYPE html>
