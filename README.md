@@ -66,12 +66,26 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 | Notion block  | CSS class     | HTML tag      |
 | ------------- | ------------- | ------------- |
 ||`.notion-block`||
+||`.notion-topbar`||
+||`.notion-color-{color}`||
 |`page`|`.notion-page-block`|`<h1>`|
 |`page`|`.notion-page-like-icon`|`<a>`|
 |`page`|`.notion-page-like-edit-icon`|`<a>`|
 |`page`|`.notion-page`|`<article>`|
+|`page`|`.notion-record-icon`||
+|`page`|`.notion-page-like-edit-icon`||
+|`page`|`.notion-page-cover`||
+|`page`|`.notion-page-block-datetime-published`||
+|`page`|`.notion-page-content`||
+|`toggle`|`.notion-toggle-like`||
 |`toggle`|`.notion-toggle-block`|`<details>`|
 |`table_of_contents`|`.notion-table_of_contents-block`|`<ul>`|
+|`table_of_contents`|`.notion-table_of_contents-site-page-list`||
+|`table_of_contents`|`.notion-table_of_contents-site-page-item`||
+|`table_of_contents`|`.notion-table_of_contents-site`||
+|`table_of_contents`|`.notion-table_of_contents-site-header`||
+|`table_of_contents`|`.notion-table_of_contents-heading`||
+|`table_of_contents`|`.notion-table_of_contents-{effective_heading_type}`||
 |`table`|`.notion-table-block`|`<table>`|
 |`video`|`.notion-video-block`|`<video>`, `<iframe>`|
 |`image`|`.notion-image-block`|`<img>`|
@@ -86,6 +100,8 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`link_to_page`|`.notion-alias-block`|`<a>`|
 |`unsupported`|`.notion-unsupported-block`|`<!-- -->`, `<br>`|
 |`divider`|`.notion-divider-block`|`<hr>`|
+||`.notion-heading-like`||
+||`.notion-heading-like-icon`||
 |`heading_1`|`.notion-header-block`|`<h1>`|
 |`heading_2`|`.notion-sub_header-block`|`<h2>`|
 |`heading_3`|`.notion-sub_sub_header-block`|`<h3>`|
@@ -96,6 +112,8 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`numbered_list_item`|`.notion-numbered_list-block`|`<ol>`|
 |`quote`|`.notion-quote-block`|`<blockquote>`|
 |`code`|`.notion-code-block`|`<pre><code>`|
+|`code`|`.notion-code-inline`||
+|`code`|`.language-{language}`||
 |`to_do`|`.notion-to_do-block`|`<div><input type="checkbox">`|
 |`equation`|`.notion-equation-block`|`<code>`|
 |`callout`|`.notion-callout-block`|`<div>`|
@@ -106,27 +124,6 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`template`|`.notion-template-block`|`<figure>`|
 |`child_database`|`.notion-child_database-block`|`<figure>`|
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
-||||
-||`.notion-topbar`||
-||`.notion-code-inline`||
-||`.notion-toggle-like`||
-||`.notion-heading-like-icon`||
-||`.notion-heading-like`||
-||`.notion-page-like-icon`||
-||`.notion-page-like-edit-icon`||
-||`.notion-page-cover`||
-||`.notion-record-icon`||
-||`.notion-page-block-datetime-published`||
-||`.notion-page-content`||
-||`.notion-table_of_contents-site-page-list`||
-||`.notion-table_of_contents-site-page-item`||
-||`.notion-table_of_contents-site`||
-||`.notion-table_of_contents-site-header`||
-||`.notion-table_of_contents-heading`||
-||`.notion-table_of_contents-{effective_heading_type}`||
-||`.language-{language}`||
-||`.notion-color-{color}`||
-
 
 # [Theme **minima.py**](https://github.com/jekyll/minima) CSS classes:
 
