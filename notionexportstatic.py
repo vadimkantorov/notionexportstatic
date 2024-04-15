@@ -4,6 +4,7 @@
 # TODO: notionjson_2html : assert args.input_json
 # TODO: notionapi2notionjson: assert args.notion_page_id
 # TODO: textlike_2markdown: color unused
+# TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 
 import os
 import re
@@ -65,7 +66,7 @@ def notionapi_retrieve_children_inplace(block, notionapi):
         for subblock in block['children']:
             notionapi_retrieve_children_inplace(subblock, notionapi)
 
-def notionapi_retrieve_children(notion_page_id_no_dashes, notionapi)
+def notionapi_retrieve_children(notion_page_id_no_dashes, notionapi):
     children = []
     start_cursor = None
     while True:
@@ -249,7 +250,7 @@ def table_of_contents_2html(block, ctx, tag = 'ul', class_name = 'notion-table_o
         block_id_no_dashes = get_block_id_no_dashes(block)
         block_slug = get_heading_slug(block, ctx)
         block_hash = block_slug if ctx['extract_mode'] in ['flat.html', 'flat/index.html'] else block_id_no_dashes
-        heading_type = block.get('type', '')
+        heading_type = get_block_type(block)
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         rich_text = richtext_2html(block, ctx, rich_text = True, title_mode = True)
         children += f'<li class="notion-table_of_contents-heading notion-table_of_contents-{effective_heading_type}"><a href="#{block_hash}">' + rich_text + '</a></li>\n'
@@ -328,7 +329,7 @@ get_block_rich_text = lambda block: block.get('rich_text', []) or block.get('tex
 paragraph_is_empty = lambda block, ctx: block.get('has_children') is False and not get_plain_text(get_block_rich_text(block)).strip()
 
 child_page_2html = lambda block, ctx, tag = 'article', class_name = 'notion-page-block', **kwargs: page_2html(block, ctx, tag = tag, class_name = class_name, **kwargs)
-unsupported_2html = lambda block, ctx, tag = 'br', class_name = 'notion-unsupported-block', comment = True, **ignored: '\n<!--\n' * comment + html.escape(blocktag_2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : block.get('type', '') or block.get('object', '')}, selfclose = True)) + '\n-->\n' * comment
+unsupported_2html = lambda block, ctx, tag = 'br', class_name = 'notion-unsupported-block', comment = True, **ignored: '\n<!--\n' * comment + html.escape(blocktag_2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : get_block_type(block)}, selfclose = True)) + '\n-->\n' * comment
 divider_2html = lambda block, ctx, tag = 'hr', class_name = 'notion-divider-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, selfclose = True)
 heading_1_2html = lambda block, ctx, tag = 'h1', class_name = 'notion-header-block': headinglike_2html(block, ctx, tag = tag, class_name = class_name)
 heading_2_2html = lambda block, ctx, tag = 'h2', class_name = 'notion-sub_header-block': headinglike_2html(block, ctx, tag = tag, class_name = class_name)
@@ -338,8 +339,8 @@ column_list_2html = lambda block, ctx, tag = 'div', class_name = 'notion-column_
 column_2html = lambda block, ctx, tag = 'div', class_name = 'notion-column-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = childrenlike_2html(block, ctx, tag = tag)) 
 bulleted_list_item_2html = lambda block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block': f'<{tag} class="{class_name}">\n' * begin + textlike_2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
 numbered_list_item_2html = lambda block, ctx, tag = 'ol', begin = False, end = False, class_name = 'notion-numbered_list-block': f'<{tag} class="{class_name}">\n' * begin + textlike_2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end 
+to_do_2html = lambda block, ctx, tag = 'div', class_name = 'notion-to_do-block', begin = False, end = False: textlike_2html(block, ctx, tag = tag, class_name = class_name, checked = block.get(get_block_type(block), {}).get('checked', False))
 code_2html = lambda block, ctx, tag = 'code', class_name = 'notion-code-block': blocktag_2html(block, ctx, tag = 'figure', attrs = {'data-language' : block['code'].get('language', '')}, class_name = class_name, set_html_contents_and_close = '<figcaption>{caption}</figcaption>\n<pre><{tag} class="language-{language}">\n'.format(language = block['code'].get('language', ''), caption = richtext_2html(block, ctx, caption = True), tag = tag) + richtext_2html(block, ctx, rich_text = True) + f'\n</{tag}></pre>')
-to_do_2html = lambda block, ctx, tag = 'div', class_name = 'notion-to_do-block': textlike_2html(block, ctx, tag = tag, class_name = class_name, checked = block.get(get_block_type(block), {}).get('checked', False))
 synced_block_2html = lambda block, ctx, tag = 'figure', class_name = 'notion-synced_block-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{synced_from_block_id}</figcaption>\n{children}'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike_2html(block, ctx)))
 equation_2html = lambda block, ctx, tag = 'code', class_name = 'notion-equation-block', inline = False: blocktag_2html(block, ctx, tag = tag, class_name = class_name if not inline else class_name.replace('block', 'inline'), set_html_contents_and_close = html.escape(block['equation'].get('expression', '') or block.get('plain_text', '')))
 pdf_2html = lambda block, ctx, tag = 'a', class_name = 'notion-pdf-block': embed_2html(block, ctx, class_name = class_name, caption = linklike_2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag) if not is_url_datauri(get_asset_url(block, ctx)) else '<div><b>{caption}</b></div>'.format(caption = html.escape(get_url_basename(get_block_url(block)))) )
@@ -355,18 +356,13 @@ callout_2html = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block
 ##############################
 
 childrenlike_2markdown = lambda block, ctx, tag = '', newline = '\n': newline.join(block_2markdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
+toggle_2markdown = lambda block, ctx, tag = '', icon = '', title_mode = False: ('<details markdown="1"><summary markdown="1">\n\n' + tag + richtext_2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike_2markdown(block, ctx) + '\n\n</details>') if ctx['markdown_toggle'] else (tag + '▼ ' + richtext_2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike_2markdown(block, ctx))
 
 def textlike_2markdown(block, ctx, tag = '', icon = '', checked = None, title_mode = False):
     rich_text = richtext_2markdown(block, ctx, rich_text = True, title_mode = title_mode)
     color = block.get(get_block_type(block), {}).get('color', '')
     checkbox = '[{}] '.format('x' if checked else ' ') if checked is not None else ''
     return tag + checkbox + rich_text + icon + '\n' + childrenlike_2markdown(block, ctx)
-
-def toggle_2markdown(block, ctx, tag = '', icon = '', title_mode = False): 
-    if ctx['markdown_toggle']:
-        return '<details markdown="1"><summary markdown="1">\n\n' + tag + richtext_2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike_2markdown(block, ctx) + '\n\n</details>'
-
-    return tag + '▼ ' + richtext_2markdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike_2markdown(block, ctx)
 
 def headinglike_2markdown(block, ctx, tag = ''):
     block_id_no_dashes = get_block_id_no_dashes(block)
@@ -418,7 +414,7 @@ def table_of_contents_2markdown(block, ctx, tag = '* '):
         block_id_no_dashes = get_block_id_no_dashes(block)
         block_slug = get_heading_slug(block, ctx)
         block_hash = block_slug if ctx['extract_mode'] == 'flat.md' else block_id_no_dashes
-        heading_type = block.get('type', '')
+        heading_type = get_block_type(block)
         nominal_heading_type, effective_heading_type = heading_type, min(heading_type, inc_heading_type(effective_heading_type) if heading_type > nominal_heading_type else effective_heading_type)
         rich_text = richtext_2markdown(block, ctx, rich_text = True, title_mode = True)
         children += max(0, heading_type2depth[effective_heading_type] - 1) * 4 * ' ' + f'{tag}[{rich_text}](#{block_hash})\n'
@@ -460,49 +456,22 @@ def page_2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     res += f'# {page_emoji} {page_title}{anchor}\n'
     res += f'[✏️]({src_edit}) ' * bool(src_edit) + f'*@{datetime_published}*\n\n'
     res += children
-    
-    # elif block['has_children']:
-    #     depth += 1
-    #     for subblock in block["children"]: # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
-    #         if subblock['type'] == "heading_1":
-    #             depth = 0
-    #         outcome_block += "\t"*depth + block_2markdown(subblock, ctx, depth = depth, page_id = page_id)
-    #page_md_fixed_lines = []
-    #prev_line_type = ''
-    #for line in res.splitlines():
-    #    line_type = ''
-    #    norm_line = line.lstrip('\t').lstrip()
-    #    if norm_line.startswith('- [ ]') or norm_line.startswith('- [x]'):
-    #        line_type = 'checkbox'
-    #    elif norm_line.startswith('* '):
-    #        line_type = 'bullet'
-    #    elif norm_line.startswith('1. '):
-    #        line_type = 'numbered'
-    #    if prev_line_type != '':
-    #        if line == '':
-    #            continue
-    #    if line_type != prev_line_type:
-    #        page_md_fixed_lines.append('')
-    #    page_md_fixed_lines.append(line)
-    #    prev_line_type = line_type
-    #res = '\n'.join(page_md_fixed_lines)
-    #res = res.replace('\n\n\n', '\n\n')
     return res
 
 child_page_2markdown = lambda block, ctx: page_2markdown(block, ctx)
 unsupported_2markdown = lambda block, ctx, tag = '*': ' {tag}unsupported notion block [{block_id}, {block_type}]{tag} '.format(tag = tag, block_id = block.get('id', ''), block_type = get_block_type(block))
-divider_2markdown = lambda block, ctx, tag: '---': tag
-heading_1_2markdown = lambda block, ctx, tag: '# '  : headinglike_2markdown(block, ctx, tag = tag) 
-heading_2_2markdown = lambda block, ctx, tag: '## ' : headinglike_2markdown(block, ctx, tag = tag) 
-heading_3_2markdown = lambda block, ctx, tag: '### ': headinglike_2markdown(block, ctx, tag = tag) 
+divider_2markdown = lambda block, ctx, tag = '---': tag
+heading_1_2markdown = lambda block, ctx, tag = '# '  : headinglike_2markdown(block, ctx, tag = tag) 
+heading_2_2markdown = lambda block, ctx, tag = '## ' : headinglike_2markdown(block, ctx, tag = tag) 
+heading_3_2markdown = lambda block, ctx, tag = '### ': headinglike_2markdown(block, ctx, tag = tag) 
 paragraph_2markdown = lambda block, ctx: '\n\n' if paragraph_is_empty(block, ctx) else textlike_2markdown(block, ctx)
 column_list_2markdown = lambda block, ctx: childrenlike_2markdown(block, ctx)
 column_2markdown      = lambda block, ctx: childrenlike_2markdown(block, ctx)
-bulleted_list_item_2markdown = lambda block, ctx, tag = '* ' : tag + textlike_2markdown(block, ctx)
-numbered_list_item_2markdown = lambda block, ctx, tag = '1. ': tag + textlike_2markdown(block, ctx)
-to_do_2markdown = lambda block, ctx, tag = '- [{x}] ': textlike_2markdown(block, ctx, tag = tag.format(x = 'x' if block.get('checked', '') else ' '), checked = block.get(get_block_type(block), {}).get('checked', False))
+bulleted_list_item_2markdown = lambda block, ctx, tag = '* ' , begin = False, end = False: '\n' * begin + tag + textlike_2markdown(block, ctx) + '\n' * end
+numbered_list_item_2markdown = lambda block, ctx, tag = '1. ', begin = False, end = False: '\n' * begin + tag + textlike_2markdown(block, ctx) + '\n' * end
+to_do_2markdown              = lambda block, ctx, tag = '- ' , begin = False, end = False: '\n' * begin + textlike_2markdown(block, ctx, tag = tag, checked = block.get(get_block_type(block), {}).get('checked', False)) + '\n' * end
 synced_block_2markdown = lambda block, ctx: '---\n**{synced_from_block_id}**\n{children}\n---'.format(synced_from_block_id = block['synced_block'].get('synced_from', {}).get('block_id', ''), children = childrenlike_2markdown(block, ctx))
-equation_2markdown = lambda block, ctx, inline = False: ('```math\n' if not inline else '`' ) + (block['equation'].get('expression', '') or block.get('plain_text', '')) + ('\n```' if not inline else '`')
+equation_2markdown     = lambda block, ctx, inline = False: ('```math\n' if not inline else '`' ) + (block['equation'].get('expression', '') or block.get('plain_text', '')) + ('\n```' if not inline else '`')
 file_2markdown         = lambda block, ctx, tag = '📎': linklike_2markdown(block, ctx, tag = tag, line_break = True)
 pdf_2markdown          = lambda block, ctx, tag = '📄': linklike_2markdown(block, ctx, tag = tag, line_break = True)
 bookmark_2markdown     = lambda block, ctx, tag = '🔖': linklike_2markdown(block, ctx, tag = tag, line_break = True)
@@ -665,7 +634,7 @@ def get_plain_text(block):
 
 def get_page_current(block, ctx):
     parent_block = block
-    while (parent_block.get('type') or parent_block.get('object')) not in ['page', 'child_page']:
+    while get_block_type(parent_block) not in ['page', 'child_page']:
         parent_id = parent_block.get('parent', {}).get(parent_block.get('parent', {}).get('type'))
         if not parent_id or parent_id not in ctx['id2block']:
             break
@@ -765,8 +734,11 @@ def normalize_youtube_url(url, embed = False):
     urlimg_youtube = f'https://img.youtube.com/vi/{id_youtube}/0.jpg' * is_youtube
     return is_youtube, url_youtube, urlimg_youtube
 
+def get_block_id(block):
+    return block.get('id', '')
+
 def get_block_id_no_dashes(block):
-    return (block.get('id', '') if isinstance(block, dict) else block).replace('-', '')
+    return (get_block_id(block) if isinstance(block, dict) else block).replace('-', '')
 
 def get_page_slug(page_id, ctx, use_page_title_for_missing_slug = False, only_slug = False):
     page_id_no_dashes = get_block_id_no_dashes(page_id)
@@ -777,7 +749,7 @@ def get_heading_slug(block, ctx, space = '-', lower = True, prefix = ''):
     s = richtext_2html(block, ctx, rich_text = True, title_mode = True)
     if ctx['extract_mode'] in extract_mode_single:
         page_block = get_page_current(block, ctx)
-        page_slug = get_page_slug(page_block.get('id', ''), ctx)
+        page_slug = get_page_slug(get_block_id(page_block), ctx)
         prefix = page_slug + '-'
     
     s = slugify(s.strip(), space = space, lower = lower)
@@ -794,7 +766,7 @@ def get_page_parent_paths(notion_pages_flat, ctx):
         header_parent_page_id = page_id
         while True:
             block = ctx['id2block'][block_id]
-            if (block.get('type') or block.get('object')) in ['page', 'child_page']:
+            if get_block_type(block) in ['page', 'child_page']:
                 parent_path.append(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = block_id), parent = dict(type = 'page_id', page_id = header_parent_page_id), plain_text = get_page_title(block, ctx, untitled = '')))
             parent_id = block['parent'].get(block['parent'].get('type'))
             if parent_id not in ctx['id2block']:
@@ -808,7 +780,7 @@ def get_block_index(ctx):
     stack = list(ctx['pages'].values())
     while stack:
         top = stack.pop()
-        id2block[top.get('id', '')] = top
+        id2block[get_block_id(top)] = top
         stack.extend(get_block_children(top))
     id2block_no_dashes = {get_block_id_no_dashes(block_id) : block for block_id, block in id2block.items()}
     return id2block | id2block_no_dashes
@@ -948,7 +920,7 @@ def block2(block, ctx = {}, block2render = {}, block2render_with_begin_end = {},
     if block_type not in block2render or block_type == 'unsupported':
         block_type = 'unsupported'
         parent_block = get_page_current(block, ctx)
-        print('UNSUPPORTED block: block_type=[{block_type}] block_id=[{block_id}] block_type_parent=[{block_type_parent}] block_id_parent=[{block_id_parent}] title_parent=[{title_parent}]'.format(block_type = get_block_type(block), block_id = block.get('id', ''), block_type_parent = parent_block.get('type', '') or parent_block.get('object', ''), block_id_parent = parent_block.get('id', ''), title_parent = get_page_title(parent_block, ctx)), file = ctx['log_unsupported_blocks_file'])
+        print('UNSUPPORTED block: block_type=[{block_type}] block_id=[{block_id}] block_type_parent=[{block_type_parent}] block_id_parent=[{block_id_parent}] title_parent=[{title_parent}]'.format(block_type = get_block_type(block), block_id = get_block_id(block), block_type_parent = get_block_type(parent_block), block_id_parent = get_block_id(parent_block), title_parent = get_page_title(parent_block, ctx)), file = ctx['log_unsupported_blocks_file'])
     return block2render[block_type](block, ctx, **kwargs) + newline
 
 ##############################
@@ -971,7 +943,7 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False):
 
 def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets_types = []):
     for block in blocks:
-        print('discover_assets', get_block_type(block), block['id'])
+        print('discover_assets', get_block_type(block), get_block_id(block))
         discover_assets(get_block_children(block), assets_urls, exclude_datauri = exclude_datauri, download_assets_types = download_assets_types)
         block_type = get_block_type(block)
         payload = block.get(block_type) or {}
@@ -1217,11 +1189,10 @@ def notion2static(
 
     notionjson = json.load(open(input_json)) if input_json else notionapi_retrieve_page_list(notion_token, resolve_page_ids_no_dashes(notion_page_id, notion_slugs)) if notion_page_id else {}
     
-    json.dump(notionjson, open('debug2.json', 'w'), ensure_ascii = False, indent = 4)
-    import sys; sys.exit(1)
+    #json.dump(notionjson, open('debug2.json', 'w'), ensure_ascii = False, indent = 4); import sys; sys.exit(1)
 
     notion_pages = notionjson.get('pages', {})
-    notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and (page.get('object') or page.get('type')) in ['page', 'child_page'] }
+    notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and get_block_type(page) in ['page', 'child_page'] }
 
     notion_pages_flat = copy.deepcopy(notion_pages)
     child_pages_by_parent_id = {}
@@ -1251,8 +1222,7 @@ def notion2static(
     ctx['page_info'] = get_page_info(ctx['pages'], ctx)
     ctx['assets'] = notionjson.get('assets', {}) or download_and_extract_assets(discover_assets(notion_pages.values(), [], exclude_datauri = False, download_assets_types = ctx['download_assets_types']), ctx, notion_assets = {})
     
-    json.dump(dict(ctx_pages = ctx['pages'], notion_pages = notion_pages), open('debug.json', 'w'), ensure_ascii = False, indent = 4)
-    import sys; sys.exit(1)
+    #json.dump(dict(ctx_pages = ctx['pages'], notion_pages = notion_pages), open('debug.json', 'w'), ensure_ascii = False, indent = 4); import sys; sys.exit(1)
 
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
@@ -1316,8 +1286,9 @@ html_block2render = dict(
     unsupported = unsupported_2html,
 )
 html_block2render_with_begin_end = dict(
-    numbered_list_item = numbered_list_item_2html, 
-    bulleted_list_item = bulleted_list_item_2html
+    numbered_list_item = numbered_list_item_2html,
+    bulleted_list_item = bulleted_list_item_2html,
+    to_do = to_do_2html
 )
 
 markdown_block2render = dict(
@@ -1353,7 +1324,11 @@ markdown_block2render = dict(
     page = page_2markdown,
     unsupported = unsupported_2markdown,
 )
-markdown_block2render_with_begin_end = {}
+markdown_block2render_with_begin_end = dict(
+    numbered_list_item = numbered_list_item_2markdown,
+    bulleted_list_item = bulleted_list_item_2markdown,
+    to_do = to_do_2markdown
+)
 
 def block_2html(block, ctx = {}, begin = False, end = False, **kwargs): return block2(block, ctx, block2render = html_block2render, block2render_with_begin_end = html_block2render_with_begin_end, begin = begin, end = end, **kwargs)
 def block_2markdown(block, ctx = {}, begin = False, end = False, **kwargs): return block2(block, ctx, block2render = markdown_block2render, block2render_with_begin_end = markdown_block2render_with_begin_end, begin = begin, end = end, **kwargs)

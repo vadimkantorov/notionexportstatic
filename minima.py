@@ -87,12 +87,12 @@ highlightjs_html = '''
 head_html = '''
 <meta name="generator" content="notionexportstatic" />
         
-<!-- <meta name="google-site-verification"     content="{site_verification_google}"   /> -->
-<!-- <meta name="msvalidate.01"                content="{site_verification_bing}"     /> -->
-<!-- <meta name="alexaVerifyID"                content="{site_verification_alexa}"    /> -->
-<!-- <meta name="yandex-verification"          content="{site_verification_yandex}"   /> -->
-<!-- <meta name="baidu-site-verification"      content="{site_verification_baidu}"    /> -->
-<!-- <meta name="facebook-domain-verification" content="{site_verification_facebook}" /> -->
+<!-- <meta name="google-site-verification"     content="{{ site_verification_google }}"   /> -->
+<!-- <meta name="msvalidate.01"                content="{{ site_verification_bing }}"     /> -->
+<!-- <meta name="alexaVerifyID"                content="{{ site_verification_alexa }}"    /> -->
+<!-- <meta name="yandex-verification"          content="{{ site_verification_yandex }}"   /> -->
+<!-- <meta name="baidu-site-verification"      content="{{ site_verification_baidu }}"    /> -->
+<!-- <meta name="facebook-domain-verification" content="{{ site_verification_facebook }}" /> -->
 ''' + googleanalytics_html.replace('{{ GOOGLE_ANALYTICS_ID }}', 'my_google_analytics_id') + katex_html + highlightjs_html
 
 boydheader_html = privacynotice_html.replace('{{ PRIVACYNOTICE_URL }}', '/privacynotice.html') 
