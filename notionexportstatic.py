@@ -122,7 +122,7 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
 
 def blocktag_2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = None, prefix = '', suffix = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
-    notion_attrs = (' data-block-id="{id}" '.format(id = block.get('id', ''))) * bool(block.get('id')) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
+    notion_attrs = (' data-block-id="{id}" '.format(id = get_block_id(block))) * bool(get_block_id(block)) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
     return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) if tag else ''
 
 def childrenlike_2html(block, ctx, tag = ''):
@@ -203,7 +203,7 @@ def linklike_2html(block, ctx, tag = 'a', class_name = '', full_url_as_caption =
 def page_2html(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
     datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
     src_cover = get_asset_url(get_page_cover_url(block), ctx)
-    page_id = block.get('id', '')
+    page_id = get_block_id(block)
     page_id_no_dashes = get_block_id_no_dashes(block)
     page_title = html.escape(get_page_title(block, ctx))
     page_emoji, page_icon_url = get_page_icon(block, ctx)
@@ -235,9 +235,9 @@ def page_2html(block, ctx, tag = 'article', class_name = 'notion-page-block', st
 def table_of_contents_2html(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
     # https://www.notion.so/help/columns-headings-and-dividers#how-it-works
     if block.get('site_table_of_contents_page_ids'):
-        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '<ul class="notion-table_of_contents-site-page-list">\n' + '\n'.join('<li class="notion-table_of_contents-site-page-item">\n{link_to_page}\n{child_pages}\n</li>'.format(link_to_page = link_to_page_2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx), child_pages = table_of_contents_page_tree(page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, []))) for page_id in page_ids) + '\n</ul>'
+        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '<ul class="notion-table_of_contents-site-page-list">\n' + '\n'.join('<li class="notion-table_of_contents-site-page-item">\n{link_to_page}\n{child_pages}\n</li>'.format(link_to_page = link_to_page_2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx), child_pages = table_of_contents_page_tree(get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []))) for page_id in page_ids) + '\n</ul>'
         page_ids = block.get('site_table_of_contents_page_ids', [])
-        child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
+        child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return '<nav class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr/></nav>\n'
     page_block = get_page_current(block, ctx)
@@ -285,7 +285,7 @@ def video_2html(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     html_contents = f'<div><iframe width="640" height="480" src="{url}" frameborder="0" allowfullscreen></iframe></div>' if is_youtube else f'<video playsinline muted loop controls src="{url}"></video>'
     return blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = html_contents)
 
-image_2html = lambda block, ctx, tag = 'img', class_name = 'notion-image-block': blocktag_2html(block, ctx, tag = 'figure', class_name = class_name, set_html_contents_and_close = '<{tag} src="{src}" alt="{rich_text_alt}"></{tag}><figcaption>{rich_text}</figcaption>'.format(src = get_asset_url(block, ctx), rich_text_alt = richtext_2html(block, ctx, caption = True, title_mode = True), rich_text = richtext_2html(block, ctx, caption = True, title_mode = False)))
+image_2html = lambda block, ctx, tag = 'img', class_name = 'notion-image-block': blocktag_2html(block, ctx, tag = 'figure', class_name = class_name, set_html_contents_and_close = '<{tag} src="{src}" alt="{rich_text_alt}"></{tag}><figcaption>{rich_text}</figcaption>'.format(tag = tag, src = get_asset_url(block, ctx), rich_text_alt = richtext_2html(block, ctx, caption = True, title_mode = True), rich_text = richtext_2html(block, ctx, caption = True, title_mode = False)))
 
 def embed_2html(block, ctx, tag = 'iframe', class_name = 'notion-embed-block', caption = '', attrs = dict(width = 640, height = 480)):
     block_type = get_block_type(block)
@@ -345,13 +345,13 @@ synced_block_2html = lambda block, ctx, tag = 'figure', class_name = 'notion-syn
 equation_2html = lambda block, ctx, tag = 'code', class_name = 'notion-equation-block', inline = False: blocktag_2html(block, ctx, tag = tag, class_name = class_name if not inline else class_name.replace('block', 'inline'), set_html_contents_and_close = html.escape(block['equation'].get('expression', '') or block.get('plain_text', '')))
 pdf_2html = lambda block, ctx, tag = 'a', class_name = 'notion-pdf-block': embed_2html(block, ctx, class_name = class_name, caption = linklike_2html({k : v for k, v in block.items() if k != 'id'}, ctx, tag = tag) if not is_url_datauri(get_asset_url(block, ctx)) else '<div><b>{caption}</b></div>'.format(caption = html.escape(get_url_basename(get_block_url(block)))) )
 file_2html = lambda block, ctx, tag = 'a', class_name = 'notion-file-block': linklike_2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
-breadcrumb_2html = lambda block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page_2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']])))
+breadcrumb_2html = lambda block, ctx, tag = 'div', class_name = 'notion-breadcrumb-block', sep = '&nbsp;/&nbsp;': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = sep.join(link_to_page_2html(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_block_id(get_page_current(block, ctx)) ])))
 template_2html = lambda block, ctx, tag = 'figure', class_name = 'notion-template-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption>{rich_text}</figcaption>\n{children}'.format(rich_text = richtext_2html(block, ctx, rich_text = True), children = childrenlike_2html(block, ctx)))
 child_database_2html = lambda block, ctx, tag = 'figure', class_name = 'notion-child_database-block', untitled = '???': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = '<figcaption><strong>{child_database_title}</strong></figcaption>'.format(child_database_title = html.escape(block['child_database'].get('title') or untitled)))
 link_preview_2html = lambda block, ctx, tag = 'a', class_name = 'notion-link_preview-block': linklike_2html(block, ctx, tag = tag, class_name = class_name, line_break = True)
 
 quote_2html = lambda block, ctx, tag = 'blockquote', class_name = 'notion-quote-block': textlike_2html(block, ctx, tag = tag, class_name = class_name)
-callout_2html = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag_2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = get_callout_emoji(block)) + textlike_2html(block, ctx, tag = tag)) + '</div>\n'
+callout_2html = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag_2html(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = get_callout_icon(block)) + textlike_2html(block, ctx, tag = tag)) + '</div>\n'
 
 ##############################
 
@@ -394,9 +394,9 @@ def table_2markdown(block, ctx, sanitize_table_cell = lambda md: md.replace('\n'
 
 def table_of_contents_2markdown(block, ctx, tag = '* '):
     if block.get('site_table_of_contents_page_ids'):
-        table_of_contents_page_tree = lambda page_ids, depth = 0: '' if not page_ids else ''.join(depth * 4 * ' ' + '{tag}{link_to_page}\n{child_pages}'.format(tag = tag, link_to_page = link_to_page_2markdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), child_pages = table_of_contents_page_tree([page['id'] for page in ctx['child_pages_by_parent_id'].get(page_id, [])], depth + 1)) for page_id in page_ids)
+        table_of_contents_page_tree = lambda page_ids, depth = 0: '' if not page_ids else ''.join(depth * 4 * ' ' + '{tag}{link_to_page}\n{child_pages}'.format(tag = tag, link_to_page = link_to_page_2markdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), child_pages = table_of_contents_page_tree([get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, [])], depth + 1)) for page_id in page_ids)
         page_ids = block.get('site_table_of_contents_page_ids', [])
-        child_page_ids = set(child_page['id'] for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
+        child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return table_of_contents_page_tree(root_page_ids, depth = 0)
     
@@ -439,7 +439,7 @@ def mention_2markdown(block, ctx):
 def page_2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
     src_cover = get_asset_url(get_page_cover_url(block), ctx)
-    page_id = block.get('id', '')
+    page_id = get_block_id(block)
     page_id_no_dashes = get_block_id_no_dashes(block)
     page_title = (get_page_title(block, ctx))
     page_emoji, page_icon_url = get_page_icon(block, ctx)
@@ -459,7 +459,7 @@ def page_2markdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     return res
 
 child_page_2markdown = lambda block, ctx: page_2markdown(block, ctx)
-unsupported_2markdown = lambda block, ctx, tag = '*': ' {tag}unsupported notion block [{block_id}, {block_type}]{tag} '.format(tag = tag, block_id = block.get('id', ''), block_type = get_block_type(block))
+unsupported_2markdown = lambda block, ctx, tag = '*': ' {tag}unsupported notion block [{block_id}, {block_type}]{tag} '.format(tag = tag, block_id = get_block_id(block), block_type = get_block_type(block))
 divider_2markdown = lambda block, ctx, tag = '---': tag
 heading_1_2markdown = lambda block, ctx, tag = '# '  : headinglike_2markdown(block, ctx, tag = tag) 
 heading_2_2markdown = lambda block, ctx, tag = '## ' : headinglike_2markdown(block, ctx, tag = tag) 
@@ -479,7 +479,7 @@ link_preview_2markdown = lambda block, ctx, tag = '🌐': linklike_2markdown(blo
 embed_2markdown = lambda block, ctx: embed_2html(block, ctx)
 child_database_2markdown = lambda block, ctx, untitled = '???', tag = '**': ' {tag}{child_database_title}{tag} '.format(tag = tag, child_database_title = (block['child_database'].get('title') or untitled))
 template_2markdown = lambda block, ctx: '---\n{rich_text}\n{children}\n---'.format(rich_text = richtext_2markdown(block, ctx, rich_text = True), children = childrenlike_2markdown(block, ctx))
-breadcrumb_2markdown = lambda block, ctx, sep = ' / ': sep.join(link_to_page_2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_page_current(block, ctx)['id']]))
+breadcrumb_2markdown = lambda block, ctx, sep = ' / ': sep.join(link_to_page_2markdown(subblock, ctx, line_break = False) for subblock in reversed(ctx['page_parent_paths'][get_block_id(get_page_current(block, ctx))]))
 code_2markdown = lambda block, ctx: '{caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), caption = richtext_2html(block, ctx, caption = True)) + richtext_2markdown(block, ctx, rich_text = True) + '\n```'
 image_2markdown = lambda block, ctx: '![{rich_text_alt}]({src})\n{rich_text}'.format(src = get_asset_url(block, ctx), rich_text_alt = richtext_2markdown(block, ctx, caption = True, title_mode = True), rich_text = richtext_2markdown(block, ctx, caption = True, title_mode = False))
 
@@ -574,7 +574,7 @@ def get_block_type(block):
 
 def get_page_link_info(block, ctx, untitled = '???'):
     payload = block.get(block.get('type'), {})
-    page_id = payload.get(payload.get('type'), '') or block.get('id', '')
+    page_id = payload.get(payload.get('type'), '') or get_block_id(block)
     page_id_no_dashes = get_block_id_no_dashes(page_id) or (block.get('href', '').lstrip('/') if block.get('href', '').startswith('/') else '') 
     page_ids_no_dashes = set(get_block_id_no_dashes(page_id) for page_id in ctx['page_ids'])
     page_slug = get_page_slug(page_id_no_dashes, ctx) 
@@ -670,7 +670,7 @@ def get_page_url_absolute(block, ctx):
     return page_url_absolute
 
 def get_page_url_relative(block, ctx):
-    page_id = block.get('link_to_page', {}).get('page_id', '') or (block.get('href', '').removeprefix('/') if block.get('href', '').startswith('/') else '') or block.get('id', '')
+    page_id = block.get('link_to_page', {}).get('page_id', '') or (block.get('href', '').removeprefix('/') if block.get('href', '').startswith('/') else '') or get_block_id(block)
     page_id_no_dashes = get_block_id_no_dashes(page_id)
     
     page_slug = get_page_slug(page_id, ctx)
@@ -885,19 +885,19 @@ def sitemap_urlset_update(urlset, id, loc, locrel = ''):
 def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}, parent_id = None):
     block_type = get_block_type(block)
     if block_type in ['page', 'child_page']:
-        if block.get('id') not in child_pages_by_parent_id:
-            child_pages_by_parent_id[block.get('id')] = [] 
+        if get_block_id(block) not in child_pages_by_parent_id:
+            child_pages_by_parent_id[get_block_id(block)] = [] 
     for key in ['children', 'blocks']:
         for i in reversed(range(len(block[key]) if block.get(key, []) else 0)):
             subblock_type = get_block_type(block[key][i])
             subblock = block[key][i]
             if subblock_type == 'child_page':
                 parent_id_type = 'page_id' if block_type in ['page', 'child_page'] else 'block_id'
-                block[key][i] = dict( object = 'block', type = 'link_to_page', has_children = False, link_to_page = dict(type = 'page_id', page_id = subblock['id']), parent = {'type' : parent_id_type, parent_id_type : block['id']} )
+                block[key][i] = dict( object = 'block', type = 'link_to_page', has_children = False, link_to_page = dict(type = 'page_id', page_id = get_block_id(subblock)), parent = {'type' : parent_id_type, parent_id_type : get_block_id(block)} )
                 if parent_id not in child_pages_by_parent_id:
                     child_pages_by_parent_id[parent_id] = []
                 child_pages_by_parent_id[parent_id].append(subblock)
-                pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = subblock['id'])
+                pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = get_block_id(subblock))
             else:
                 pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = parent_id)
 
@@ -943,7 +943,7 @@ def download_asset_if_not_exists(url, asset_path = '', datauri = False):
 
 def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets_types = []):
     for block in blocks:
-        print('discover_assets', get_block_type(block), get_block_id(block))
+        #print('discover_assets', get_block_type(block), get_block_id(block))
         discover_assets(get_block_children(block), assets_urls, exclude_datauri = exclude_datauri, download_assets_types = download_assets_types)
         block_type = get_block_type(block)
         payload = block.get(block_type) or {}
@@ -954,8 +954,7 @@ def discover_assets(blocks, assets_urls, exclude_datauri = True, download_assets
             ('icon', get_block_url(block.get('icon') or {})),
             (block_type + '-' + payload_type, get_block_url(block)),
         ]
-
-        print(assets_types_urls)
+        #print(assets_types_urls)
 
         assets_urls.extend( asset_url for asset_type, asset_url in assets_types_urls if asset_url and asset_type in download_assets_types and (exclude_datauri is False or not is_url_datauri(asset_url)) )
     return assets_urls
@@ -1198,11 +1197,11 @@ def notion2static(
     child_pages_by_parent_id = {}
     for page_id, page in notion_pages_flat.items():
         pop_and_replace_child_pages_recursively(page, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = page_id)
-    child_pages_by_id = {child_page['id'] : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
+    child_pages_by_id = {get_block_id(child_page) : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
         
     root_page_ids = resolve_page_ids(notion_page_id or list(notion_pages.keys()), notion_pages_flat.keys(), notion_slugs)
-    page_ids = root_page_ids + [child_page['id'] for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if child_page['id'] not in root_page_ids]
+    page_ids = root_page_ids + [get_block_id(child_page) for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if get_block_id(child_page) not in root_page_ids]
     assert all(page_id in notion_pages_flat for page_id in root_page_ids), f'{notion_pages_flat.keys()=}, {root_page_ids=}'
     
     ext = os.path.splitext(extract_mode)[-1]

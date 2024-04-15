@@ -17,6 +17,7 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
         .replace('{{ head_html }}', snippets.get('head_html', '')) \
         .replace('{{ style_css }}', style_css) \
         .replace('{{ nav_html }}', nav) \
+        .replace('{{ footer_html }}', '') \
         .replace('{{ bodyheader_html }}'   , snippets.get('bodyheader_html', '')) \
         .replace('{{ bodyfooter_html }}'   , snippets.get('bodyfooter_html', '')) \
         .replace('{{ main_html }}', main_toc + main) \
@@ -131,6 +132,7 @@ page_html =  '''
     </head>
     <body>
         {{ bodyheader_html }}
+
         <header class="site-header notion-topbar">
             <nav>
                 {{ nav_html }}
@@ -149,11 +151,17 @@ page_html =  '''
             </nav>
 
         </header>
+
         <main class="page-content" aria-label="Content">
             <div class="wrapper">
                 {{ main_html }}
             </div>
         </main>
+
+        <footer>
+            {{ footer_html }}
+        </footer>
+
         {{ bodyfooter_html }}
     </body>
 </html>

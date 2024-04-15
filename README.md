@@ -106,6 +106,44 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`template`|`.notion-template-block`|`<figure>`|
 |`child_database`|`.notion-child_database-block`|`<figure>`|
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
+||||
+||`.notion-topbar`||
+||`.notion-code-inline`||
+||`.notion-toggle-like`||
+||`.notion-heading-like-icon`||
+||`.notion-heading-like`||
+||`.notion-page-like-icon`||
+||`.notion-page-like-edit-icon`||
+||`.notion-page-cover`||
+||`.notion-record-icon`||
+||`.notion-page-block-datetime-published`||
+||`.notion-page-content`||
+||`.notion-table_of_contents-site-page-list`||
+||`.notion-table_of_contents-site-page-item`||
+||`.notion-table_of_contents-site`||
+||`.notion-table_of_contents-site-header`||
+||`.notion-table_of_contents-heading`||
+||`.notion-table_of_contents-{effective_heading_type}`||
+||`.language-{language}`||
+||`.notion-color-{color}`||
+
+
+# [Theme **minima.py**](https://github.com/jekyll/minima) CSS classes:
+
+| Element       | CSS class     |
+| ------------- | ------------- |
+||`.post`|
+||`.post-title`|
+||`.post-content`|
+||`.page-link`|
+||`.post-header`|
+||`.site-header`|
+||`.site-nav`|
+||`.nav-trigger`|
+||`.menu-icon`|
+||`.trigger`|
+||`.wrapper`|
+||`.dt-published`|
 
 # References
 - https://github.com/jekyll/minima
