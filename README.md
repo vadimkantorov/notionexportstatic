@@ -129,18 +129,45 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 
 | Element       | CSS class     |
 | ------------- | ------------- |
-||`.post`|
+||`.wrapper`|
+||`.post-list-heading`|
+||`.post-list`|
+||`.post-meta`|
+||`.post-link`|
+||`.post-header`|
 ||`.post-title`|
 ||`.post-content`|
+|||
+||`.page-content`|
+||`.page-heading`|
 ||`.page-link`|
-||`.post-header`|
+|||
 ||`.site-header`|
+||`.site-title`|
+||`.site-footer`|
 ||`.site-nav`|
 ||`.nav-trigger`|
-||`.menu-icon`|
+||`.menu-icon `|
 ||`.trigger`|
-||`.wrapper`|
-||`.dt-published`|
+|||
+||`.feed-subscribe`|
+||`.contact-list`|
+||`.social-links`|
+||`.social-media-list`|
+||`.svg-icon`|
+||`.pagination`|
+||`.pager-edge`|
+||`.highlight`|
+||`.highlighter-rouge`|
+||`.orange`|
+||`.grey`|
+|||
+||`.footer-heading`|
+||`.footer-col-wrapper`|
+||`.footer-col`|
+||`.footer-col-1`|
+||`.footer-col-2`|
+||`.footer-col-3`|
 
 # References
 - https://github.com/jekyll/minima

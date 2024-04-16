@@ -17,7 +17,7 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
         .replace('{{ head_html }}', snippets.get('head_html', '')) \
         .replace('{{ style_css }}', style_css) \
         .replace('{{ nav_html }}', nav) \
-        .replace('{{ footer_html }}', '') \
+        .replace('{{ footer_html }}', snippets.get('footer_html', '')) \
         .replace('{{ bodyheader_html }}'   , snippets.get('bodyheader_html', '')) \
         .replace('{{ bodyfooter_html }}'   , snippets.get('bodyfooter_html', '')) \
         .replace('{{ main_html }}', main_toc + main) \
@@ -52,7 +52,7 @@ emoji_svg = '''
 '''
 
 privacynotice_html = '''
-<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a href="{{ PRIVACYNOTICE_URL }}">privacy and privacy notice</a>:&nbsp;<button onclick="document.cookie='accepted';">Accept</button></div>
+<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;" onload="console.log(this)">Please review and accept the <a href="{{ PRIVACYNOTICE_URL }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';this.hidden=true;">Accept</button></div>
 '''
 
 googleanalytics_html = '''
@@ -87,16 +87,15 @@ highlightjs_html = '''
 
 head_html = '''
 <meta name="generator" content="notionexportstatic" />
-        
+
+<!-- https://developers.google.com/search/docs/crawling-indexing/special-tags -->
 <!-- <meta name="google-site-verification"     content="{{ site_verification_google }}"   /> -->
-<!-- <meta name="msvalidate.01"                content="{{ site_verification_bing }}"     /> -->
-<!-- <meta name="alexaVerifyID"                content="{{ site_verification_alexa }}"    /> -->
-<!-- <meta name="yandex-verification"          content="{{ site_verification_yandex }}"   /> -->
-<!-- <meta name="baidu-site-verification"      content="{{ site_verification_baidu }}"    /> -->
-<!-- <meta name="facebook-domain-verification" content="{{ site_verification_facebook }}" /> -->
 ''' + googleanalytics_html.replace('{{ GOOGLE_ANALYTICS_ID }}', 'my_google_analytics_id') + katex_html + highlightjs_html
 
-boydheader_html = privacynotice_html.replace('{{ PRIVACYNOTICE_URL }}', '/privacynotice.html') 
+bodyheader_html = privacynotice_html.replace('{{ PRIVACYNOTICE_URL }}', '/privacynotice.html') 
+bodyfooter_html = ''
+footer_html = ''
+
 
 page_html =  '''
 <!DOCTYPE html>
@@ -1754,6 +1753,9 @@ snippets_default = dict(
     minimacss_classic_css = minimacss_classic_css,
     page_html = page_html,
     head_html = head_html,
+    bodyheader_html = bodyheader_html,
+    bodyfooter_html = bodyfooter_html,
+    footer_html = footer_html
 )
 
 if __name__ == '__main__':
