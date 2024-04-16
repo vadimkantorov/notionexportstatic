@@ -139,9 +139,11 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 ||`.post-content`|
 |||
 |||
+|||
 ||`.page-content`|
 ||`.page-heading`|
 ||`.page-link`|
+|||
 |||
 |||
 ||`.site-header`|
@@ -151,6 +153,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 ||`.nav-trigger`|
 ||`.menu-icon `|
 ||`.trigger`|
+|||
 |||
 |||
 ||`.feed-subscribe`|
@@ -164,6 +167,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 ||`.highlighter-rouge`|
 ||`.orange`|
 ||`.grey`|
+|||
 |||
 |||
 ||`.footer-heading`|
