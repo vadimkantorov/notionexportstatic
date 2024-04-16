@@ -1,6 +1,3 @@
-# TODO: scroll-to-top link in bottom-right over-the-top
-# TODO: burger menu example for global toc
-
 def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
     divider = render_block(dict(type = 'divider'), ctx, class_name = '')
@@ -13,12 +10,21 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
     emoji_datauri = 'data:image/svg+xml,' + emoji_svg.replace('{{ emoji }}', ctx.get('meta_tags', {}).get('emoji') or '📜').translate({ord('<') : '%3C', ord('>') : '%3E', ord('"') : "'"}).strip()
     
     main = divider.join(render_block(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
+
+    bodyheader_html = snippets.get('bodyheader_html', '')
+    for k in ['html_privacynotice', 'html_googleanalytics', 'html_equation_katex', 'html_code_highlightjs']:
+        if ctx[k]:
+            bodyheader_html = bodyheader_html.replace('<!--' + k, '').replace(k + '-->', '')
+    bodyheader_html = bodyheader_html \
+        .replace('{{ PRIVACYNOTICE_URL }}', ctx['html_privacynotice'] or '') \
+        .replace('{{ GOOGLE_ANALYTICS_TAG_ID }}', ctx['html_googleanalytics'] or '')
+
     res = snippets.get('page_html', '') \
         .replace('{{ head_html }}', snippets.get('head_html', '')) \
         .replace('{{ style_css }}', style_css) \
         .replace('{{ nav_html }}', nav) \
         .replace('{{ footer_html }}', snippets.get('footer_html', '')) \
-        .replace('{{ bodyheader_html }}'   , snippets.get('bodyheader_html', '')) \
+        .replace('{{ bodyheader_html }}'   , bodyheader_html) \
         .replace('{{ bodyfooter_html }}'   , snippets.get('bodyfooter_html', '')) \
         .replace('{{ main_html }}', main_toc + main) \
         .replace('{{ site_title }}'                   , ctx.get('meta_tags', {}).get('site_title', '')) \
@@ -52,12 +58,12 @@ emoji_svg = '''
 '''
 
 privacynotice_html = '''
-<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;" onload="console.log(this)">Please review and accept the <a href="{{ PRIVACYNOTICE_URL }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';this.hidden=true;">Accept</button></div>
+<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a href="{{ PRIVACYNOTICE_URL }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';this.hidden=true;">Accept</button></div>
+<script></script>
 '''
 
 googleanalytics_html = '''
-<!-- https://developers.google.com/tag-platform/gtagjs/install -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_TAG_ID }}"></script>
+<script title="https://developers.google.com/tag-platform/gtagjs/install" async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_TAG_ID }}"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
@@ -74,28 +80,22 @@ console.log("nocookie");
 '''
 
 katex_html = '''
-<!-- https://katex.org/docs/autorender -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+<link title="https://katex.org/docs/autorender" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous" onload="document.querySelectorAll('code.notion-equation-block').forEach(elem=>katex.render(elem.innerText,elem,{displayMode:true,throwOnError:false}));document.querySelectorAll('code.notion-equation-inline').forEach(elem=>katex.render(elem.innerText,elem,{displayMode:false,throwOnError:false}));"></script>
 '''
 
 highlightjs_html = '''
-<!-- https://highlightjs.org/#as-html-tags -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css">
+<link title="https://highlightjs.org/#as-html-tags" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css" />
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" defer onload="hljs.highlightAll();"></script>
 '''
 
-head_html = '''
-<meta name="generator" content="notionexportstatic" />
+head_html = '<!-- head_html -->'
 
-<!-- https://developers.google.com/search/docs/crawling-indexing/special-tags -->
-<!-- <meta name="google-site-verification"     content="{{ site_verification_google }}"   /> -->
-''' + googleanalytics_html.replace('{{ GOOGLE_ANALYTICS_ID }}', 'my_google_analytics_id') + katex_html + highlightjs_html
-
-bodyheader_html = privacynotice_html.replace('{{ PRIVACYNOTICE_URL }}', '/privacynotice.html') 
-bodyfooter_html = ''
-footer_html = ''
-
+bodyheader_html =  '<!--html_privacynotice' + privacynotice_html + 'html_privacynotice-->' + '\n\n' + '<!--html_googleanalytics' + googleanalytics_html + 'html_googleanalytics-->' + '\n\n' + '<!--html_equation_katex' + katex_html + 'html_equation_katex-->' + '\n\n' + '<!--html_code_highlightjs' + highlightjs_html + 'html_code_highlightjs-->'
+bodyfooter_html = '<!-- bodyfooter_html -->'
+footer_html = '<!-- footer_html -->'
+articleheader_html = '<!-- articleheader_html -->'
+articlefooter_html = '<!-- articlefooter_html -->'
 
 page_html =  '''
 <!DOCTYPE html>
@@ -103,6 +103,7 @@ page_html =  '''
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" /> <!-- , shrink-to-fit=no -->
+        <meta name="generator" content="notionexportstatic" />
 
         <title>{{ site_title }}</title>
         <link rel="canonical" href="{{ site_url_absolute }}" />
@@ -1755,6 +1756,8 @@ snippets_default = dict(
     head_html = head_html,
     bodyheader_html = bodyheader_html,
     bodyfooter_html = bodyfooter_html,
+    articleheader_html = articleheader_html,
+    articlefooter_html = articlefooter_html,
     footer_html = footer_html
 )
 

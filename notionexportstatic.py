@@ -1151,16 +1151,20 @@ def notion2static(
     base_url,
     base_url_removesuffix,
     edit_url,
-    markdown_frontmatter,
-    markdown_toggle,
-    markdown_toc_page,
     use_page_title_for_missing_slug,
     log_unsupported_blocks,
     log_urls,
 
+    markdown_toc_page,
+    markdown_toggle,
+    markdown_frontmatter,
     html_details_open,
     html_columnlist_disable,
     html_link_to_page_index_html,
+    html_privacynotice,
+    html_googleanalytics,
+    html_equation_katex,
+    html_code_highlightjs,
     bodyheader_html,
     bodyfooter_html,
     articleheader_html,
@@ -1368,6 +1372,11 @@ if __name__ == '__main__':
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
     parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
+    parser.add_argument('--html-privacynotice')
+    parser.add_argument('--html-googleanalytics')
+    parser.add_argument('--html-equation-katex', action = 'store_true')
+    parser.add_argument('--html-code-highlightjs', action = 'store_true')
+
     parser.add_argument('--bodyheader-html')
     parser.add_argument('--bodyfooter-html')
     parser.add_argument('--articleheader-html')
