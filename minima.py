@@ -1,8 +1,9 @@
 def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
+    page_is_single = bool(len(page_ids) > 1)
     divider = render_block(dict(type = 'divider'), ctx, class_name = '')
     nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * bool(len(page_ids) > 1)
+    main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * page_is_single
     
     snippets = snippets_default | snippets
     style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
@@ -16,17 +17,17 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
         if ctx[k]:
             bodyheader_html = bodyheader_html.replace('<!--' + k, '').replace(k + '-->', '')
     bodyheader_html = bodyheader_html \
-        .replace('{{ PRIVACYNOTICE_URL }}', ctx['html_privacynotice'] or '') \
-        .replace('{{ GOOGLE_ANALYTICS_TAG_ID }}', ctx['html_googleanalytics'] or '')
+        .replace('{{ privacynotice_url }}', ctx['html_privacynotice'] or '') \
+        .replace('{{ googleanalytics_tag_id }}', ctx['html_googleanalytics'] or '')
 
     res = snippets.get('page_html', '') \
-        .replace('{{ head_html }}', snippets.get('head_html', '')) \
-        .replace('{{ style_css }}', style_css) \
-        .replace('{{ nav_html }}', nav) \
-        .replace('{{ footer_html }}', snippets.get('footer_html', '')) \
-        .replace('{{ bodyheader_html }}'   , bodyheader_html) \
-        .replace('{{ bodyfooter_html }}'   , snippets.get('bodyfooter_html', '')) \
-        .replace('{{ main_html }}', main_toc + main) \
+        .replace('{{ head_html }}'                    , snippets.get('head_html', '')) \
+        .replace('{{ style_css }}'                    , style_css) \
+        .replace('{{ nav_html }}'                     , nav) \
+        .replace('{{ footer_html }}'                  , snippets.get('footer_html', '')) \
+        .replace('{{ bodyheader_html }}'              , bodyheader_html) \
+        .replace('{{ bodyfooter_html }}'              , snippets.get('bodyfooter_html', '')) \
+        .replace('{{ main_html }}'                    , main_toc + main) \
         .replace('{{ site_title }}'                   , ctx.get('meta_tags', {}).get('site_title', '')) \
         .replace('{{ site_url_absolute }}'            , ctx.get('meta_tags', {}).get('site_url_absolute', '')) \
         .replace('{{ site_description }}'             , ctx.get('meta_tags', {}).get('site_description', '')) \
@@ -45,9 +46,10 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
 
 def sitepages_2markdown(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     page_id_first = page_ids[0]
+    page_is_single = bool(len(page_ids) > 1)
     divider = '\n' + render_block(dict(type = 'divider'), ctx) + '\n'
     nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = (nav + divider + '\n' + render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * bool(len(page_ids) > 1)
+    main_toc = (nav + divider + '\n' + render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * page_is_sinlge
 
     main = divider.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
     res = main_toc + main
@@ -58,25 +60,13 @@ emoji_svg = '''
 '''
 
 privacynotice_html = '''
-<div style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a href="{{ PRIVACYNOTICE_URL }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';this.hidden=true;">Accept</button></div>
-<script></script>
+<div id="privacynotice" hidden style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a href="{{ privacynotice_url }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';this.hidden=true;">Accept</button></div>
+<script>if(!document.cookie) document.getElementById("privacynotice").removeAttribute("hidden");</script>
 '''
 
 googleanalytics_html = '''
-<script title="https://developers.google.com/tag-platform/gtagjs/install" async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_TAG_ID }}"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-if(document.cookie) {
-console.log("docookie");
-//gtag('js', new Date());
-//gtag('config', '{{ GOOGLE_ANALYTICS_TAG_ID }}');
-}
-else
-{
-console.log("nocookie");
-}
-</script>
+<script title="https://developers.google.com/tag-platform/gtagjs/install" async src="https://www.googletagmanager.com/gtag/js?id={{ googleanalytics_tag_id }}"></script>
+<script>window.dataLayer=window.dataLayer||[];gtag=()=>dataLayer.push(arguments);if(document.cookie){gtag('js', new Date());gtag('config','{{ googleanalytics_tag_id }}');}</script>
 '''
 
 katex_html = '''
@@ -86,7 +76,7 @@ katex_html = '''
 
 highlightjs_html = '''
 <link title="https://highlightjs.org/#as-html-tags" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css" />
-<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" defer onload="hljs.highlightAll();"></script>
+<script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="hljs.highlightAll();"></script>
 '''
 
 head_html = '<!-- head_html -->'
