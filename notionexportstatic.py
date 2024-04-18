@@ -243,6 +243,13 @@ def table_of_contents_2html(block, ctx, tag = 'ul', class_name = 'notion-table_o
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return '<nav class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '\n<hr/></nav>'
     
+    if block.get('site_table_of_contents_flat_page_ids'):
+        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '\n'.join('<li class="notion-table_of_contents-site-page-item">{link_to_page}</li>\n{child_pages}'.format(link_to_page = link_to_page_2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids)
+        page_ids = block.get('site_table_of_contents_flat_page_ids', [])
+        child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
+        root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
+        return '<ul class="notion-table_of_contents-site-page-list">\n' + table_of_contents_page_tree(root_page_ids) + '\n</ul>\n'
+    
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
     color = block['table_of_contents'].get('color', '')
