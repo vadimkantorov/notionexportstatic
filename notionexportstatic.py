@@ -5,6 +5,7 @@
 # TODO: notionapi2notionjson: assert args.notion_page_id
 # TODO: textlike_2markdown: color unused
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
+# TODO: table_of_contents_2html site reduce ul's
 
 import os
 import re
@@ -123,7 +124,8 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
 def blocktag_2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = None, prefix = '', suffix = '', attrs = {}, **kwargs):
     notion_attrs_class_name = 'notion-block ' + class_name
     notion_attrs = (' data-block-id="{id}" '.format(id = get_block_id(block))) * bool(get_block_id(block)) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
-    return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + '>\n' + (set_html_contents_and_close + f'\n</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) if tag else ''
+    endline_if_html = '\n' * ('<' in (set_html_contents_and_close or '') or '>' in (set_html_contents_and_close or ''))
+    return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + f'>{endline_if_html}' + (set_html_contents_and_close + f'{endline_if_html}</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) if tag else ''
 
 def childrenlike_2html(block, ctx, tag = ''):
     res = ''
@@ -235,11 +237,12 @@ def page_2html(block, ctx, tag = 'article', class_name = 'notion-page-block', st
 def table_of_contents_2html(block, ctx, tag = 'ul', class_name = 'notion-table_of_contents-block'):
     # https://www.notion.so/help/columns-headings-and-dividers#how-it-works
     if block.get('site_table_of_contents_page_ids'):
-        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '<ul class="notion-table_of_contents-site-page-list">\n' + '\n'.join('<li class="notion-table_of_contents-site-page-item">\n{link_to_page}\n{child_pages}\n</li>'.format(link_to_page = link_to_page_2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx), child_pages = table_of_contents_page_tree(get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []))) for page_id in page_ids) + '\n</ul>'
+        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else ('<ul class="notion-table_of_contents-site-page-list">\n' + '\n'.join('<li class="notion-table_of_contents-site-page-item">\n{link_to_page}\n{child_pages}\n</li>'.format(link_to_page = link_to_page_2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids) + '\n</ul>')
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
-        return '<nav class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '<hr/></nav>\n'
+        return '<nav class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '\n<hr/></nav>'
+    
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
     color = block['table_of_contents'].get('color', '')
@@ -334,7 +337,9 @@ divider_2html = lambda block, ctx, tag = 'hr', class_name = 'notion-divider-bloc
 heading_1_2html = lambda block, ctx, tag = 'h1', class_name = 'notion-header-block': headinglike_2html(block, ctx, tag = tag, class_name = class_name)
 heading_2_2html = lambda block, ctx, tag = 'h2', class_name = 'notion-sub_header-block': headinglike_2html(block, ctx, tag = tag, class_name = class_name)
 heading_3_2html = lambda block, ctx, tag = 'h3', class_name = 'notion-sub_sub_header-block': headinglike_2html(block, ctx, tag = tag, class_name = class_name)
+
 paragraph_2html = lambda block, ctx, tag = 'p', class_name = 'notion-text-block': blocktag_2html(block, ctx, tag = 'br', class_name = class_name, selfclose = True) if paragraph_is_empty(block, ctx) else textlike_2html(block, ctx, tag = tag, class_name = class_name)
+
 column_list_2html = lambda block, ctx, tag = 'div', class_name = 'notion-column_list-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name + ' notion_column_list-block-vertical' * (ctx['html_columnlist_disable'] is True), set_html_contents_and_close = childrenlike_2html(block, ctx))
 column_2html = lambda block, ctx, tag = 'div', class_name = 'notion-column-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, set_html_contents_and_close = childrenlike_2html(block, ctx, tag = tag)) 
 bulleted_list_item_2html = lambda block, ctx, tag = 'ul', begin = False, end = False, class_name = 'notion-bulleted_list-block': f'<{tag} class="{class_name}">\n' * begin + textlike_2html(block, ctx, tag = 'li') + f'\n</{tag}>\n' * end
@@ -622,7 +627,7 @@ def get_page_description(block, ctx, prefix_len = 300, ellipsis = '...'):
 
 def get_plain_text(block):
     plain_text = []
-    stack = block if isinstance(block, list) else [block]
+    stack = list(block) if isinstance(block, list) else [block]
     while stack:
         top = stack.pop()
         if 'plain_text' in top:
@@ -1333,8 +1338,8 @@ markdown_block2render_with_begin_end = dict(
     to_do = to_do_2markdown
 )
 
-def block_2html(block, ctx = {}, begin = False, end = False, **kwargs): return block2(block, ctx, block2render = html_block2render, block2render_with_begin_end = html_block2render_with_begin_end, begin = begin, end = end, **kwargs)
-def block_2markdown(block, ctx = {}, begin = False, end = False, **kwargs): return block2(block, ctx, block2render = markdown_block2render, block2render_with_begin_end = markdown_block2render_with_begin_end, begin = begin, end = end, **kwargs)
+block_2html = lambda block, ctx = {}, begin = False, end = False, **kwargs: block2(block, ctx, block2render = html_block2render, block2render_with_begin_end = html_block2render_with_begin_end, begin = begin, end = end, **kwargs)
+block_2markdown = lambda block, ctx = {}, begin = False, end = False, **kwargs: block2(block, ctx, block2render = markdown_block2render, block2render_with_begin_end = markdown_block2render_with_begin_end, begin = begin, end = end, **kwargs)
 
 ##############################
 

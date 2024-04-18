@@ -125,6 +125,11 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`child_database`|`.notion-child_database-block`|`<figure>`|
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
 
+# Notion colors:
+| Color | CSS class |
+| ----- | --------- |
+| \$\color{#f00}{\textsf{lorem ipsum}}$ | `.notion-color-default` |
+
 # [Theme **minima.py**](https://github.com/jekyll/minima) CSS classes:
 
 | Element       | CSS class     |

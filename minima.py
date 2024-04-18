@@ -3,7 +3,7 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
     page_is_single = bool(len(page_ids) > 1)
     divider = render_block(dict(type = 'divider'), ctx, class_name = '')
     nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) * page_is_single
+    main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
     
     snippets = snippets_default | snippets
     style_css = '\n'.join([ snippets.get('notionexportstatic_css', ''), snippets.get('notioncolors_css', ''), snippets.get('notioncolors_classic_css', ''), snippets.get('minimacss_classic_css', '') ])
@@ -24,10 +24,11 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
         .replace('{{ head_html }}'                    , snippets.get('head_html', '')) \
         .replace('{{ style_css }}'                    , style_css) \
         .replace('{{ nav_html }}'                     , nav) \
+        .replace('{{ navsite_html }}'                 , main_toc) \
         .replace('{{ footer_html }}'                  , snippets.get('footer_html', '')) \
         .replace('{{ bodyheader_html }}'              , bodyheader_html) \
         .replace('{{ bodyfooter_html }}'              , snippets.get('bodyfooter_html', '')) \
-        .replace('{{ main_html }}'                    , main_toc + main) \
+        .replace('{{ main_html }}'                    , main_toc * page_is_single + main) \
         .replace('{{ site_title }}'                   , ctx.get('meta_tags', {}).get('site_title', '')) \
         .replace('{{ site_url_absolute }}'            , ctx.get('meta_tags', {}).get('site_url_absolute', '')) \
         .replace('{{ site_description }}'             , ctx.get('meta_tags', {}).get('site_description', '')) \
@@ -49,10 +50,10 @@ def sitepages_2markdown(page_ids = [], ctx = {}, notion_pages = {}, render_block
     page_is_single = bool(len(page_ids) > 1)
     divider = '\n' + render_block(dict(type = 'divider'), ctx) + '\n'
     nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
-    main_toc = (nav + divider + '\n' + render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n') * page_is_sinlge
+    main_toc = nav + divider + '\n' + render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx) + divider + '\n'
 
     main = divider.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
-    res = main_toc + main
+    res = main_toc * page_is_single + main
     return res
 
 emoji_svg = '''
@@ -60,13 +61,13 @@ emoji_svg = '''
 '''
 
 privacynotice_html = '''
-<div id="privacynotice" hidden style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a href="{{ privacynotice_url }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';this.hidden=true;">Accept</button></div>
+<div id="privacynotice" hidden style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a href="{{ privacynotice_url }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';document.getElementById('privacynotice').hidden=true;">Accept</button></div>
 <script>if(!document.cookie) document.getElementById("privacynotice").removeAttribute("hidden");</script>
 '''
 
 googleanalytics_html = '''
 <script title="https://developers.google.com/tag-platform/gtagjs/install" async src="https://www.googletagmanager.com/gtag/js?id={{ googleanalytics_tag_id }}"></script>
-<script>window.dataLayer=window.dataLayer||[];gtag=()=>dataLayer.push(arguments);if(document.cookie){gtag('js', new Date());gtag('config','{{ googleanalytics_tag_id }}');}</script>
+<script>window.dataLayer=window.dataLayer||[];gtag=()=>dataLayer.push(arguments);if(document.cookie){gtag("js", new Date());gtag("config","{{ googleanalytics_tag_id }}");}</script>
 '''
 
 katex_html = '''
@@ -83,9 +84,52 @@ head_html = '<!-- head_html -->'
 
 bodyheader_html =  '<!--html_privacynotice' + privacynotice_html + 'html_privacynotice-->' + '\n\n' + '<!--html_googleanalytics' + googleanalytics_html + 'html_googleanalytics-->' + '\n\n' + '<!--html_equation_katex' + katex_html + 'html_equation_katex-->' + '\n\n' + '<!--html_code_highlightjs' + highlightjs_html + 'html_code_highlightjs-->'
 bodyfooter_html = '<!-- bodyfooter_html -->'
-footer_html = '<!-- footer_html -->'
 articleheader_html = '<!-- articleheader_html -->'
 articlefooter_html = '<!-- articlefooter_html -->'
+
+footer_html = '''
+<!-- footer_html -->
+<footer class="site-footer h-card">
+  <data class="u-url" href="relative_url_to_root"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="absolute_url_feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="assets/minima-social-icons.svg#rss"></use>
+            </svg><span>Subscribe</span>
+          </a>
+        </p>
+      <!--{%- if site.author %}-->
+        <ul class="contact-list">
+          <!--{% if site.author.name -%}-->
+            <li class="p-name">{{ site.author.name | escape }}</li>
+          <!--{% endif -%}-->
+          <!--{% if site.author.email -%}-->
+            <li><a class="u-email" href="mailto:{{ site.author.email }}">{{ site.author.email }}</a></li>
+          <!--{%- endif %}-->
+        </ul>
+      <!--{%- endif %}-->
+      </div>
+      <div class="footer-col">
+        <p>{{ site_description }}</p>
+      </div>
+    </div>
+
+    <div class="social-links">
+      <!--{%- include social.html -%}-->
+    </div>
+
+  </div>
+
+</footer>
+'''
+
+#                    <a class="page-link" href="pageA">pageA</a>
+#                    <a class="page-link" href="pageB">pageB</a>
 
 page_html =  '''
 <!DOCTYPE html>
@@ -127,6 +171,8 @@ page_html =  '''
             <nav>
                 {{ nav_html }}
             </nav>
+
+            <!--<a class="site-title" rel="author" href="relative_url_to_root">{{ site_title }}</a>-->
             
             <nav class="site-nav">
                 <input type="checkbox" id="nav-trigger" class="nav-trigger" />
@@ -135,8 +181,7 @@ page_html =  '''
                 </label>
 
                 <div class="trigger">
-                    <a class="page-link" href="pageA">pageA</a>
-                    <a class="page-link" href="pageB">pageB</a>
+                    {{ navsite_html }}
                 </div>
             </nav>
 
@@ -159,6 +204,18 @@ page_html =  '''
 
 
 notionexportstatic_css = '''
+
+/* override minimacss defaults for burger menu hide for large screens */
+@media screen and (min-width: 600px) {
+  .site-nav label[for="nav-trigger"] {
+    display: block !important; }
+  .site-nav .menu-icon {
+    display: block !important; }
+}
+
+.site-nav .trigger {
+    overflow-y: scroll;
+}
 
 .notion-page-like-icon::after, .notion-heading-like-icon::after { content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath d='m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z'%3E%3C/path%3E%3C/svg%3E") }
 
