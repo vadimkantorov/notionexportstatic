@@ -126,28 +126,28 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
 
 # Notion colors light theme
-| Color | CSS class |
-| ----- | --------- |
-| \$\color{#37352F}{\texttt{37352F}}$ | `.notion-color-default`| 
-| \$\color{#9B9A97}{\texttt{9B9A97}}$ | `.notion-color-gray`   | 
-| \$\color{#64473A}{\textsf{64473A}}$ | `.notion-color-brown`  | 
-| \$\color{#D9730D}{\textsf{D9730D}}$ | `.notion-color-orange` |  
-| \$\color{#DFAB01}{\textsf{DFAB01}}$ | `.notion-color-yellow` | 
-| \$\color{#0F7B6C}{\textsf{0F7B6C}}$ | `.notion-color-green`  | 
-| \$\color{#0B6E99}{\textsf{0B6E99}}$ | `.notion-color-blue`   | 
-| \$\color{#6940A5}{\textsf{6940A5}}$ | `.notion-color-purple` | 
-| \$\color{#AD1A72}{\textsf{AD1A72}}$ | `.notion-color-pink`   | 
-| \$\color{#E03E3E}{\textsf{E03E3E}}$ | `.notion-color-red`    | 
-| \$\color{#FFFFFF}{\textsf{FFFFFF}}$ | `.notion-color-default_background`| 
-| \$\color{#EBECED}{\textsf{EBECED}}$ | `.notion-color-gray_background`   | 
-| \$\color{#E9E5E3}{\textsf{E9E5E3}}$ | `.notion-color-brown_background`  | 
-| \$\color{#FAEBDD}{\textsf{FAEBDD}}$ | `.notion-color-orange_background` | 
-| \$\color{#FBF3DB}{\textsf{FBF3DB}}$ | `.notion-color-yellow_background` | 
-| \$\color{#DDEDEA}{\textsf{DDEDEA}}$ | `.notion-color-green_background`  | 
-| \$\color{#DDEBF1}{\textsf{DDEBF1}}$ | `.notion-color-blue_background`   | 
-| \$\color{#EAE4F2}{\textsf{EAE4F2}}$ | `.notion-color-purple_background` | 
-| \$\color{#F4DFEB}{\textsf{F4DFEB}}$ | `.notion-color-pink_background`   | 
-| \$\color{#FBE4E4}{\textsf{FBE4E4}}$ | `.notion-color-red_background`    | 
+| Color | CSS class | RGB |
+| ----- | --------- | --- |
+| \$\color{#37352F}{\texttt{37352F}}$ | `.notion-color-default`| `#37352F` |
+| \$\color{#9B9A97}{\texttt{9B9A97}}$ | `.notion-color-gray`   | `#9B9A97` | 
+| \$\color{#64473A}{\texttt{64473A}}$ | `.notion-color-brown`  | `#64473A` | 
+| \$\color{#D9730D}{\texttt{D9730D}}$ | `.notion-color-orange` | `#D9730D` |  
+| \$\color{#DFAB01}{\texttt{DFAB01}}$ | `.notion-color-yellow` | `#DFAB01` | 
+| \$\color{#0F7B6C}{\texttt{0F7B6C}}$ | `.notion-color-green`  | `#0F7B6C` | 
+| \$\color{#0B6E99}{\texttt{0B6E99}}$ | `.notion-color-blue`   | `#0B6E99` | 
+| \$\color{#6940A5}{\texttt{6940A5}}$ | `.notion-color-purple` | `#6940A5` | 
+| \$\color{#AD1A72}{\texttt{AD1A72}}$ | `.notion-color-pink`   | `#AD1A72` | 
+| \$\color{#E03E3E}{\texttt{E03E3E}}$ | `.notion-color-red`    | `#E03E3E` | 
+| \$\color{#FFFFFF}{\texttt{FFFFFF}}$ | `.notion-color-default_background`| `#FFFFFF` |
+| \$\color{#EBECED}{\texttt{EBECED}}$ | `.notion-color-gray_background`   | `#EBECED` |
+| \$\color{#E9E5E3}{\texttt{E9E5E3}}$ | `.notion-color-brown_background`  | `#E9E5E3` |
+| \$\color{#FAEBDD}{\texttt{FAEBDD}}$ | `.notion-color-orange_background` | `#FAEBDD` |
+| \$\color{#FBF3DB}{\texttt{FBF3DB}}$ | `.notion-color-yellow_background` | `#FBF3DB` |
+| \$\color{#DDEDEA}{\texttt{DDEDEA}}$ | `.notion-color-green_background`  | `#DDEDEA` |
+| \$\color{#DDEBF1}{\texttt{DDEBF1}}$ | `.notion-color-blue_background`   | `#DDEBF1` |
+| \$\color{#EAE4F2}{\texttt{EAE4F2}}$ | `.notion-color-purple_background` | `#EAE4F2` |
+| \$\color{#F4DFEB}{\texttt{F4DFEB}}$ | `.notion-color-pink_background`   | `#F4DFEB` |
+| \$\color{#FBE4E4}{\texttt{FBE4E4}}$ | `.notion-color-red_background`    | `#FBE4E4` |
 
 # [Theme **minima.py**](https://github.com/jekyll/minima) CSS classes:
 
