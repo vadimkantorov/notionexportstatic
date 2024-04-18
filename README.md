@@ -128,8 +128,8 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 # Notion colors light theme
 | Color | CSS class |
 | ----- | --------- |
-| \$\color{#37352F}{\text{37352F}}$ | `.notion-color-default`| 
-| \$\color{#9B9A97}{\text{9B9A97}}$ | `.notion-color-gray`   | 
+| \$\color{#37352F}{\texttt{37352F}}$ | `.notion-color-default`| 
+| \$\color{#9B9A97}{\texttt{9B9A97}}$ | `.notion-color-gray`   | 
 | \$\color{#64473A}{\textsf{64473A}}$ | `.notion-color-brown`  | 
 | \$\color{#D9730D}{\textsf{D9730D}}$ | `.notion-color-orange` |  
 | \$\color{#DFAB01}{\textsf{DFAB01}}$ | `.notion-color-yellow` | 
