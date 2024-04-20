@@ -123,7 +123,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`template`|`.notion-template-block`|`<figure>`|
 |`child_database`|`.notion-child_database-block`|`<figure>`|
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
-| **Notion colors light theme** | | | 
+| **Notion colors light theme** | **Notion colors light theme** | **Notion colors light theme**  | 
 | \$\color{#37352F}{\texttt{37352F}}$ | `.notion-color-default`| `#37352F` |
 | \$\color{#FFFFFF}{\texttt{FFFFFF}}$ | `.notion-color-default_background`| `#FFFFFF` |
 | \$\color{#9B9A97}{\texttt{9B9A97}}$ | `.notion-color-gray`   | `#9B9A97` | 
