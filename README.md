@@ -125,6 +125,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
 | | | |
 | | | |
+| | | |
 | **Notion colors light theme** | **Notion colors light theme** | **Notion colors light theme**  | 
 | \$\color{#37352F}{\texttt{37352F}}$ | `.notion-color-default`| `#37352F` |
 | \$\color{#FFFFFF}{\texttt{FFFFFF}}$ | `.notion-color-default_background`| `#FFFFFF` |
