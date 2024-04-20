@@ -190,6 +190,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 - https://github.com/vadimkantorov/minimacss 
 - https://developer.twitter.com/en/docs/twitter-for-websites/cards/overview/markup
 - https://katex.org/docs/browser
+- https://github.com/MerkulovDaniil/notion4ever
 
 # Notes
 For markdown2html conversion in Python:
