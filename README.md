@@ -123,6 +123,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`template`|`.notion-template-block`|`<figure>`|
 |`child_database`|`.notion-child_database-block`|`<figure>`|
 |`synced_block`|`.notion-synced_block-block`|`<figure>`|
+| | | |
 | **Notion colors light theme** | **Notion colors light theme** | **Notion colors light theme**  | 
 | \$\color{#37352F}{\texttt{37352F}}$ | `.notion-color-default`| `#37352F` |
 | \$\color{#FFFFFF}{\texttt{FFFFFF}}$ | `.notion-color-default_background`| `#FFFFFF` |
@@ -144,6 +145,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 | \$\color{#F4DFEB}{\texttt{F4DFEB}}$ | `.notion-color-pink_background`   | `#F4DFEB` |
 | \$\color{#E03E3E}{\texttt{E03E3E}}$ | `.notion-color-red`    | `#E03E3E` | 
 | \$\color{#FBE4E4}{\texttt{FBE4E4}}$ | `.notion-color-red_background`    | `#FBE4E4` |
+| | | |
 | [Theme **minima.py**](https://github.com/jekyll/minima) |[Theme **minima.py**](https://github.com/jekyll/minima) |[Theme **minima.py**](https://github.com/jekyll/minima) |
 ||`.wrapper`||
 ||`.post-list-heading`||
