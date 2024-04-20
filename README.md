@@ -148,7 +148,6 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 | \$\color{#E03E3E}{\texttt{E03E3E}}$ | `.notion-color-red`    | `#E03E3E` | 
 | \$\color{#FBE4E4}{\texttt{FBE4E4}}$ | `.notion-color-red_background`    | `#FBE4E4` |
 | | | |
-| | | |
 | [Theme **minima.py**](https://github.com/jekyll/minima) |[Theme **minima.py**](https://github.com/jekyll/minima) |[Theme **minima.py**](https://github.com/jekyll/minima) |
 ||`.wrapper`||
 ||`.post-list-heading`||
