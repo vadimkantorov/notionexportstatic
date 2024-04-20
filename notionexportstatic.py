@@ -3,9 +3,8 @@
 # TODO: child_page CSS block
 # TODO: notionjson_2html : assert args.input_json
 # TODO: notionapi2notionjson: assert args.notion_page_id
-# TODO: textlike_2markdown: color unused
+# TODO: richtext_2markdown: color unused
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
-# TODO: table_of_contents_2html site reduce ul's
 
 import os
 import re
@@ -45,15 +44,64 @@ headers = {
 ##############################
 
 def notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes):
+    # https://developers.notion.com/reference/retrieve-a-page
+    # https://developers.notion.com/reference/retrieve-a-page-property
+    # https://developers.notion.com/reference/retrieve-a-block
+    # https://developers.notion.com/reference/get-block-children
+    # https://developers.notion.com/reference/retrieve-a-database
+
+    import notion_client
+    notionapi = notion_client.Client(auth = notion_token)
+    
+    notion_pages_and_databases = {}
+    for notion_page_id_no_dashes in notion_page_ids_no_dashes:
+        page_type, page = None, {}
+        for k, f in [('page', notionapi.pages.retrieve), ('database', notionapi.databases.retrieve), ('child_page', notionapi.blocks.retrieve)]:
+            try:
+                page_type, page = k, f(notion_page_id_no_dashes)
+                break
+            except notion_client.APIResponseError as exc:
+                continue
+            except Exception as exc:
+                print(exc)
+                break
+        assert page_type
+        
+        notion_pages_and_databases[page['id']] = page
+
+        stack = [page]
+        while stack:
+            block = stack.pop()
+            block_type = block.get('object') or block.get('type') or ''
+            block_id_no_dashes = block['id'].replace('-', '')
+            children = block['blocks' if block_type in ['page', 'database'] else 'children'] = []
+            start_cursor = None
+            while True:
+                if block_type in ['database', 'child_database']:
+                    response = notionapi.databases.query(block_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+                else:
+                    response = notionapi.blocks.children.list(block_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+                start_cursor = response['next_cursor']
+                children.extend(response['results'])
+                stack.extend(response['results'])
+                if start_cursor is None or response['has_more'] is False:
+                    break 
+    
+    notionjson = dict(pages = notion_pages_and_databases, unix_seconds_downloaded = int(time.time()))
+    return notionjson
+
+##############################
+
+def notionapi_retrieve_page_list_(notion_token, notion_page_ids_no_dashes):
     import notion_client
     notionapi = notion_client.Client(auth = notion_token)
     notion_pages_and_databases = {}
     for notion_page_id_no_dashes in notion_page_ids_no_dashes:
-        notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_dashes, notion_pages_and_databases = notion_pages_and_databases)
+        notionapi_retrieve_recursively_(notion_client, notionapi, notion_page_id_no_dashes, notion_pages_and_databases = notion_pages_and_databases)
     notionjson = dict(pages = notion_pages_and_databases, unix_seconds_downloaded = int(time.time()))
     return notionjson
 
-def notionapi_retrieve_children_inplace(block, notionapi):
+def notionapi_retrieve_children_inplace_recursively(block, notionapi):
     print('block', block.get('id'), block.get('type'))
     if block['has_children']:
         block['children'] = []
@@ -65,29 +113,23 @@ def notionapi_retrieve_children_inplace(block, notionapi):
             if start_cursor is None or blocks['has_more'] is False:
                 break  
         for subblock in block['children']:
-            notionapi_retrieve_children_inplace(subblock, notionapi)
+            notionapi_retrieve_children_inplace_recursively(subblock, notionapi)
 
-def notionapi_retrieve_children(notion_page_id_no_dashes, notionapi):
+def notionapi_retrieve_children(notion_page_id_no_dashes, notionapi, block_type):
     children = []
     start_cursor = None
     while True:
-        if page_type == 'page' or page_type == 'child_page':
-            blocks = notionapi.blocks.children.list(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
-        elif page_type == 'database':
-            blocks = notionapi.databases.query(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
-        start_cursor = blocks['next_cursor']
-        children += blocks['results']
-        if start_cursor is None or blocks['has_more'] is False:
+        if block_type in ['database', 'child_database']:
+            response = notionapi.databases.query(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+        else:
+            response = notionapi.blocks.children.list(notion_page_id_no_dashes, **(dict(start_cursor = start_cursor) if start_cursor is not None else {}))
+        start_cursor = response['next_cursor']
+        children += response['results']
+        if start_cursor is None or response['has_more'] is False:
             break 
     return children
 
 def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_dashes, notion_pages_and_databases = {}):
-    # https://developers.notion.com/reference/retrieve-a-page
-    # https://developers.notion.com/reference/retrieve-a-page-property
-    # https://developers.notion.com/reference/retrieve-a-block
-    # https://developers.notion.com/reference/get-block-children
-    # https://developers.notion.com/reference/retrieve-a-database
-
     page_type, page = None, {}
     for k, f in [('page', notionapi.pages.retrieve), ('database', notionapi.databases.retrieve), ('child_page', notionapi.blocks.retrieve)]:
         try:
@@ -102,23 +144,52 @@ def notionapi_retrieve_recursively(notion_client, notionapi, notion_page_id_no_d
         return
     print(page_type, page['id'])
     notion_pages_and_databases[page['id']] = page
-    notion_pages_and_databases[page['id']]['blocks'] = notionapi_retrieve_children(notion_page_id_no_dashes, notionapi)
-
+    notion_pages_and_databases[page['id']]['blocks'] = notionapi_retrieve_children(notion_page_id_no_dashes, notionapi, page_type)
     for i_block, block in enumerate(notion_pages_and_databases[page['id']]['blocks']):
         print(page_type, page['id'], 'childblock', block['id'], block['type'])
-
-        if page_type == 'page':
-            if block['type'] in ['page', 'child_page', 'child_database']:
-                notionapi_retrieve_recursively(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
-            else:
-                notionapi_retrieve_children_inplace(block, notionapi)
-                notion_pages_and_databases[page['id']]['blocks'][i_block] = block
+        
+        if page_type == 'page' and block['type'] in ['page', 'child_page', 'child_database']:
+            notionapi_retrieve_recursively(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
+        
+        elif page_type == 'page':
+            notionapi_retrieve_children_inplace_recursively(block, notionapi)
+       
+        elif page_type == 'database' and block['object'] in ['page', 'child_page', 'child_database']:
+            block['type'] = 'db_entry'
+            notionapi_retrieve_recursively(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
         elif page_type == 'database':
             block['type'] = 'db_entry'
-            notion_pages_and_databases[page['id']]['blocks'][i_block] = block
-            if block['object'] in ['page', 'child_page', 'child_database']:
-                notionapi_retrieve_recursively(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
 
+##############################
+#def notionapi_retrieve_recursively_(notion_client, notionapi, notion_page_id_no_dashes, notion_pages_and_databases = {}):
+#    page_type, page = None, {}
+#    for k, f in [('page', notionapi.pages.retrieve), ('database', notionapi.databases.retrieve), ('child_page', notionapi.blocks.retrieve)]:
+#        try:
+#            page_type, page = k, f(notion_page_id_no_dashes)
+#            break
+#        except notion_client.APIResponseError as exc:
+#            continue
+#        except Exception as exc:
+#            print(exc)
+#            break
+#    if not page_type:
+#        return
+#    print(page_type, page['id'])
+#    notion_pages_and_databases[page['id']] = page
+#    notion_pages_and_databases[page['id']]['blocks'] = notionapi_retrieve_children(notion_page_id_no_dashes, notionapi)
+#    for i_block, block in enumerate(notion_pages_and_databases[page['id']]['blocks']):
+#        print(page_type, page['id'], 'childblock', block['id'], block['type'])
+#        if page_type == 'page':
+#            if block['type'] in ['page', 'child_page', 'child_database']:
+#                notionapi_retrieve_recursively_(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
+#            else:
+#                notionapi_retrieve_children_inplace_recursively(block, notionapi)
+#                notion_pages_and_databases[page['id']]['blocks'][i_block] = block
+#        elif page_type == 'database':
+#            block['type'] = 'db_entry'
+#            notion_pages_and_databases[page['id']]['blocks'][i_block] = block
+#            if block['object'] in ['page', 'child_page', 'child_database']:
+#                notionapi_retrieve_recursively_(notion_client, notionapi, block['id'], notion_pages_and_databases = notion_pages_and_databases)
 ##############################
 
 def blocktag_2html(block = {}, ctx = {}, class_name = '', tag = '', selfclose = False, set_html_contents_and_close = None, prefix = '', suffix = '', attrs = {}, **kwargs):
@@ -244,7 +315,7 @@ def table_of_contents_2html(block, ctx, tag = 'ul', class_name = 'notion-table_o
         return '<nav class="notion-table_of_contents-site"><h1 class="notion-table_of_contents-site-header"></h1>\n' + table_of_contents_page_tree(root_page_ids) + '\n<hr/></nav>'
     
     if block.get('site_table_of_contents_flat_page_ids'):
-        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '\n'.join('<li class="notion-table_of_contents-site-page-item">{link_to_page}</li>\n{child_pages}'.format(link_to_page = link_to_page_2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids)
+        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '\n'.join('<li class="notion-table_of_contents-site-page-item">{link_to_page}</li>\n{child_pages}'.format(link_to_page = link_to_page_2html(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False, class_name = 'page-link'), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids)
         page_ids = block.get('site_table_of_contents_flat_page_ids', [])
         child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
@@ -372,7 +443,7 @@ toggle_2markdown = lambda block, ctx, tag = '', icon = '', title_mode = False: (
 
 def textlike_2markdown(block, ctx, tag = '', icon = '', checked = None, title_mode = False):
     rich_text = richtext_2markdown(block, ctx, rich_text = True, title_mode = title_mode)
-    color = block.get(get_block_type(block), {}).get('color', '')
+    color_unused = block.get(get_block_type(block), {}).get('color', '')
     checkbox = '[{}] '.format('x' if checked else ' ') if checked is not None else ''
     return tag + checkbox + rich_text + icon + '\n' + childrenlike_2markdown(block, ctx)
 
@@ -417,7 +488,7 @@ def table_of_contents_2markdown(block, ctx, tag = '* '):
 
     page_block = get_page_current(block, ctx)
     headings = get_page_headings(page_block, ctx)
-    color = block['table_of_contents'].get('color', '')
+    color_unused = block['table_of_contents'].get('color', '')
     inc_heading_type = dict(heading_0 = 'heading_1', heading_1 = 'heading_2', heading_2 = 'heading_3', heading_3 = 'heading_3').get
     nominal_heading_type, effective_heading_type = 'heading_0', 'heading_0'
     heading_type2depth = dict(heading_0 = 0, heading_1 = 1, heading_2 = 2, heading_3 = 3)
@@ -1011,7 +1082,7 @@ def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_asse
         if datauri is None:
             try:
                 if not extract_assets_and_assets_dir or not os.path.exists(asset_path):
-                    print(url, urlopen_url, asset_path)
+                    print('download_asset_if_not_exists', asset_path, '<-', urlopen_url)
                 
                 datauri = download_asset_if_not_exists(urlopen_url, asset_path, datauri = not extract_assets_and_assets_dir)
             except Exception as exc:
@@ -1025,7 +1096,7 @@ def download_and_extract_assets(assets_urls, ctx, assets_dir = None, notion_asse
             if not os.path.exists(asset_path):
                 with open(asset_path, 'wb') as f:
                     f.write(base64.b64decode(datauri.split('base64,', maxsplit = 1)[-1].encode()))
-                print(asset_path)
+                print('download_asset_if_not_exists', asset_path)
             datauri = 'file:///./' + os.path.sep.join(asset_path.split(os.path.sep)[-2:])
 
         assets[url] = dict(basename = basename, basename_hashed = basename_hashed, uri = datauri, ok = ok)
@@ -1194,6 +1265,9 @@ def notion2static(
     site_info_image_height,
     site_info_image_width,
     site_info_image_alt,
+    site_info_author_name,
+    site_info_author_email,
+    site_info_github
 ):
     slugs = {k.lower().strip() : v.lower().strip() for s in slugs for kv in s.split(',') for k, v in [kv.split('=')]}
     notion_page_id = [page_id.lower().strip() for comma_separated_page_ids in notion_page_id for page_id in comma_separated_page_ids.split(',')]
@@ -1406,6 +1480,9 @@ if __name__ == '__main__':
     parser.add_argument('--site-info-image-height')
     parser.add_argument('--site-info-image-width')
     parser.add_argument('--site-info-image-alt')
+    parser.add_argument('--site-info-author-name', default = '')
+    parser.add_argument('--site-info-author-email', default = '')
+    parser.add_argument('--site-info-github', default = '')
 
     args = parser.parse_args()
     print(args)
