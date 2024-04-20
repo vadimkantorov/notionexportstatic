@@ -144,58 +144,42 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 | \$\color{#F4DFEB}{\texttt{F4DFEB}}$ | `.notion-color-pink_background`   | `#F4DFEB` |
 | \$\color{#E03E3E}{\texttt{E03E3E}}$ | `.notion-color-red`    | `#E03E3E` | 
 | \$\color{#FBE4E4}{\texttt{FBE4E4}}$ | `.notion-color-red_background`    | `#FBE4E4` |
-
-# [Theme **minima.py**](https://github.com/jekyll/minima) CSS classes:
-
-| Element       | CSS class     |
-| ------------- | ------------- |
-||`.wrapper`|
-||`.post-list-heading`|
-||`.post-list`|
-||`.post-meta`|
-||`.post-link`|
-||`.post-header`|
-||`.post-title`|
-||`.post-content`|
-|||
-|||
-|||
-||`.page-content`|
-||`.page-heading`|
-||`.page-link`|
-|||
-|||
-|||
-||`.site-header`|
-||`.site-title`|
-||`.site-footer`|
-||`.site-nav`|
-||`.nav-trigger`|
-||`.menu-icon `|
-||`.trigger`|
-|||
-|||
-|||
-||`.feed-subscribe`|
-||`.contact-list`|
-||`.social-links`|
-||`.social-media-list`|
-||`.svg-icon`|
-||`.pagination`|
-||`.pager-edge`|
-||`.highlight`|
-||`.highlighter-rouge`|
-||`.orange`|
-||`.grey`|
-|||
-|||
-|||
-||`.footer-heading`|
-||`.footer-col-wrapper`|
-||`.footer-col`|
-||`.footer-col-1`|
-||`.footer-col-2`|
-||`.footer-col-3`|
+| [Theme **minima.py**](https://github.com/jekyll/minima) |[Theme **minima.py**](https://github.com/jekyll/minima) |[Theme **minima.py**](https://github.com/jekyll/minima) |
+||`.wrapper`||
+||`.post-list-heading`||
+||`.post-list`||
+||`.post-meta`||
+||`.post-link`||
+||`.post-header`||
+||`.post-title`||
+||`.post-content`||
+||`.page-content`||
+||`.page-heading`||
+||`.page-link`||
+||`.site-header`||
+||`.site-title`||
+||`.site-footer`||
+||`.site-nav`||
+||`.nav-trigger`||
+||`.menu-icon `||
+||`.trigger`||
+||`.feed-subscribe`||
+||`.contact-list`||
+||`.social-links`||
+||`.social-media-list`||
+||`.svg-icon`||
+||`.pagination`||
+||`.pager-edge`||
+||`.highlight`||
+||`.highlighter-rouge`||
+||`.orange`||
+||`.grey`||
+||`.footer-heading`||
+||`.footer-col-wrapper`||
+||`.footer-col`||
+||`.footer-col-1`||
+||`.footer-col-2`||
+||`.footer-col-3`||
 
 # References
 - https://github.com/jekyll/minima
