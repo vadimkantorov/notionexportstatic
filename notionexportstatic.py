@@ -1,8 +1,9 @@
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
 # TODO: check get_page_info: site_info_title, subscribe
-# TODO: get_callout_icon: asset?
+# TODO: get_callout_icon, get_page_icon: resolve asset
 # TODO: image detection for summary image
+# TODO: reorder functions
 
 import os
 import re
@@ -135,7 +136,7 @@ def richtext_tohtml(block, ctx = {}, title_mode = False, caption = False, rich_t
     if anno['code']:
         res = f'<code class="notion-code-inline">{res}</code>'
     if (color := anno['color']) != 'default':
-        res = f'<span style="color:{color}">{res}</span>'
+        res = f'<span class="notion-color-{color}">{res}</span>'
     return res
 
 def textlike_tohtml(block, ctx, tag = 'span', class_name = '', attrs = {}, icon = '', checked = None):
@@ -164,6 +165,10 @@ def linklike_tohtml(block, ctx, tag = 'a', class_name = '', full_url_as_caption 
     rich_text = richtext_tohtml(block, ctx, caption = True) or html.escape(block.get(get_block_type(block), {}).get('name') or block.get('plain_text') or (src if full_url_as_caption else get_url_basename(src)))
     return blocktag_tohtml(block, ctx, tag = tag, attrs = dict(href = src) | (dict(download = download) if download is not None else {}), class_name = class_name, set_html_contents_and_close = icon + rich_text) + '<br/>' * line_break
 
+icon_image_tohtml = lambda icon_url: f'<img src="{icon_url}"></img>'
+
+icon_image_tomarkdown = lambda icon_url: '![cover]({icon_url})'
+
 def page_tohtml(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', prefix = '', suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
     datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
     src_cover = get_asset_url(get_page_cover_url(block), ctx)
@@ -179,7 +184,7 @@ def page_tohtml(block, ctx, tag = 'article', class_name = 'notion-page-block', s
     anchor = link_to_page_tohtml(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon')
     edit = f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     page_icon_id = f'id="{page_id_no_dashes}"' * bool(page_id_no_dashes != page_slug)
-    page_icon = f'<img src="{page_icon_url}"></img>' * bool(page_icon_url)
+    page_icon = icon_image_tohtml(page_icon_url) * bool(page_icon_url)
     
     return blocktag_tohtml(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'''
         {prefix}
@@ -327,7 +332,9 @@ child_database_tohtml = lambda block, ctx, tag = 'figure', class_name = 'notion-
 link_preview_tohtml = lambda block, ctx, tag = 'a', class_name = 'notion-link_preview-block': linklike_tohtml(block, ctx, tag = tag, class_name = class_name, line_break = True)
 
 quote_tohtml = lambda block, ctx, tag = 'blockquote', class_name = 'notion-quote-block': textlike_tohtml(block, ctx, tag = tag, class_name = class_name)
-callout_tohtml = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag_tohtml(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon_emoji}</div><div>\n'.format(icon_emoji = get_callout_icon(block)) + textlike_tohtml(block, ctx, tag = tag)) + '</div>\n'
+callout_tohtml = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag_tohtml(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = ('<div>{icon}</div><div>\n'.format(icon = ('{}'.format if icon_is_emoji(get_callout_icon(block)) else icon_image_tohtml)(get_callout_icon(block)) + textlike_tohtml(block, ctx, tag = tag)) + '</div>\n'
+
+icon_is_emoji = lambda icon: len(icon) == 1
 
 ##############################
 
@@ -431,12 +438,15 @@ def page_tomarkdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     src_edit = get_page_edit_url(page_id, ctx, page_slug = page_slug)
     children = childrenlike_tomarkdown(block, ctx)
     
+    page_icon = icon_image_tomarkdown(page_icon_url) * bool(page_icon_url)
+    
     anchor = link_to_page_tomarkdown(block, ctx, caption = '#', line_break = False)
     edit = f'[✏️]({src_edit})' * bool(src_edit)
 
     res  = f'''---\ntitle: "{page_title}"\ncover: {src_cover}\nemoji: {page_emoji}\n---\n\n''' * bool(ctx['markdown_frontmatter'])
     res += f'![cover]({src_cover})\n\n' * bool(src_cover)
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
+    res += (page_icon + '\n') * bool(page_icon_url)
     res += f'# {page_emoji} {page_title}{anchor}\n'
     res += f'*@{datetime_published}* {edit}\n\n'
     res += children
@@ -468,7 +478,8 @@ code_tomarkdown = lambda block, ctx: '{caption}\n```{language}\n'.format(languag
 image_tomarkdown = lambda block, ctx: '![{rich_text_alt}]({src})\n{rich_text}'.format(src = get_asset_url(block, ctx), rich_text_alt = richtext_tomarkdown(block, ctx, caption = True, title_mode = True), rich_text = richtext_tomarkdown(block, ctx, caption = True, title_mode = False))
 
 def quote_tomarkdown(block, ctx, tag = '> ', icon = ''):
-    res = ''.join('{tag}{icon}{line}\n'.format(tag = tag, line = line, icon = icon * bool(i == 0)) for i, line in enumerate(richtext_tomarkdown(block, ctx, rich_text = True, title_mode = False).strip().splitlines()))
+    res = (icon_image_tomarkdown(get_callout_icon(block)) + '\n')* (not icon_is_emoji(icon)) + 
+    res += ''.join('{tag}{icon}{line}\n'.format(tag = tag, line = line, icon = icon * icon_is_emoji(icon) * bool(i == 0)) for i, line in enumerate(richtext_tomarkdown(block, ctx, rich_text = True, title_mode = False).strip().splitlines()))
     res += f'{tag}\n'.join(''.join(f'{tag}{line}\n' for line in block_tomarkdown(subblock, ctx).splitlines()) for subblock in get_block_children(block))
     return res
 
