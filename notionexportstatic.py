@@ -1,8 +1,8 @@
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
-# TODO: markdown: quote-tab
-# TODO: image detection for summary image
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
-# TODO: check get_page_info
+# TODO: check get_page_info: site_info_title, subscribe
+# TODO: get_callout_icon: asset?
+# TODO: image detection for summary image
 
 import os
 import re
@@ -96,14 +96,7 @@ def blocktag_tohtml(block = {}, ctx = {}, class_name = '', tag = '', selfclose =
     endline_if_html = '\n' * ('<' in (set_html_contents_and_close or '') or '>' in (set_html_contents_and_close or ''))
     return (f'{prefix}<{tag} ' + notion_attrs * bool(block) + '/' * selfclose + f'>{endline_if_html}' + (set_html_contents_and_close + f'{endline_if_html}</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) * bool(tag)
 
-def childrenlike_tohtml(block, ctx, tag = ''):
-    res = ''
-    subblocks = sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], [])
-    for i, subblock in enumerate(subblocks):
-        same_block_type_as_prev = i > 0 and subblock.get('type') == subblocks[i - 1].get('type')
-        same_block_type_as_next = i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type')
-        res += f'<{tag}>' * bool(tag) + block_tohtml(subblock, ctx, begin = not same_block_type_as_prev, end = not same_block_type_as_next) + f'</{tag}>\n' * bool(tag)
-    return res
+childrenlike_tohtml = lambda block, ctx, tag = '', newline = '\n': newline.join(f'<{tag}>' * bool(tag) + block_tohtml(subblock, ctx, begin = not(i > 0 and subblock.get('type') == subblocks[i - 1].get('type')), end = not(i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type'))) + f'</{tag}>' * bool(tag) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
 
 def richtext_tohtml(block, ctx = {}, title_mode = False, caption = False, rich_text = False):
     # https://www.notion.so/help/customize-and-style-your-content#markdown
@@ -474,11 +467,12 @@ breadcrumb_tomarkdown = lambda block, ctx, sep = ' / ': sep.join(link_to_page_to
 code_tomarkdown = lambda block, ctx: '{caption}\n```{language}\n'.format(language = block.get('language', '').replace(' ', '_'), caption = richtext_tohtml(block, ctx, caption = True)) + richtext_tomarkdown(block, ctx, rich_text = True) + '\n```'
 image_tomarkdown = lambda block, ctx: '![{rich_text_alt}]({src})\n{rich_text}'.format(src = get_asset_url(block, ctx), rich_text_alt = richtext_tomarkdown(block, ctx, caption = True, title_mode = True), rich_text = richtext_tomarkdown(block, ctx, caption = True, title_mode = False))
 
-quote_tomarkdown = lambda block, ctx, tag = '> ': tag + textlike_tomarkdown(block, ctx)
-def callout_tomarkdown(block, ctx):
-    res = '> {icon_emoji} '.format(icon_emoji = get_callout_icon(block)) + richtext_tomarkdown(block, ctx, rich_text = True, title_mode = False).rstrip()
-    res += '>\n'.join(''.join(f'> {line}\n' for line in block_tomarkdown(subblock, ctx).splitlines()) + '>\n' for subblock in get_block_children(block))
+def quote_tomarkdown(block, ctx, tag = '> ', icon = ''):
+    res = ''.join('{tag}{icon}{line}\n'.format(tag = tag, line = line, icon = icon * bool(i == 0)) for i, line in enumerate(richtext_tomarkdown(block, ctx, rich_text = True, title_mode = False).strip().splitlines()))
+    res += f'{tag}\n'.join(''.join(f'{tag}{line}\n' for line in block_tomarkdown(subblock, ctx).splitlines()) for subblock in get_block_children(block))
     return res
+
+callout_tomarkdown = lambda block, ctx: quote_tomarkdown(block, ctx, icon = get_callout_icon(block))
 
 def video_tomarkdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     url = get_asset_url(block, ctx)
@@ -1358,7 +1352,7 @@ if __name__ == '__main__':
     parser.add_argument('--sitemap-xml')
     parser.add_argument('--base-url-removesuffix')
     parser.add_argument('--base-url')
-    parser.add_argument('--edit-url')
+    parser.add_argument('--edit-url', nargs = '?', default = '')
     parser.add_argument('--log-unsupported-blocks')
     parser.add_argument('--log-urls')
     parser.add_argument('--download-assets-types', nargs = '*', choices = ['icon', 'cover', 'image-external', 'image-file', 'video-external', 'video-file', 'pdf-external', 'pdf-file', 'file-external', 'file-file'], default = ['cover', 'icon', 'image-file', 'image-external', 'pdf-file', 'file-file', 'video-file'])
@@ -1373,10 +1367,10 @@ if __name__ == '__main__':
     parser.add_argument('--html-details-open', action = 'store_true')
     parser.add_argument('--html-columnlist-disable', action = 'store_true')
     parser.add_argument('--html-link-to-page-index-html', action = 'store_true')
-    parser.add_argument('--html-privacynotice')
-    parser.add_argument('--html-googleanalytics')
     parser.add_argument('--html-equation-katex', action = 'store_true')
     parser.add_argument('--html-code-highlightjs', action = 'store_true')
+    parser.add_argument('--html-privacynotice')
+    parser.add_argument('--html-googleanalytics')
 
     parser.add_argument('--site-info-name', default = 'notionexportstatic')
     parser.add_argument('--site-info-locale', default = 'en_EN')
