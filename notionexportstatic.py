@@ -4,6 +4,7 @@
 # TODO: notionapi2notionjson: assert args.notion_page_id
 # TODO: richtext_2markdown: color unused
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
+# TODO: image detection for summary image
 
 import os
 import re

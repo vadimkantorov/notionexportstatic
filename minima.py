@@ -1,6 +1,4 @@
 # TODO: replace site_info str
-# TODO: same height for header and cookies notice
-# TODO: harmonize code for 2html and 2markdown
 
 def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     snippets = snippets_default | snippets
@@ -21,7 +19,7 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
         .replace('{{ googleanalytics_tag_id }}', ctx['html_googleanalytics'] or '')
     
     main_toc_flat = render_block(dict(type = 'table_of_contents', site_table_of_contents_flat_page_ids = page_ids), ctx)
-    main = divider.join(render_block(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
+    main = f'\n{divider}\n'.join(render_block(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
 
     res = snippets.get('page_html', '') \
         .replace('{{ head_html }}'                    , snippets.get('head_html', '')) \
@@ -60,7 +58,7 @@ def sitepages_2markdown(page_ids = [], ctx = {}, notion_pages = {}, render_block
     main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
     
     main_toc = f'{nav}\n{divider}\n\n{main_toc}\n{divider}\n\n'
-    main = ('\n' + divider + '\n').join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+    main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
     res = main_toc * page_is_single + main
 
     return res
@@ -70,8 +68,8 @@ emoji_svg = '''
 '''
 
 privacynotice_html = '''
-<div id="privacynotice" hidden style="width:100%; position: fixed; left: 0; bottom: 0; background-color: skyblue; color: white; text-align: center;">Please review and accept the <a target="_blank" href="{{ privacynotice_url }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';document.getElementById('privacynotice').hidden=true;">Accept</button></div>
-<script>if(!document.cookie) document.getElementById("privacynotice").removeAttribute("hidden");</script>
+<div class="privacynotice" hidden>Please review and accept the &nbsp;<a target="_blank" href="{{ privacynotice_url }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';document.querySelector('.privacynotice').hidden=true;">Accept</button></div>
+<script>if(!document.cookie) document.querySelector(".privacynotice").removeAttribute("hidden");</script>
 '''
 
 googleanalytics_html = '''
@@ -97,7 +95,6 @@ articleheader_html = '<!-- articleheader_html -->'
 articlefooter_html = '<!-- articlefooter_html -->'
 
 footer_html = '''
-<!-- footer_html -->
 <footer class="site-footer h-card">
   <data class="u-url" href="relative_url_to_root"></data>
 
@@ -253,7 +250,6 @@ notionexportstatic_css = '''
     --minima-header-height: 60px;
 }
 
-
 /* override minimacss defaults for burger menu hide for large screens */
 @media screen and (min-width: 600px) {
   .site-nav label[for="nav-trigger"] {
@@ -272,6 +268,19 @@ notionexportstatic_css = '''
     left:  50vw;
 }
 
+.privacynotice {
+    width:100%; 
+    position: fixed; 
+    left: 0; 
+    bottom: 0; 
+    background-color: skyblue; 
+    color: white; 
+    /*text-align: center;*/
+    height: var(--minima-header-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 .notion-page-like-icon::after, .notion-heading-like-icon::after { content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath d='m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z'%3E%3C/path%3E%3C/svg%3E") }
 
 .notion-page-like-edit-icon::after { content: "✏️"; font-size: 0.4em; }
@@ -344,66 +353,66 @@ notioncolors_css = '''
 
 :root {
 --notion-light-color-text-default: #37352F;
---notion-light-color-bg-default: #FFFFFF;
+--notion-light-color-bg-default  : #FFFFFF;
 --notion-light-color-pill-default: rgba(206,205,202,0.5);
---notion-light-color-text-gray : #9B9A97;
---notion-light-color-bg-gray : #EBECED;
---notion-light-color-pill-gray : rgba(155,154,151,0.4);
---notion-light-color-text-brown : #64473A;
---notion-light-color-bg-brown : #E9E5E3;
---notion-light-color-pill-brown : rgba(140,46,0,0.2);
+--notion-light-color-text-gray   : #9B9A97;
+--notion-light-color-bg-gray     : #EBECED;
+--notion-light-color-pill-gray   : rgba(155,154,151,0.4);
+--notion-light-color-text-brown  : #64473A;
+--notion-light-color-bg-brown    : #E9E5E3;
+--notion-light-color-pill-brown  : rgba(140,46,0,0.2);
 --notion-light-color-text-orange : #D9730D;
---notion-light-color-bg-orange : #FAEBDD;
+--notion-light-color-bg-orange   : #FAEBDD;
 --notion-light-color-pill-orange : rgba(245,93,0,0.2);
 --notion-light-color-text-yellow : #DFAB01;
---notion-light-color-bg-yellow : #FBF3DB;
+--notion-light-color-bg-yellow   : #FBF3DB;
 --notion-light-color-pill-yellow : rgba(233,168,0,0.2);
---notion-light-color-text-green : #0F7B6C;
---notion-light-color-bg-green : #DDEDEA;
---notion-light-color-pill-green : rgba(0,135,107,0.2);
---notion-light-color-text-blue : #0B6E99;
---notion-light-color-bg-blue : #DDEBF1;
---notion-light-color-pill-blue : rgba(0,120,223,0.2);
+--notion-light-color-text-green  : #0F7B6C;
+--notion-light-color-bg-green    : #DDEDEA;
+--notion-light-color-pill-green  : rgba(0,135,107,0.2);
+--notion-light-color-text-blue   : #0B6E99;
+--notion-light-color-bg-blue     : #DDEBF1;
+--notion-light-color-pill-blue   : rgba(0,120,223,0.2);
 --notion-light-color-text-purple : #6940A5;
---notion-light-color-bg-purple : #EAE4F2;
+--notion-light-color-bg-purple   : #EAE4F2;
 --notion-light-color-pill-purple : rgba(103,36,222,0.2);
---notion-light-color-text-pink : #AD1A72;
---notion-light-color-bg-pink : #F4DFEB;
---notion-light-color-pill-pink : rgba(221,0,129,0.2);
---notion-light-color-text-red : #E03E3E;
---notion-light-color-bg-red : #FBE4E4;
---notion-light-color-pill-red : rgba(255,0,26,0.2);
+--notion-light-color-text-pink   : #AD1A72;
+--notion-light-color-bg-pink     : #F4DFEB;
+--notion-light-color-pill-pink   : rgba(221,0,129,0.2);
+--notion-light-color-text-red    : #E03E3E;
+--notion-light-color-bg-red      : #FBE4E4;
+--notion-light-color-pill-red    : rgba(255,0,26,0.2);
 
 --notion-dark-color-text-default : rgba(255,255,255,0.9);
---notion-dark-color-bg-default : #2F3437;
+--notion-dark-color-bg-default   : #2F3437;
 --notion-dark-color-pill-default : rgba(206,205,202,0.5);
---notion-dark-color-text-gray : rgba(151,154,155,0.95);
---notion-dark-color-bg-gray : #454B4E;
---notion-dark-color-pill-gray : rgba(151,154,155,0.5);
---notion-dark-color-text-brown : #937264;
---notion-dark-color-bg-brown : #434040;
---notion-dark-color-pill-brown : rgba(147,114,100,0.5);
---notion-dark-color-text-orange : #FFA344;
---notion-dark-color-bg-orange : #594A3A;
---notion-dark-color-pill-orange : rgba(255,163,68,0.5);
---notion-dark-color-text-yellow : #FFDC49;
---notion-dark-color-bg-yellow : #59563B;
---notion-dark-color-pill-yellow : rgba(255,220,73,0.5);
---notion-dark-color-text-green : #4DAB9A;
---notion-dark-color-bg-green : #354C4B;
---notion-dark-color-pill-green : rgba(77,171,154,0.5);
---notion-dark-color-text-blue : #529CCA;
---notion-dark-color-bg-blue : #364954;
---notion-dark-color-pill-blue : rgba(82,156,202,0.5);
---notion-dark-color-text-purple : #9A6DD7;
---notion-dark-color-bg-purple : #443F57;
---notion-dark-color-pill-purple : rgba(154,109,215,0.5);
---notion-dark-color-text-pink : #E255A1;
---notion-dark-color-bg-pink : #533B4C;
---notion-dark-color-pill-pink : rgba(226,85,161,0.5);
---notion-dark-color-text-red : #FF7369;
---notion-dark-color-bg-red : #594141;
---notion-dark-color-pill-red : rgba(255,115,105,0.5);
+--notion-dark-color-text-gray    : rgba(151,154,155,0.95);
+--notion-dark-color-bg-gray      : #454B4E;
+--notion-dark-color-pill-gray    : rgba(151,154,155,0.5);
+--notion-dark-color-text-brown   : #937264;
+--notion-dark-color-bg-brown     : #434040;
+--notion-dark-color-pill-brown   : rgba(147,114,100,0.5);
+--notion-dark-color-text-orange  : #FFA344;
+--notion-dark-color-bg-orange    : #594A3A;
+--notion-dark-color-pill-orange  : rgba(255,163,68,0.5);
+--notion-dark-color-text-yellow  : #FFDC49;
+--notion-dark-color-bg-yellow    : #59563B;
+--notion-dark-color-pill-yellow  : rgba(255,220,73,0.5);
+--notion-dark-color-text-green   : #4DAB9A;
+--notion-dark-color-bg-green     : #354C4B;
+--notion-dark-color-pill-green   : rgba(77,171,154,0.5);
+--notion-dark-color-text-blue    : #529CCA;
+--notion-dark-color-bg-blue      : #364954;
+--notion-dark-color-pill-blue    : rgba(82,156,202,0.5);
+--notion-dark-color-text-purple  : #9A6DD7;
+--notion-dark-color-bg-purple    : #443F57;
+--notion-dark-color-pill-purple  : rgba(154,109,215,0.5);
+--notion-dark-color-text-pink    : #E255A1;
+--notion-dark-color-bg-pink      : #533B4C;
+--notion-dark-color-pill-pink    : rgba(226,85,161,0.5);
+--notion-dark-color-text-red     : #FF7369;
+--notion-dark-color-bg-red       : #594141;
+--notion-dark-color-pill-red     : rgba(255,115,105,0.5);
 }
 '''
 
