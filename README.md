@@ -97,7 +97,7 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 |`mention`|`.notion-user-mention-token`|`<strong>`|
 |`mention`|`.notion-date-mention-token`|`<strong>`|
 |`link_to_page`|`.notion-alias-block`|`<a>`|
-|`unsupported`|`.notion-unsupported-block`|`<!-- -->`, `<br>`|
+|`unsupported`|`.notion-unsupported-block`|`<br>`|
 |`divider`|`.notion-divider-block`|`<hr>`|
 ||`.notion-heading-like`||
 ||`.notion-heading-like-icon`||

@@ -1,5 +1,4 @@
 # TODO: markdown: quote-tab
-# TODO: test.json does not download assets
 # TODO: child_page CSS block
 # TODO: notionjson_2html : assert args.input_json
 # TODO: notionapi2notionjson: assert args.notion_page_id
@@ -310,7 +309,7 @@ get_block_rich_text = lambda block: block.get('rich_text', []) or block.get('tex
 paragraph_is_empty = lambda block, ctx: block.get('has_children') is False and not get_plain_text(get_block_rich_text(block)).strip()
 
 child_page_2html = lambda block, ctx, tag = 'article', class_name = 'notion-page-block', **kwargs: page_2html(block, ctx, tag = tag, class_name = class_name, **kwargs)
-unsupported_2html = lambda block, ctx, tag = 'br', class_name = 'notion-unsupported-block', comment = True, **ignored: '\n<!--\n' * comment + html.escape(blocktag_2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : get_block_type(block)}, selfclose = True)) + '\n-->\n' * comment
+unsupported_2html = lambda block, ctx, tag = 'br', class_name = 'notion-unsupported-block', **ignored: blocktag_2html(block, ctx, tag = tag, class_name = class_name, attrs = {'data-notion-block_type' : get_block_type(block)}, selfclose = True)
 divider_2html = lambda block, ctx, tag = 'hr', class_name = 'notion-divider-block': blocktag_2html(block, ctx, tag = tag, class_name = class_name, selfclose = True)
 heading_1_2html = lambda block, ctx, tag = 'h1', class_name = 'notion-header-block': headinglike_2html(block, ctx, tag = tag, class_name = class_name)
 heading_2_2html = lambda block, ctx, tag = 'h2', class_name = 'notion-sub_header-block': headinglike_2html(block, ctx, tag = tag, class_name = class_name)
