@@ -1,10 +1,10 @@
 # TODO: markdown: quote-tab
-# TODO: child_page CSS block
+# TODO: markdown: for symmetry, implement flat mode of table_of_contents_tomarkdown
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 # TODO: image detection for summary image
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
-# TODO: for symmetry, implement flat mode of table_of_contents_tomarkdown
 # TODO: edit-url optional
+# TODO: make main_toc use CSS class site-title
 
 import os
 import re
