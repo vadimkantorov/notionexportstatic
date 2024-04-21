@@ -2,7 +2,6 @@
 # TODO: child_page CSS block
 # TODO: notionjson_2html : assert args.input_json
 # TODO: notionapi2notionjson: assert args.notion_page_id
-# TODO: richtext_2markdown: color unused
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 # TODO: image detection for summary image
 
@@ -520,7 +519,7 @@ def richtext_2markdown(block, ctx, title_mode = False, caption = False, rich_tex
     if anno['code']:
         res = f' `{res}` '
     if (color := anno['color']) != 'default':
-        res = f'<span style="color:{color}">{res}</span>'
+        res = f'<span style="color:{color}">{res}</span>' # NOTE: https://github.com/github/markup/issues/1440
     return ' ' * space_left + res + ' ' * space_right
 
 
