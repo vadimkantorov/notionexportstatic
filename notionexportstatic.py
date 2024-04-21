@@ -5,6 +5,7 @@
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
 # TODO: for symmetry, implement flat mode of table_of_contents_2markdown
 # TODO: reduce amount of snippets
+# TODO: edit-url optional
 
 import os
 import re
@@ -1161,11 +1162,7 @@ def notion2static(
     html_googleanalytics,
     html_equation_katex,
     html_code_highlightjs,
-    bodyheader_html,
-    bodyfooter_html,
-    articleheader_html,
-    articlefooter_html,
-
+    
     site_info_name,
     site_info_locale,
     site_info_title,
@@ -1235,12 +1232,7 @@ def notion2static(
         sys.path.append(os.path.dirname(theme_py))
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
 
-    snippets = read_snippets(snippets_dir, snippets_extra_paths = dict(
-        bodyheader_html    = bodyheader_html   ,
-        bodyfooter_html    = bodyfooter_html   ,
-        articleheader_html = articleheader_html,
-        articlefooter_html = articlefooter_html,
-    ))
+    snippets = read_snippets(snippets_dir, snippets_extra_paths = {})
     snippets_read = list(snippets.keys())
 
     extractall(
@@ -1377,11 +1369,6 @@ if __name__ == '__main__':
     parser.add_argument('--html-googleanalytics')
     parser.add_argument('--html-equation-katex', action = 'store_true')
     parser.add_argument('--html-code-highlightjs', action = 'store_true')
-
-    parser.add_argument('--bodyheader-html')
-    parser.add_argument('--bodyfooter-html')
-    parser.add_argument('--articleheader-html')
-    parser.add_argument('--articlefooter-html')
 
     parser.add_argument('--site-info-name', default = 'notionexportstatic')
     parser.add_argument('--site-info-locale', default = 'en_EN')

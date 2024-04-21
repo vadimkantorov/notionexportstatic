@@ -1,6 +1,3 @@
-# TODO: replace site_info str
-# TODO: harmonize main = 
-
 def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     snippets = snippets_default | snippets
     page_id_first = page_ids[0]
@@ -28,6 +25,8 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
     
     main_toc_flat = render_block(dict(type = 'table_of_contents', site_table_of_contents_flat_page_ids = page_ids), ctx)
     render_block_page_kwargs = dict(prefix = snippets.get('articleheader_html', ''), suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post')
+    
+    #main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx, **render_block_page_kwargs) for page_id in page_ids)
     
     main = f'\n{divider}\n'.join(render_block(notion_pages[page_id], ctx, **render_block_page_kwargs) for page_id in page_ids)
     res_main = main_toc * page_is_single + main
@@ -90,27 +89,27 @@ emoji_svg = '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">{{ emoji }}</text></svg>
 '''
 
-privacynotice_html = '''
+bodyheader_html =  '''
+<!--html_privacynotice
 <div class="privacynotice" hidden>Please review and accept the &nbsp;<a target="_blank" href="{{ privacynotice_url }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';document.querySelector('.privacynotice').hidden=true;">Accept</button></div>
 <script>if(!document.cookie) document.querySelector(".privacynotice").removeAttribute("hidden");</script>
-'''
+html_privacynotice-->
 
-googleanalytics_html = '''
+<!--html_googleanalytics'
 <script title="https://developers.google.com/tag-platform/gtagjs/install" async src="https://www.googletagmanager.com/gtag/js?id={{ googleanalytics_tag_id }}"></script>
 <script>window.dataLayer=window.dataLayer||[];gtag=()=>dataLayer.push(arguments);if(document.cookie){gtag("js", new Date());gtag("config","{{ googleanalytics_tag_id }}");}</script>
-'''
+html_googleanalytics-->
 
-katex_html = '''
+<!--html_equation_katex
 <link title="https://katex.org/docs/autorender" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous" onload="document.querySelectorAll('code.notion-equation-block').forEach(elem=>katex.render(elem.innerText,elem,{displayMode:true,throwOnError:false}));document.querySelectorAll('code.notion-equation-inline').forEach(elem=>katex.render(elem.innerText,elem,{displayMode:false,throwOnError:false}));"></script>
-'''
+html_equation_katex-->
 
-highlightjs_html = '''
+<!--html_code_highlightjs
 <link title="https://highlightjs.org/#as-html-tags" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/default.min.css" />
 <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="hljs.highlightAll();"></script>
+html_code_highlightjs-->
 '''
-
-bodyheader_html =  '<!--html_privacynotice' + privacynotice_html + 'html_privacynotice-->' + '\n\n' + '<!--html_googleanalytics' + googleanalytics_html + 'html_googleanalytics-->' + '\n\n' + '<!--html_equation_katex' + katex_html + 'html_equation_katex-->' + '\n\n' + '<!--html_code_highlightjs' + highlightjs_html + 'html_code_highlightjs-->'
 
 head_html = '<!-- head_html -->'
 bodyfooter_html = '<!-- bodyfooter_html -->'
@@ -222,12 +221,12 @@ page_html =  '''
         <meta name="twitter:site"               content="{{ site_twitter_atusername }}" />
         <meta name="twitter:card"               content="{{ site_twitter_card_type }}" /> <!-- summary_large_image or summary -->
         <meta name="description"                content="{{ site_description }}" />
+        <meta property="article:published_time" content="{{ site_published_time_xmlschema }}" />
         <meta property="og:description"         content="{{ site_description }}" />
         <meta property="og:site_name"           content="{{ site_name }}" />
         <meta property="og:locale"              content="{{ site_locale }}" />
         <meta property="og:title"               content="{{ site_title }}"/>
         <meta property="og:url"                 content="{{ site_url_absolute }}" />
-        <meta property="article:published_time" content="{{ site_published_time_xmlschema }}" />
         <meta property="og:image"               content="{{ site_image_url }}">
         <meta property="og:image:height"        content="{{ site_image_height }}" />
         <meta property="og:image:width"         content="{{ site_image_width }}" />
