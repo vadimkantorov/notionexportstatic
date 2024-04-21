@@ -7,7 +7,7 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
     main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
     
     style_css = snippets.get('notionexportstatic_css', '') + '\n' + snippets.get('minimacss_classic_css', '')
-    emoji_datauri = 'data:image/svg+xml,' + emoji_svg.replace('{{ emoji }}', ctx.get('meta_tags', {}).get('emoji') or '📜').translate({ord('<') : '%3C', ord('>') : '%3E', ord('"') : "'"}).strip()
+    emoji_datauri = 'data:image/svg+xml,' + emoji_svg.replace('{{ emoji }}', ctx['meta'].get('emoji') or '📜').translate({ord('<') : '%3C', ord('>') : '%3E', ord('"') : "'"}).strip()
     head_html = snippets.get('head_html', '')
     bodyfooter_html = snippets.get('bodyfooter_html', '')
     bodyheader_html = snippets.get('bodyheader_html', '')
