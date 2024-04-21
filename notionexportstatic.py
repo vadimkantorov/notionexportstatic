@@ -1,9 +1,8 @@
 # TODO: markdown: quote-tab
 # TODO: child_page CSS block
-# TODO: notionjson_2html : assert args.input_json
-# TODO: notionapi2notionjson: assert args.notion_page_id
-# TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
+# TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 # TODO: image detection for summary image
+# TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
 
 import os
 import re
@@ -865,23 +864,26 @@ def sitemap_urlset_update(urlset, id, loc, locrel = ''):
     return urlset
 
 def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}, parent_id = None):
-    block_type = get_block_type(block)
-    if block_type in ['page', 'child_page']:
-        if get_block_id(block) not in child_pages_by_parent_id:
-            child_pages_by_parent_id[get_block_id(block)] = [] 
-    for key in ['children', 'blocks']:
-        for i in reversed(range(len(block[key]) if block.get(key, []) else 0)):
-            subblock_type = get_block_type(block[key][i])
-            subblock = block[key][i]
-            if subblock_type == 'child_page':
-                parent_id_type = 'page_id' if block_type in ['page', 'child_page'] else 'block_id'
-                block[key][i] = dict( object = 'block', type = 'link_to_page', has_children = False, link_to_page = dict(type = 'page_id', page_id = get_block_id(subblock)), parent = {'type' : parent_id_type, parent_id_type : get_block_id(block)} )
-                if parent_id not in child_pages_by_parent_id:
-                    child_pages_by_parent_id[parent_id] = []
-                child_pages_by_parent_id[parent_id].append(subblock)
-                pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = get_block_id(subblock))
-            else:
-                pop_and_replace_child_pages_recursively(subblock, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = parent_id)
+    stack = [(block, parent_id)]
+    while stack:
+        block, parent_id = stack.top()
+        block_type = get_block_type(block)
+        if block_type in ['page', 'child_page']:
+            if get_block_id(block) not in child_pages_by_parent_id:
+                child_pages_by_parent_id[get_block_id(block)] = [] 
+        for key in ['children', 'blocks']:
+            for i in reversed(range(len(block[key]) if block.get(key, []) else 0)):
+                subblock = block[key][i]
+                subblock_type = get_block_type(subblock)
+                if subblock_type == 'child_page':
+                    parent_id_type = 'page_id' if block_type in ['page', 'child_page'] else 'block_id'
+                    block[key][i] = dict( object = 'block', type = 'link_to_page', has_children = False, link_to_page = dict(type = 'page_id', page_id = get_block_id(subblock)), parent = {'type' : parent_id_type, parent_id_type : get_block_id(block)} )
+                    if parent_id not in child_pages_by_parent_id:
+                        child_pages_by_parent_id[parent_id] = []
+                    child_pages_by_parent_id[parent_id].append(subblock)
+                    stack.append((subblock, get_block_id(subblock)))
+                else:
+                    stack.append((subblock, parent_id))
 
 def slugify(s, space = '_', lower = True):
     # regex from https://github.com/Flet/github-slugger, see https://github.com/github/cmark-gfm/issues/361
@@ -1177,8 +1179,6 @@ def notion2static(
 
     notionjson = json.load(open(input_json)) if input_json else notionapi_retrieve_page_list(notion_token, resolve_page_ids_no_dashes(notion_page_id, notion_slugs)) if notion_page_id else {}
     
-    #json.dump(notionjson, open('debug2.json', 'w'), ensure_ascii = False, indent = 4); import sys; sys.exit(1)
-
     notion_pages = notionjson.get('pages', {})
     notion_pages = { page_id : page for page_id, page in notion_pages.items() if page['parent']['type'] in ['workspace', 'page_id'] and get_block_type(page) in ['page', 'child_page'] }
 
@@ -1188,10 +1188,10 @@ def notion2static(
         pop_and_replace_child_pages_recursively(page, child_pages_by_parent_id = child_pages_by_parent_id, parent_id = page_id)
     child_pages_by_id = {get_block_id(child_page) : child_page for pages in child_pages_by_parent_id.values() for child_page in pages}
     notion_pages_flat |= child_pages_by_id
-        
+
     root_page_ids = resolve_page_ids(notion_page_id or list(notion_pages.keys()), notion_pages_flat.keys(), notion_slugs)
     page_ids = root_page_ids + [get_block_id(child_page) for page_id in root_page_ids for child_page in child_pages_by_parent_id.get(page_id, []) if get_block_id(child_page) not in root_page_ids]
-    assert all(page_id in notion_pages_flat for page_id in root_page_ids), f'{notion_pages_flat.keys()=}, {root_page_ids=}'
+    assert notion_pages_flat and root_page_ids and all(page_id in notion_pages_flat for page_id in root_page_ids), f'{notion_pages_flat.keys()=}, {root_page_ids=}'
     
     ext = os.path.splitext(extract_mode)[-1]
     ctx = config.copy()
@@ -1210,8 +1210,6 @@ def notion2static(
     ctx['page_info'] = get_page_info(ctx['pages'], ctx)
     ctx['assets'] = notionjson.get('assets', {}) or download_and_extract_assets(discover_assets(notion_pages.values(), [], exclude_datauri = False, download_assets_types = ctx['download_assets_types']), ctx, notion_assets = {})
     
-    #json.dump(dict(ctx_pages = ctx['pages'], notion_pages = notion_pages), open('debug.json', 'w'), ensure_ascii = False, indent = 4); import sys; sys.exit(1)
-
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
     except:
