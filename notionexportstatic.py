@@ -1,5 +1,4 @@
 # TODO: markdown: quote-tab
-# TODO: markdown: for symmetry, implement flat mode of table_of_contents_tomarkdown
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 # TODO: image detection for summary image
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
@@ -185,7 +184,8 @@ def page_tohtml(block, ctx, tag = 'article', class_name = 'notion-page-block', s
     src_edit = get_page_edit_url(page_id, ctx, page_slug = page_slug)
     children = childrenlike_tohtml(block, ctx)
 
-    anchor = link_to_page_tohtml(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon') + f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
+    anchor = link_to_page_tohtml(block, ctx, caption = '', line_break = False, class_name = 'notion-page-like-icon')
+    edit = f'<a href="{src_edit}" target="_blank" class="notion-page-like-edit-icon"></a>' * bool(src_edit)
     page_icon_id = f'id="{page_id_no_dashes}"' * bool(page_id_no_dashes != page_slug)
     page_icon = f'<img src="{page_icon_url}"></img>' * bool(page_icon_url)
     
@@ -196,6 +196,7 @@ def page_tohtml(block, ctx, tag = 'article', class_name = 'notion-page-block', s
             <h1 {page_icon_id} class="notion-record-icon">{page_emoji}{page_icon}</h1> 
             <h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1>
             <i><time class="notion-page-block-datetime-published dt-published" datetime="{datetime_published}">@{datetime_published}</time></i>
+            {edit}
         </header>
         <div class="notion-page-content {class_name_page_content}">
             {children}
@@ -383,6 +384,13 @@ def table_of_contents_tomarkdown(block, ctx, tag = '* '):
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
         return table_of_contents_page_tree(root_page_ids, depth = 0)
     
+    if block.get('site_table_of_contents_flat_page_ids'):
+        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '\n'.join('{tag}{link_to_page}\n{child_pages}'.format(link_to_page = link_to_page_tomarkdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False, class_name = 'page-link'), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids)
+        page_ids = block.get('site_table_of_contents_flat_page_ids', [])
+        child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
+        root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
+        return table_of_contents_page_tree(root_page_ids)
+    
     if ctx['markdown_toc_page']:
         return ctx['markdown_toc_page']
 
@@ -432,12 +440,13 @@ def page_tomarkdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     children = childrenlike_tomarkdown(block, ctx)
     
     anchor = link_to_page_tomarkdown(block, ctx, caption = '#', line_break = False)
+    edit = f'[✏️]({src_edit})' * bool(src_edit)
 
     res  = f'''---\ntitle: "{page_title}"\ncover: {src_cover}\nemoji: {page_emoji}\n---\n\n''' * bool(ctx['markdown_frontmatter'])
     res += f'![cover]({src_cover})\n\n' * bool(src_cover)
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
     res += f'# {page_emoji} {page_title}{anchor}\n'
-    res += f'[✏️]({src_edit}) ' * bool(src_edit) + f'*@{datetime_published}*\n\n'
+    res += f'*@{datetime_published}*{edit}}\n\n'
     res += children
     return res
 
