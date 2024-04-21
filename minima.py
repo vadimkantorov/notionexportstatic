@@ -11,43 +11,61 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
     
     style_css = snippets.get('notionexportstatic_css', '') + '\n' + snippets.get('minimacss_classic_css', '')
     emoji_datauri = 'data:image/svg+xml,' + emoji_svg.replace('{{ emoji }}', ctx.get('meta_tags', {}).get('emoji') or '📜').translate({ord('<') : '%3C', ord('>') : '%3E', ord('"') : "'"}).strip()
+    head_html = snippets.get('head_html', '')
+    bodyfooter_html = snippets.get('bodyfooter_html', '')
     bodyheader_html = snippets.get('bodyheader_html', '')
+    footer_html = snippets.get('footer_html', '')
+    page_html = snippets.get('page_html', '')
     for k in ['html_privacynotice', 'html_googleanalytics', 'html_equation_katex', 'html_code_highlightjs']:
         if ctx[k]:
             bodyheader_html = bodyheader_html.replace('<!--' + k, '').replace(k + '-->', '')
     bodyheader_html = bodyheader_html \
         .replace('{{ privacynotice_url }}', ctx['html_privacynotice'] or '') \
         .replace('{{ googleanalytics_tag_id }}', ctx['html_googleanalytics'] or '')
+    for k in ['site_twitter', 'site_facebook', 'site_instagram', 'site_linkedin', 'site_youtube', 'site_github']:
+        if ctx.get('meta', {}).get(k):
+            footer_html = footer_html.replace('<!--' + k, '').replace(k + '-->', '')
     
     main_toc_flat = render_block(dict(type = 'table_of_contents', site_table_of_contents_flat_page_ids = page_ids), ctx)
     render_block_page_kwargs = dict(prefix = snippets.get('articleheader_html', ''), suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post')
+    
     main = f'\n{divider}\n'.join(render_block(notion_pages[page_id], ctx, **render_block_page_kwargs) for page_id in page_ids)
-
-    res = snippets.get('page_html', '') \
-        .replace('{{ head_html }}'                    , snippets.get('head_html', '')) \
-        .replace('{{ style_css }}'                    , style_css) \
-        .replace('{{ nav_html }}'                     , nav) \
-        .replace('{{ navsite_html }}'                 , main_toc_flat) \
-        .replace('{{ footer_html }}'                  , snippets.get('footer_html', '')) \
-        .replace('{{ bodyheader_html }}'              , bodyheader_html) \
-        .replace('{{ bodyfooter_html }}'              , snippets.get('bodyfooter_html', '')) \
-        .replace('{{ main_html }}'                    , main_toc * page_is_single + main) \
-        .replace('{{ site_title }}'                   , ctx.get('meta_tags', {}).get('site_title', '')) \
-        .replace('{{ site_url_absolute }}'            , ctx.get('meta_tags', {}).get('site_url_absolute', '')) \
-        .replace('{{ site_description }}'             , ctx.get('meta_tags', {}).get('site_description', '')) \
-        .replace('{{ site_image_url }}'               , ctx.get('meta_tags', {}).get('site_image_url', '')) \
-        .replace('{{ site_image_height }}'            , ctx.get('meta_tags', {}).get('site_image_height', '')) \
-        .replace('{{ site_image_width }}'             , ctx.get('meta_tags', {}).get('site_image_width', '')) \
-        .replace('{{ site_image_alt }}'               , ctx.get('meta_tags', {}).get('site_image_alt', '')) \
-        .replace('{{ site_published_time_xmlschema }}', ctx.get('meta_tags', {}).get('site_published_time_xmlschema', '')) \
-        .replace('{{ site_name }}'                    , ctx.get('meta_tags', {}).get('site_name', '')) \
-        .replace('{{ site_locale }}'                  , ctx.get('meta_tags', {}).get('site_locale', '')) \
-        .replace('{{ site_twitter_card_type }}'       , ctx.get('meta_tags', {}).get('site_twitter_card_type', '')) \
-        .replace('{{ site_twitter_atusername }}'      , ctx.get('meta_tags', {}).get('site_twitter_atusername', '')) \
-        .replace('{{ site_icon }}'                    , ctx.get('meta_tags', {}).get('site_icon_url') or emoji_datauri) \
-        .replace('{{ site_author_name }}'             , ctx.get('site_info_author_name', '')) \
-        .replace('{{ site_author_email }}'            , ctx.get('site_info_author_email', '')) \
-        .replace('{{ site_github }}'                  , ctx.get('site_info_github', ''))
+    res_main = main_toc * page_is_single + main
+    
+    res = page_html
+    fields = dict(
+        head_html                     =  head_html,
+        style_css                     =  style_css,
+        nav_html                      =  nav,
+        navsite_html                  =  main_toc_flat,
+        footer_html                   =  footer_html,
+        bodyheader_html               =  bodyheader_html,
+        bodyfooter_html               =  bodyfooter_html,
+        main_html                     =  res_main,
+        site_title                    =  ctx['meta'].get('site_title', ''),
+        site_url_absolute             =  ctx['meta'].get('site_url_absolute', ''),
+        site_description              =  ctx['meta'].get('site_description', ''),
+        site_image_url                =  ctx['meta'].get('site_image_url', ''),
+        site_image_height             =  ctx['meta'].get('site_image_height', ''),
+        site_image_width              =  ctx['meta'].get('site_image_width', ''),
+        site_image_alt                =  ctx['meta'].get('site_image_alt', ''),
+        site_published_time_xmlschema =  ctx['meta'].get('site_published_time_xmlschema', ''),
+        site_name                     =  ctx['meta'].get('site_name', ''),
+        site_locale                   =  ctx['meta'].get('site_locale', ''),
+        site_icon                     =  ctx['meta'].get('site_icon_url') or emoji_datauri,
+        site_author_name              =  ctx['meta'].get('site_author_name', ''),
+        site_author_email             =  ctx['meta'].get('site_author_email', ''),
+        site_twitter_card_type        =  ctx['meta'].get('site_twitter_card_type', ''),
+        site_twitter_atusername       =  ctx['meta'].get('site_twitter_atusername', ''),
+        site_twitter                  =  ctx['meta'].get('site_twitter', ''),
+        site_facebook                 =  ctx['meta'].get('site_facebook', ''),
+        site_instagram                =  ctx['meta'].get('site_instagram', ''),
+        site_linkedin                 =  ctx['meta'].get('site_linkedin', ''),
+        site_youtube                  =  ctx['meta'].get('site_youtube', ''),
+        site_github                   =  ctx['meta'].get('site_github', '')
+    )
+    for k, v in fields.items():
+        res = res.replace('{{ ' + k + ' }}', v)
     
     return res
 
@@ -61,9 +79,11 @@ def sitepages_2markdown(page_ids = [], ctx = {}, notion_pages = {}, render_block
     
     main_toc = f'{nav}\n{divider}\n\n{main_toc}\n{divider}\n\n'
     render_block_page_kwargs = {}
+    
     main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx, **render_block_page_kwargs) for page_id in page_ids)
-    res = main_toc * page_is_single + main
-
+    res_main = main_toc * page_is_single + main
+    
+    res = res_main
     return res
 
 emoji_svg = '''
@@ -90,9 +110,9 @@ highlightjs_html = '''
 <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" onload="hljs.highlightAll();"></script>
 '''
 
-head_html = '<!-- head_html -->'
-
 bodyheader_html =  '<!--html_privacynotice' + privacynotice_html + 'html_privacynotice-->' + '\n\n' + '<!--html_googleanalytics' + googleanalytics_html + 'html_googleanalytics-->' + '\n\n' + '<!--html_equation_katex' + katex_html + 'html_equation_katex-->' + '\n\n' + '<!--html_code_highlightjs' + highlightjs_html + 'html_code_highlightjs-->'
+
+head_html = '<!-- head_html -->'
 bodyfooter_html = '<!-- bodyfooter_html -->'
 articleheader_html = '<!-- articleheader_html -->'
 articlefooter_html = '<!-- articlefooter_html -->'
@@ -125,29 +145,37 @@ footer_html = '''
     <div class="social-links">
       <ul class="social-media-list">
 
-          <li>
-            <a href="{{ site_facebook }}" target="_blank" title="facebook">
-              <svg id="facebook" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M15.117 0H.883C.395 0 0 .395 0 .883v14.234c0 .488.395.883.883.883h7.663V9.804H6.46V7.39h2.086V5.607c0-2.066 1.262-3.19 3.106-3.19.883 0 1.642.064 1.863.094v2.16h-1.28c-1 0-1.195.48-1.195 1.18v1.54h2.39l-.31 2.42h-2.08V16h4.077c.488 0 .883-.395.883-.883V.883C16 .395 15.605 0 15.117 0"/></svg>
-            </a>
-          </li>
-
+          <!--site_github
           <li>
             <a href="{{ site_github }}" target="_blank" title="github">
               <svg id="github" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M8 0C3.58 0 0 3.582 0 8c0 3.535 2.292 6.533 5.47 7.59.4.075.547-.172.547-.385 0-.19-.007-.693-.01-1.36-2.226.483-2.695-1.073-2.695-1.073-.364-.924-.89-1.17-.89-1.17-.725-.496.056-.486.056-.486.803.056 1.225.824 1.225.824.714 1.223 1.873.87 2.33.665.072-.517.278-.87.507-1.07-1.777-.2-3.644-.888-3.644-3.953 0-.873.31-1.587.823-2.147-.09-.202-.36-1.015.07-2.117 0 0 .67-.215 2.2.82.64-.178 1.32-.266 2-.27.68.004 1.36.092 2 .27 1.52-1.035 2.19-.82 2.19-.82.43 1.102.16 1.915.08 2.117.51.56.82 1.274.82 2.147 0 3.073-1.87 3.75-3.65 3.947.28.24.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.14.46.55.38C13.71 14.53 16 11.53 16 8c0-4.418-3.582-8-8-8"/></svg>
             </a>
           </li>
-              
+          site_github-->
+
+          <!--site_facebook
+          <li>
+            <a href="{{ site_facebook }}" target="_blank" title="facebook">
+              <svg id="facebook" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M15.117 0H.883C.395 0 0 .395 0 .883v14.234c0 .488.395.883.883.883h7.663V9.804H6.46V7.39h2.086V5.607c0-2.066 1.262-3.19 3.106-3.19.883 0 1.642.064 1.863.094v2.16h-1.28c-1 0-1.195.48-1.195 1.18v1.54h2.39l-.31 2.42h-2.08V16h4.077c.488 0 .883-.395.883-.883V.883C16 .395 15.605 0 15.117 0"/></svg>
+            </a>
+          </li>
+          site_facebook-->
+          
+          <!--site_instagram
           <li>
             <a href="{{ site_instagram }}" target="_blank" title="instagram">
               <svg id="instagram" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M8 0C5.827 0 5.555.01 4.702.048 3.85.088 3.27.222 2.76.42c-.526.204-.973.478-1.417.923-.445.444-.72.89-.923 1.417-.198.51-.333 1.09-.372 1.942C.008 5.555 0 5.827 0 8s.01 2.445.048 3.298c.04.852.174 1.433.372 1.942.204.526.478.973.923 1.417.444.445.89.72 1.417.923.51.198 1.09.333 1.942.372.853.04 1.125.048 3.298.048s2.445-.01 3.298-.048c.852-.04 1.433-.174 1.942-.372.526-.204.973-.478 1.417-.923.445-.444.72-.89.923-1.417.198-.51.333-1.09.372-1.942.04-.853.048-1.125.048-3.298s-.01-2.445-.048-3.298c-.04-.852-.174-1.433-.372-1.942-.204-.526-.478-.973-.923-1.417-.444-.445-.89-.72-1.417-.923-.51-.198-1.09-.333-1.942-.372C10.445.008 10.173 0 8 0zm0 1.44c2.136 0 2.39.01 3.233.048.78.036 1.203.166 1.485.276.374.145.64.318.92.598.28.28.453.546.598.92.11.282.24.705.276 1.485.038.844.047 1.097.047 3.233s-.01 2.39-.05 3.233c-.04.78-.17 1.203-.28 1.485-.15.374-.32.64-.6.92-.28.28-.55.453-.92.598-.28.11-.71.24-1.49.276-.85.038-1.1.047-3.24.047s-2.39-.01-3.24-.05c-.78-.04-1.21-.17-1.49-.28-.38-.15-.64-.32-.92-.6-.28-.28-.46-.55-.6-.92-.11-.28-.24-.71-.28-1.49-.03-.84-.04-1.1-.04-3.23s.01-2.39.04-3.24c.04-.78.17-1.21.28-1.49.14-.38.32-.64.6-.92.28-.28.54-.46.92-.6.28-.11.7-.24 1.48-.28.85-.03 1.1-.04 3.24-.04zm0 2.452c-2.27 0-4.108 1.84-4.108 4.108 0 2.27 1.84 4.108 4.108 4.108 2.27 0 4.108-1.84 4.108-4.108 0-2.27-1.84-4.108-4.108-4.108zm0 6.775c-1.473 0-2.667-1.194-2.667-2.667 0-1.473 1.194-2.667 2.667-2.667 1.473 0 2.667 1.194 2.667 2.667 0 1.473-1.194 2.667-2.667 2.667zm5.23-6.937c0 .53-.43.96-.96.96s-.96-.43-.96-.96.43-.96.96-.96.96.43.96.96z"/></svg>
             </a>
           </li>
+          site_instagram-->
 
+          <!--site_linkedin
           <li>
             <a href="{{ site_linkedin }}" target="_blank" title="linkedin">
               <svg id="linkedin" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M13.632 13.635h-2.37V9.922c0-.886-.018-2.025-1.234-2.025-1.235 0-1.424.964-1.424 1.96v3.778h-2.37V6H8.51v1.04h.03c.318-.6 1.092-1.233 2.247-1.233 2.4 0 2.845 1.58 2.845 3.637v4.188zM3.558 4.955c-.762 0-1.376-.617-1.376-1.377 0-.758.614-1.375 1.376-1.375.76 0 1.376.617 1.376 1.375 0 .76-.617 1.377-1.376 1.377zm1.188 8.68H2.37V6h2.376v7.635zM14.816 0H1.18C.528 0 0 .516 0 1.153v13.694C0 15.484.528 16 1.18 16h13.635c.652 0 1.185-.516 1.185-1.153V1.153C16 .516 15.467 0 14.815 0z"/></svg>
             </a>
           </li>
+          site_linkedin-->
               
           <li>
             <a href="{{ site_telegram }}" target="_blank" title="telegram">
@@ -155,17 +183,21 @@ footer_html = '''
             </a>
           </li>
               
+          <!--site_twitter
           <li>
             <a href="{{ site_twitter }}" target="_blank" title="twitter">
               <svg id="twitter" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M16 3.038c-.59.26-1.22.437-1.885.517.677-.407 1.198-1.05 1.443-1.816-.634.37-1.337.64-2.085.79-.598-.64-1.45-1.04-2.396-1.04-1.812 0-3.282 1.47-3.282 3.28 0 .26.03.51.085.75-2.728-.13-5.147-1.44-6.766-3.42C.83 2.58.67 3.14.67 3.75c0 1.14.58 2.143 1.46 2.732-.538-.017-1.045-.165-1.487-.41v.04c0 1.59 1.13 2.918 2.633 3.22-.276.074-.566.114-.865.114-.21 0-.41-.02-.61-.058.42 1.304 1.63 2.253 3.07 2.28-1.12.88-2.54 1.404-4.07 1.404-.26 0-.52-.015-.78-.045 1.46.93 3.18 1.474 5.04 1.474 6.04 0 9.34-5 9.34-9.33 0-.14 0-.28-.01-.42.64-.46 1.2-1.04 1.64-1.7z"/></svg>
             </a>
           </li>
+          site_twitter-->
               
+          <!--site_youtube
           <li>
             <a href="{{ site_youtube }}" target="_blank" title="youtube">
               <svg id="youtube" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M0 7.345c0-1.294.16-2.59.16-2.59s.156-1.1.636-1.587c.608-.637 1.408-.617 1.764-.684C3.84 2.36 8 2.324 8 2.324s3.362.004 5.6.166c.314.038.996.04 1.604.678.48.486.636 1.588.636 1.588S16 6.05 16 7.346v1.258c0 1.296-.16 2.59-.16 2.59s-.156 1.102-.636 1.588c-.608.638-1.29.64-1.604.678-2.238.162-5.6.166-5.6.166s-4.16-.037-5.44-.16c-.356-.067-1.156-.047-1.764-.684-.48-.487-.636-1.587-.636-1.587S0 9.9 0 8.605v-1.26zm6.348 2.73V5.58l4.323 2.255-4.32 2.24z"/></svg>
             </a>
           </li>
+          site_youtube-->
               
       </ul>
     </div>

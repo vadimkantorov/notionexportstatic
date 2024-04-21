@@ -4,6 +4,7 @@
 # TODO: image detection for summary image
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
 # TODO: for symmetry, implement flat mode of table_of_contents_2markdown
+# TODO: reduce amount of snippets
 
 import os
 import re
@@ -810,10 +811,8 @@ def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', 
         image_info = get_page_image(page, ctx)
         page_info[page_id] = dict(
             site_name                     = ctx['site_info_name']               or '', # {{ site['pages'][site['root_page_id']]['title'] }}
+            site_title                    = '',
             site_locale                   = ctx['site_info_locale']             or '',
-            site_twitter_card_type        = ctx['site_info_twitter_card_type']  or '',
-            site_twitter_atusername       = ctx['site_info_twitter_atusername'] or '',
-            site_title                    = ctx['site_info_title']              or get_page_title(page, ctx),
             site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(page, ctx),
             site_description              = ctx['site_info_description']        or get_page_description(page, ctx),
             site_published_time_xmlschema = ctx['site_info_time_published']     or get_page_time_published(page, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded'),
@@ -821,6 +820,18 @@ def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', 
             site_image_height             = ctx['site_info_image_height']       or image_info['image_height'],
             site_image_width              = ctx['site_info_image_width']        or image_info['image_width'],
             site_image_alt                = ctx['site_info_image_alt']          or image_info['image_alt'],
+            
+            site_twitter_card_type        = ctx['site_info_twitter_card_type']  or '',
+            site_twitter_atusername       = ctx['site_info_twitter_atusername'] or '',
+            site_twitter                  = 'https://twitter.com/' + (ctx['site_info_twitter_atusername'] or '').lstrip('@'),
+            site_author_name              = ctx['site_info_author_name'] or '',
+            site_author_email             = ctx['site_info_author_email'] or '',
+            site_github                   = ctx['site_info_github'] or '',
+            site_facebook                 = ctx['site_info_facebook'] or '',
+            site_instagram                = ctx['site_info_instagram'] or '',
+            site_linkedin                 = ctx['site_info_linkedin'] or '',
+            site_telegram                 = ctx['site_info_telegram'] or '',
+            site_youtube                  = ctx['site_info_youtube'] or '',
         )
         page_info[page_id] = {k : v.translate(translate) for k, v in page_info[page_id].items()}
         
@@ -867,7 +878,7 @@ def sitemap_urlset_update(urlset, id, loc, locrel = ''):
 def pop_and_replace_child_pages_recursively(block, child_pages_by_parent_id = {}, parent_id = None):
     stack = [(block, parent_id)]
     while stack:
-        block, parent_id = stack.top()
+        block, parent_id = stack.pop()
         block_type = get_block_type(block)
         if block_type in ['page', 'child_page']:
             if get_block_id(block) not in child_pages_by_parent_id:
@@ -1015,11 +1026,11 @@ def extractall(output_path, ctx, theme, page_ids = [], notion_pages = {}, notion
     if ctx['extract_mode'] in extract_mode_single:
         assets_urls = discover_assets(ctx['pages'].values(), [], download_assets_types = ctx['download_assets_types'])
         notion_assets_for_blocks = download_and_extract_assets(assets_urls, ctx, assets_dir = ctx['assets_dir'], notion_assets = notion_assets)
-        meta_tags = ctx['page_info'][page_ids[0]]
+        meta = ctx['page_info'][page_ids[0]]
         if ext == '.md':
-           notionstr = theme.sitepages_2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks, meta_tags = meta_tags), notion_pages = notion_pages_flat, render_block = block_2markdown, snippets = snippets)
+           notionstr = theme.sitepages_2markdown(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks, meta = meta), notion_pages = notion_pages_flat, render_block = block_2markdown, snippets = snippets)
         if ext == '.html':
-           notionstr = theme.sitepages_2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks, meta_tags = meta_tags), notion_pages = notion_pages_flat, render_block = block_2html, snippets = snippets)
+           notionstr = theme.sitepages_2html(page_ids, ctx = dict(ctx, assets = notion_assets_for_blocks, meta = meta), notion_pages = notion_pages_flat, render_block = block_2html, snippets = snippets)
         if ext == '.json':
             notionjson = dict(
                 pages = {page_id : page for page_id, page in (notion_pages if ctx['extract_mode'] == 'single.json' else notion_pages_flat).items() if page_id in page_ids}, 
@@ -1161,15 +1172,21 @@ def notion2static(
     site_info_description,
     site_info_url_absolute,
     site_info_time_published,
-    site_info_twitter_card_type,
-    site_info_twitter_atusername,
     site_info_image_url,
     site_info_image_height,
     site_info_image_width,
     site_info_image_alt,
+
+    site_info_twitter_card_type,
+    site_info_twitter_atusername,
     site_info_author_name,
     site_info_author_email,
-    site_info_github
+    site_info_github,
+    site_info_facebook,
+    site_info_instagram,
+    site_info_linkedin,
+    site_info_telegram,
+    site_info_youtube
 ):
     slugs = {k.lower().strip() : v.lower().strip() for s in slugs for kv in s.split(',') for k, v in [kv.split('=')]}
     notion_page_id = [page_id.lower().strip() for comma_separated_page_ids in notion_page_id for page_id in comma_separated_page_ids.split(',')]
@@ -1372,15 +1389,20 @@ if __name__ == '__main__':
     parser.add_argument('--site-info-description')
     parser.add_argument('--site-info-url-absolute')
     parser.add_argument('--site-info-time-published')
-    parser.add_argument('--site-info-twitter-card-type')
-    parser.add_argument('--site-info-twitter-atusername')
     parser.add_argument('--site-info-image-url')
     parser.add_argument('--site-info-image-height')
     parser.add_argument('--site-info-image-width')
     parser.add_argument('--site-info-image-alt')
-    parser.add_argument('--site-info-author-name', default = '')
-    parser.add_argument('--site-info-author-email', default = '')
-    parser.add_argument('--site-info-github', default = '')
+    parser.add_argument('--site-info-author-name')
+    parser.add_argument('--site-info-author-email')
+    parser.add_argument('--site-info-twitter-card-type')
+    parser.add_argument('--site-info-twitter-atusername')
+    parser.add_argument('--site-info-github')
+    parser.add_argument('--site-info-facebook')
+    parser.add_argument('--site-info-instagram')
+    parser.add_argument('--site-info-linkedin')
+    parser.add_argument('--site-info-telegram')
+    parser.add_argument('--site-info-youtube')
 
     args = parser.parse_args()
     print(args)
