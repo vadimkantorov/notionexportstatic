@@ -3,6 +3,7 @@
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 # TODO: image detection for summary image
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
+# TODO: for symmetry, implement flat mode of table_of_contents_2markdown
 
 import os
 import re
@@ -171,7 +172,7 @@ def linklike_2html(block, ctx, tag = 'a', class_name = '', full_url_as_caption =
     rich_text = richtext_2html(block, ctx, caption = True) or html.escape(block.get(get_block_type(block), {}).get('name') or block.get('plain_text') or (src if full_url_as_caption else get_url_basename(src)))
     return blocktag_2html(block, ctx, tag = tag, attrs = dict(href = src) | (dict(download = download) if download is not None else {}), class_name = class_name, set_html_contents_and_close = icon + rich_text) + '<br/>' * line_break
 
-def page_2html(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', html_prefix = '', html_suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
+def page_2html(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', prefix = '', suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
     datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
     src_cover = get_asset_url(get_page_cover_url(block), ctx)
     page_id = get_block_id(block)
@@ -188,7 +189,7 @@ def page_2html(block, ctx, tag = 'article', class_name = 'notion-page-block', st
     page_icon = f'<img src="{page_icon_url}"></img>' * bool(page_icon_url)
     
     return blocktag_2html(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'''
-        {html_prefix}
+        {prefix}
         <header class="{class_name_header}">
             <img src="{src_cover}" class="notion-page-cover"></img>
             <h1 {page_icon_id} class="notion-record-icon">{page_emoji}{page_icon}</h1> 
@@ -198,7 +199,7 @@ def page_2html(block, ctx, tag = 'article', class_name = 'notion-page-block', st
         <div class="notion-page-content {class_name_page_content}">
             {children}
         </div>
-        {html_suffix}
+        {suffix}
     ''')
 
 ##############################

@@ -1,4 +1,5 @@
 # TODO: replace site_info str
+# TODO: harmonize main = 
 
 def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     snippets = snippets_default | snippets
@@ -19,7 +20,8 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
         .replace('{{ googleanalytics_tag_id }}', ctx['html_googleanalytics'] or '')
     
     main_toc_flat = render_block(dict(type = 'table_of_contents', site_table_of_contents_flat_page_ids = page_ids), ctx)
-    main = f'\n{divider}\n'.join(render_block(notion_pages[page_id], ctx, html_prefix = snippets.get('articleheader_html', ''), html_suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post') for page_id in page_ids)
+    render_block_page_kwargs = dict(prefix = snippets.get('articleheader_html', ''), suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post')
+    main = f'\n{divider}\n'.join(render_block(notion_pages[page_id], ctx, **render_block_page_kwargs) for page_id in page_ids)
 
     res = snippets.get('page_html', '') \
         .replace('{{ head_html }}'                    , snippets.get('head_html', '')) \
@@ -58,7 +60,8 @@ def sitepages_2markdown(page_ids = [], ctx = {}, notion_pages = {}, render_block
     main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
     
     main_toc = f'{nav}\n{divider}\n\n{main_toc}\n{divider}\n\n'
-    main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx) for page_id in page_ids)
+    render_block_page_kwargs = {}
+    main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx, **render_block_page_kwargs) for page_id in page_ids)
     res = main_toc * page_is_single + main
 
     return res
