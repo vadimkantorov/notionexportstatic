@@ -16,12 +16,11 @@ def sitepages_2html(page_ids = [], ctx = {}, notion_pages = {}, render_block = (
     for k in ['html_privacynotice', 'html_googleanalytics', 'html_equation_katex', 'html_code_highlightjs']:
         if ctx[k]:
             bodyheader_html = bodyheader_html.replace('<!--' + k, '').replace(k + '-->', '')
-    bodyheader_html = bodyheader_html \
-        .replace('{{ privacynotice_url }}', ctx['html_privacynotice'] or '') \
-        .replace('{{ googleanalytics_tag_id }}', ctx['html_googleanalytics'] or '')
+    for k, v in dict(privacynotice_url = ctx['html_privacynotice'] or '', googleanalytics_tag_id = ctx['html_googleanalytics'] or '').items():
+        bodyheader_html = bodyheader_html.replace('{{ ' + k + ' }}', v)
     for k in ['site_twitter', 'site_facebook', 'site_instagram', 'site_linkedin', 'site_youtube', 'site_github']:
-        if ctx.get('meta', {}).get(k):
-            footer_html = footer_html.replace('<!--' + k, '').replace(k + '-->', '')
+        if v := ctx['meta'].get(k):
+            footer_html = footer_html.replace('{{ ' + k + ' }}', v).replace('<!--' + k, '').replace(k + '-->', '')
     
     main_toc_flat = render_block(dict(type = 'table_of_contents', site_table_of_contents_flat_page_ids = page_ids), ctx)
     render_block_page_kwargs = dict(prefix = snippets.get('articleheader_html', ''), suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post')
