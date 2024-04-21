@@ -1,19 +1,16 @@
-# TODO: twemoji: apply to body
-# TODO: try to move hamburger to left
-
 def sitepages_tohtml(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     snippets = snippets_default | snippets
     page_id_first = page_ids[0]
-    page_is_single = bool(len(page_ids) > 1)
+    multipage= len(page_ids) > 1
     divider = render_block(dict(type = 'divider'), ctx, class_name = '')
     nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
     main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
     main_toc_flat = render_block(dict(type = 'table_of_contents', site_table_of_contents_flat_page_ids = page_ids), ctx)
 
     render_block_page_kwargs = dict(prefix = snippets.get('articleheader_html', ''), suffix = snippets.get('articlefooter_html', ''), class_name_page_title = 'post-title', class_name_page_content = 'post-content', class_name_header = 'post-header', class_name_page = 'post')
-    main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx, **render_block_page_kwargs) for page_id in page_ids)
-    #main = f'\n{divider}\n'.join(render_block(notion_pages[page_id], ctx, **render_block_page_kwargs) for page_id in page_ids)
-    main_with_toc = main_toc * page_is_single + main
+
+    main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) * multipage + '\n\n' * multipage + render_block(notion_pages[page_id], ctx = ctx, **render_block_page_kwargs) for page_id in page_ids)
+    main_with_toc = main_toc * multipage + main
     
     res = snippets.get('page_html', '')
     head_html = snippets.get('head_html', '')
@@ -27,42 +24,41 @@ def sitepages_tohtml(page_ids = [], ctx = {}, notion_pages = {}, render_block = 
     for k in ['html_privacynotice', 'html_googleanalytics', 'html_equation_katex', 'html_code_highlightjs']:
         if v := ctx[k]:
             bodyheader_html = bodyheader_html.replace('<!--' + k, '').replace(k + '-->', '')
-    for k in ['site_twitter', 'site_facebook', 'site_instagram', 'site_linkedin', 'site_youtube', 'site_github']:
+    for k in ['site_twitter', 'site_facebook', 'site_instagram', 'site_linkedin', 'site_youtube', 'site_github', 'site_telegram']:
         if v := ctx['meta'].get(k):
             footer_html = footer_html.replace('{{ ' + k + ' }}', v).replace('<!--' + k, '').replace(k + '-->', '')
     
-    fields = dict(
-        head_html                     =  head_html,
-        style_css                     =  style_css,
-        nav_html                      =  nav,
-        navsite_html                  =  main_toc_flat,
-        footer_html                   =  footer_html,
-        bodyheader_html               =  bodyheader_html,
-        bodyfooter_html               =  bodyfooter_html,
-        main_html                     =  main_with_toc,
-        site_title                    =  ctx['meta'].get('site_title', ''),
-        site_url_absolute             =  ctx['meta'].get('site_url_absolute', ''),
-        site_description              =  ctx['meta'].get('site_description', ''),
-        site_image_url                =  ctx['meta'].get('site_image_url', ''),
-        site_image_height             =  ctx['meta'].get('site_image_height', ''),
-        site_image_width              =  ctx['meta'].get('site_image_width', ''),
-        site_image_alt                =  ctx['meta'].get('site_image_alt', ''),
-        site_published_time_xmlschema =  ctx['meta'].get('site_published_time_xmlschema', ''),
-        site_name                     =  ctx['meta'].get('site_name', ''),
-        site_locale                   =  ctx['meta'].get('site_locale', ''),
-        site_icon                     =  ctx['meta'].get('site_icon_url') or emoji_datauri,
-        site_author_name              =  ctx['meta'].get('site_author_name', ''),
-        site_author_email             =  ctx['meta'].get('site_author_email', ''),
-        site_twitter_card_type        =  ctx['meta'].get('site_twitter_card_type', ''),
-        site_twitter_atusername       =  ctx['meta'].get('site_twitter_atusername', ''),
-        site_twitter                  =  ctx['meta'].get('site_twitter', ''),
-        site_facebook                 =  ctx['meta'].get('site_facebook', ''),
-        site_instagram                =  ctx['meta'].get('site_instagram', ''),
-        site_linkedin                 =  ctx['meta'].get('site_linkedin', ''),
-        site_youtube                  =  ctx['meta'].get('site_youtube', ''),
-        site_github                   =  ctx['meta'].get('site_github', '')
-    )
-    for k, v in fields.items():
+    for k, v in dict(
+                    head_html                     =  head_html,
+                    style_css                     =  style_css,
+                    nav_html                      =  nav,
+                    navsite_html                  =  main_toc_flat,
+                    footer_html                   =  footer_html,
+                    bodyheader_html               =  bodyheader_html,
+                    bodyfooter_html               =  bodyfooter_html,
+                    main_html                     =  main_with_toc,
+                    site_icon                     =  ctx['meta']['site_icon_url'] or emoji_datauri,
+                    site_title                    =  ctx['meta']['site_title'],
+                    site_url_absolute             =  ctx['meta']['site_url_absolute'],
+                    site_description              =  ctx['meta']['site_description'],
+                    site_image_url                =  ctx['meta']['site_image_url'],
+                    site_image_height             =  ctx['meta']['site_image_height'],
+                    site_image_width              =  ctx['meta']['site_image_width'],
+                    site_image_alt                =  ctx['meta']['site_image_alt'],
+                    site_published_time_xmlschema =  ctx['meta']['site_published_time_xmlschema'],
+                    site_name                     =  ctx['meta']['site_name'],
+                    site_locale                   =  ctx['meta']['site_locale'],
+                    site_author_name              =  ctx['meta']['site_author_name'],
+                    site_author_email             =  ctx['meta']['site_author_email'],
+                    site_twitter_card_type        =  ctx['meta']['site_twitter_card_type'],
+                    site_twitter_atusername       =  ctx['meta']['site_twitter_atusername'],
+                    site_twitter                  =  ctx['meta']['site_twitter'],
+                    site_facebook                 =  ctx['meta']['site_facebook'],
+                    site_instagram                =  ctx['meta']['site_instagram'],
+                    site_linkedin                 =  ctx['meta']['site_linkedin'],
+                    site_youtube                  =  ctx['meta']['site_youtube'],
+                    site_github                   =  ctx['meta']['site_github'],
+            ).items():
         res = res.replace('{{ ' + k + ' }}', v)
     
     return res
@@ -70,19 +66,19 @@ def sitepages_tohtml(page_ids = [], ctx = {}, notion_pages = {}, render_block = 
 def sitepages_tomarkdown(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     snippets = snippets_default | snippets
     page_id_first = page_ids[0]
-    page_is_single = bool(len(page_ids) > 1)
+    multipage = len(page_ids) > 1
     divider = render_block(dict(type = 'divider'), ctx)
     nav = render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id_first)), ctx)
     main_toc = render_block(dict(type = 'table_of_contents', site_table_of_contents_page_ids = page_ids), ctx)
     main_toc_flat = render_block(dict(type = 'table_of_contents', site_table_of_contents_flat_page_ids = page_ids), ctx)
     
-    main_toc = f'{nav}\n{divider}\n\n{main_toc}\n{divider}\n\n'
     render_block_page_kwargs = {}
+
+    main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) * multipage + '\n\n' * multipage + render_block(notion_pages[page_id], ctx = ctx, **render_block_page_kwargs) for page_id in page_ids)
+    main_with_toc = main_toc * multipage + main
     
-    main = f'\n{divider}\n'.join(render_block(dict(type = 'breadcrumb', parent = dict(type = 'page_id', page_id = page_id)), ctx) + '\n\n' + render_block(notion_pages[page_id], ctx = ctx, **render_block_page_kwargs) for page_id in page_ids)
-    main_with_toc = main_toc * page_is_single + main
-    
-    res = main_with_toc
+    res = f'{nav}\n{divider}\n\n{main_with_toc}'
+
     return res
 
 emoji_svg = '''
@@ -97,10 +93,10 @@ articlefooter_html = '<!-- articlefooter_html -->'
 bodyheader_html =  '''
 <!--html_privacynotice
 <div class="privacynotice" hidden>Please review and accept the &nbsp;<a target="_blank" href="{{ privacynotice_url }}">privacy and cookies notice</a>:&nbsp;<button onclick="document.cookie='accepted';document.querySelector('.privacynotice').hidden=true;">Accept</button></div>
-<script>if(!document.cookie) document.querySelector(".privacynotice").removeAttribute("hidden");</script>
+<script>if(!document.cookie)document.querySelector(".privacynotice").removeAttribute("hidden");</script>
 html_privacynotice-->
 
-<!--html_googleanalytics'
+<!--html_googleanalytics
 <script title="https://developers.google.com/tag-platform/gtagjs/install" async src="https://www.googletagmanager.com/gtag/js?id={{ googleanalytics_tag_id }}"></script>
 <script>window.dataLayer=window.dataLayer||[];gtag=()=>dataLayer.push(arguments);if(document.cookie){gtag("js", new Date());gtag("config","{{ googleanalytics_tag_id }}");}</script>
 html_googleanalytics-->
@@ -176,11 +172,13 @@ footer_html = '''
           </li>
           site_linkedin-->
               
+          <!--site_telegram
           <li>
             <a href="{{ site_telegram }}" target="_blank" title="telegram">
               <svg id="telegram" class="svg-icon grey" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M10.563,11.596l1.286-6.063c0.053-0.256,0.022-0.44-0.092-0.551c-0.113-0.111-0.264-0.131-0.45-0.061l-7.56,2.914 C3.579,7.897,3.463,7.971,3.402,8.052C3.34,8.134,3.333,8.211,3.38,8.284s0.14,0.13,0.28,0.171l1.934,0.604l4.489-2.826 c0.123-0.082,0.216-0.099,0.28-0.053c0.041,0.029,0.029,0.073-0.035,0.131L6.696,9.592l-0.14,1.996c0.134,0,0.265-0.064,0.394-0.193 l0.945-0.91l1.96,1.444C10.229,12.139,10.465,12.027,10.563,11.596z M15.84,8c0,1.062-0.207,2.077-0.621,3.045 c-0.414,0.969-0.972,1.803-1.671,2.503c-0.7,0.699-1.534,1.257-2.503,1.671C10.077,15.633,9.062,15.84,8,15.84 s-2.077-0.207-3.045-0.621c-0.969-0.414-1.803-0.972-2.502-1.671c-0.7-0.7-1.257-1.534-1.671-2.503C0.367,10.077,0.16,9.062,0.16,8 s0.207-2.077,0.621-3.045c0.414-0.969,0.971-1.803,1.671-2.502c0.7-0.7,1.534-1.257,2.502-1.671C5.923,0.367,6.938,0.16,8,0.16 s2.077,0.207,3.045,0.621c0.969,0.414,1.803,0.971,2.503,1.671c0.699,0.7,1.257,1.534,1.671,2.502C15.633,5.923,15.84,6.938,15.84,8 z"/></svg>
             </a>
           </li>
+          site_telegram-->
               
           <!--site_twitter
           <li>
@@ -281,7 +279,7 @@ page_html =  '''
 
 notionexportstatic_css = '''
 :root {
-    --minima-header-height: 60px;
+    --minima-navbar-height: 60px;
 }
 
 /* override minimacss defaults for burger menu hide for large screens */
@@ -296,7 +294,7 @@ notionexportstatic_css = '''
     overflow-y: scroll;
     position: fixed;
     bottom: 0;
-    top: var(--minima-header-height);
+    top: var(--minima-navbar-height);
     background-color: wheat;
     width: 50vw;
     left:  50vw;
@@ -310,11 +308,15 @@ notionexportstatic_css = '''
     background-color: skyblue; 
     color: white; 
     /*text-align: center;*/
-    height: var(--minima-header-height);
+    height: var(--minima-navbar-height);
     display: flex;
     justify-content: center;
     align-items: center;
 }
+.privacynotice[hidden] {
+    display:none
+}
+
 .notion-page-like-icon::after, .notion-heading-like-icon::after { content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' width='16' height='16' aria-hidden='true'%3E%3Cpath d='m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z'%3E%3C/path%3E%3C/svg%3E") }
 
 .notion-page-like-edit-icon::after { content: "✏️"; font-size: 0.4em; }
@@ -326,10 +328,9 @@ notionexportstatic_css = '''
 
 .notion-table_of_contents-site-header::after { content: "#" }
 
-.notion-topbar                 { font-family: 'Twemoji Country Flags', sans-serif !important; position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
-.notion-record-icon            { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 78px  !important; line-height: 1.1 !important; margin-left: 0 !important; }
-.notion-page-block             { font-family: 'Twemoji Country Flags', sans-serif !important; font-size: 2.5em !important; line-height: 1.1 !important; margin-left: 0 !important; }
-.notion-table_of_contents-site { font-family: 'Twemoji Country Flags' }
+.notion-topbar                 { position: sticky !important; top: 0 !important; width: 100% !important; z-index: 9 !important; background-color: white !important; }
+.notion-record-icon            { font-size: 78px  !important; line-height: 1.1 !important; margin-left: 0 !important; }
+.notion-page-block             { font-size: 2.5em !important; line-height: 1.1 !important; margin-left: 0 !important; }
 
 .notion-header-block, .notion-sub_header-block, .notion-sub_sub_header-block, .notion-record-icon, .notion-page-block {scroll-margin-top: var(--minima-navbar-height) !important}
 
@@ -460,6 +461,7 @@ notionexportstatic_css = '''
 --notion-dark-color-pill-red     : rgba(255,115,105,0.5);
 }
 
+body { font-family: 'Twemoji Country Flags', sans-serif !important; }
 @font-face {
     font-family: 'Twemoji Country Flags';
     unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;

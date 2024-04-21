@@ -1,9 +1,8 @@
-# TODO: markdown: quote-tab
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
+# TODO: markdown: quote-tab
 # TODO: image detection for summary image
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
-# TODO: edit-url optional
-# TODO: make main_toc use CSS class site-title
+# TODO: check get_page_info
 
 import os
 import re
@@ -95,7 +94,7 @@ def blocktag_tohtml(block = {}, ctx = {}, class_name = '', tag = '', selfclose =
     notion_attrs_class_name = 'notion-block ' + class_name
     notion_attrs = (' data-block-id="{id}" '.format(id = get_block_id(block))) * bool(get_block_id(block)) + (f' class="{notion_attrs_class_name}" ' if notion_attrs_class_name else '') + ' ' + ' '.join(f'{k}="{v}"' if v is not None else k for k, v in attrs.items()) + ' '
     endline_if_html = '\n' * ('<' in (set_html_contents_and_close or '') or '>' in (set_html_contents_and_close or ''))
-    return (f'{prefix}<{tag} ' + (notion_attrs if block else '') + '/' * selfclose + f'>{endline_if_html}' + (set_html_contents_and_close + f'{endline_if_html}</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) if tag else ''
+    return (f'{prefix}<{tag} ' + notion_attrs * bool(block) + '/' * selfclose + f'>{endline_if_html}' + (set_html_contents_and_close + f'{endline_if_html}</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) * bool(tag)
 
 def childrenlike_tohtml(block, ctx, tag = ''):
     res = ''
@@ -103,7 +102,7 @@ def childrenlike_tohtml(block, ctx, tag = ''):
     for i, subblock in enumerate(subblocks):
         same_block_type_as_prev = i > 0 and subblock.get('type') == subblocks[i - 1].get('type')
         same_block_type_as_next = i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type')
-        res += ((f'<{tag}>') if tag else '') + block_tohtml(subblock, ctx, begin = not same_block_type_as_prev, end = not same_block_type_as_next) + (f'</{tag}>\n' if tag else '')
+        res += f'<{tag}>' * bool(tag) + block_tohtml(subblock, ctx, begin = not same_block_type_as_prev, end = not same_block_type_as_next) + f'</{tag}>\n' * bool(tag)
     return res
 
 def richtext_tohtml(block, ctx = {}, title_mode = False, caption = False, rich_text = False):
@@ -339,7 +338,7 @@ callout_tohtml = lambda block, ctx, tag = 'p', class_name = 'notion-callout-bloc
 
 ##############################
 
-childrenlike_tomarkdown = lambda block, ctx, tag = '', newline = '\n': newline.join(block_tomarkdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
+childrenlike_tomarkdown = lambda block, ctx, tag = '', newline = '\n': newline.join(tag + block_tomarkdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
 toggle_tomarkdown = lambda block, ctx, tag = '', icon = '', title_mode = False: ('<details markdown="1"><summary markdown="1">\n\n' + tag + richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike_tomarkdown(block, ctx) + '\n\n</details>') if ctx['markdown_toggle'] else (tag + '▼ ' + richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike_tomarkdown(block, ctx))
 
 def textlike_tomarkdown(block, ctx, tag = '', icon = '', checked = None, title_mode = False):
@@ -382,7 +381,7 @@ def table_of_contents_tomarkdown(block, ctx, tag = '* '):
         page_ids = block.get('site_table_of_contents_page_ids', [])
         child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
-        return table_of_contents_page_tree(root_page_ids, depth = 0)
+        return table_of_contents_page_tree(root_page_ids, depth = 0) + '\n---\n'
     
     if block.get('site_table_of_contents_flat_page_ids'):
         table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '\n'.join('{tag}{link_to_page}\n{child_pages}'.format(link_to_page = link_to_page_tomarkdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False, class_name = 'page-link'), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids)
@@ -446,7 +445,7 @@ def page_tomarkdown(block, ctx, strftime = '%Y/%m/%d %H:%M:%S'):
     res += f'![cover]({src_cover})\n\n' * bool(src_cover)
     res += f'<i id="{page_slug}"></i>\n' * bool(ctx['extract_mode'] == 'single.md')
     res += f'# {page_emoji} {page_title}{anchor}\n'
-    res += f'*@{datetime_published}*{edit}}\n\n'
+    res += f'*@{datetime_published}* {edit}\n\n'
     res += children
     return res
 
@@ -822,6 +821,7 @@ def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', 
             site_name                     = ctx['site_info_name']               or '', # {{ site['pages'][site['root_page_id']]['title'] }}
             site_title                    = '',
             site_locale                   = ctx['site_info_locale']             or '',
+            site_icon_url                 = '',
             site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(page, ctx),
             site_description              = ctx['site_info_description']        or get_page_description(page, ctx),
             site_published_time_xmlschema = ctx['site_info_time_published']     or get_page_time_published(page, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded'),
@@ -832,7 +832,7 @@ def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', 
             
             site_twitter_card_type        = ctx['site_info_twitter_card_type']  or '',
             site_twitter_atusername       = ctx['site_info_twitter_atusername'] or '',
-            site_twitter                  = 'https://twitter.com/' + (ctx['site_info_twitter_atusername'] or '').lstrip('@'),
+            site_twitter                  = ('https://twitter.com/' + (ctx['site_info_twitter_atusername'] or '').lstrip('@')) * bool(ctx['site_info_twitter_atusername']),
             site_author_name              = ctx['site_info_author_name'] or '',
             site_author_email             = ctx['site_info_author_email'] or '',
             site_github                   = ctx['site_info_github'] or '',
