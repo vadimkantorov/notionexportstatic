@@ -1,6 +1,3 @@
-# TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
-# TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
-
 import os
 import re
 import sys
@@ -49,7 +46,11 @@ def notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes):
     notionapi = notion_client.Client(auth = notion_token)
     
     notion_pages_and_databases = {}
+    downloaded_page_ids_no_dashes = set()
     for notion_page_id_no_dashes in notion_page_ids_no_dashes:
+        if notion_page_id_no_dashes in downloaded_page_ids_no_dashes:
+            continue
+
         page_type, page = None, {}
         for k, f in [('page', notionapi.pages.retrieve), ('database', notionapi.databases.retrieve), ('child_page', notionapi.blocks.retrieve)]:
             try:
@@ -63,11 +64,14 @@ def notionapi_retrieve_page_list(notion_token, notion_page_ids_no_dashes):
         assert page_type
         
         notion_pages_and_databases[page['id']] = page
+        downloaded_page_ids_no_dashes.add(page['id'].replace('-', ''))
 
         stack = [page]
         while stack:
             block = stack.pop()
             block_type = block.get('object') or block.get('type') or ''
+            if block_type in ['page', 'child_page']:
+                downloaded_page_ids_no_dashes.add(block['id'].replace('-', ''))
             block_id_no_dashes = block['id'].replace('-', '')
             children = block['blocks' if block_type in ['page', 'database'] else 'children'] = []
             start_cursor = None
@@ -644,7 +648,7 @@ def resolve_page_ids(root_page_ids, all_page_and_child_page_ids, notion_slugs):
     return root_page_ids
 
 def resolve_page_ids_no_dashes(notion_page_id, notion_slugs):
-    return  [ get_block_id_no_dashes( ([k for k, v in notion_slugs.items() if v.lower() == page_id.lower()] or [page_id])[0] ) for page_id in notion_page_id]
+    return  [ get_block_id_no_dashes( ([k for k, v in notion_slugs.items() if v.lower() == page_id.lower()] or [page_id])[0] ) for page_id in notion_page_id] or [get_block_id_no_dashes(k) for k in notion_slugs.keys()]
 
 def get_page_edit_url(page_id, ctx, page_slug, base_url = 'https://notion.so'):
     page_id_no_dashes = get_block_id_no_dashes(page_id)
@@ -834,20 +838,17 @@ def get_page_image_url(block, ctx):
 def get_callout_icon(block, ctx):
     return get_asset_url(block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), ''), ctx)
 
-
-
 def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', translate = {ord('"') : ' ', ord("'") : ' ', ord('#') : ' ', ord('<') : ' ', ord('>') : ' ', ord('#') : ' '}, default_page_image_size = 400):
     page_info = {}
     for page_id, page in notion_pages_flat.items():
         page_emoji, page_icon_url = get_page_icon(block, ctx)
         page_title = get_page_title(block, ctx)
 
-        
         page_info[page_id] = dict(
             site_name                     = ctx['site_info_name']               or '',
-            site_title                    = page_title,
-            site_icon_url                 = page_icon_url,
             site_locale                   = ctx['site_info_locale']             or '',
+            site_title                    = ctx['site_info_title'] or page_title,
+            site_icon_url                 = page_icon_url,
             site_image_url                = ctx['site_info_image_url']          or get_page_image_url(page, ctx),
             site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(page, ctx),
             site_description              = ctx['site_info_description']        or get_page_description(page, ctx),
