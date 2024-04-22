@@ -189,7 +189,7 @@ def page_tohtml(block, ctx, tag = 'article', class_name = 'notion-page-block', s
     return blocktag_tohtml(block, ctx, tag = tag, attrs = {'data-notion-url' : page_url}, class_name = 'notion-page ' + class_name_page, set_html_contents_and_close = f'''
         {prefix}
         <header class="{class_name_header}">
-            <img src="{src_cover}" class="notion-page-cover"></img>
+            <!--notion-page-cover <img src="{src_cover}" class="notion-page-cover"></img> notion-page-cover-->
             <h1 {page_icon_id} class="notion-record-icon">{page_emoji}{page_icon}</h1> 
             <h1 id="{page_slug}" class="{class_name} {class_name_page_title}">{page_title}{anchor}</h1>
             <i><time class="notion-page-block-datetime-published dt-published" datetime="{datetime_published}">@{datetime_published}</time></i>
@@ -199,7 +199,7 @@ def page_tohtml(block, ctx, tag = 'article', class_name = 'notion-page-block', s
             {children}
         </div>
         {suffix}
-    ''')
+    ''').replace('<!--notion-page-cover' * bool(src_cover), '').replace('notion-page-cover-->' * bool(src_cover), '')
 
 ##############################
 
@@ -336,7 +336,8 @@ def callout_tohtml(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
     return blocktag_tohtml(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon}</div><div>\n'.format(icon = (str if icon_is_emoji(get_callout_icon(block, ctx)) else icon_image_tohtml)(get_callout_icon(block, ctx))) + textlike_tohtml(block, ctx, tag = tag) + '</div>\n')
 
 def icon_is_emoji(icon):
-    return len(icon) <= 3
+    return not (icon or '').startswith('http')
+    #return len(icon) <= 3
 
 ##############################
 
