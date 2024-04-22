@@ -97,7 +97,9 @@ def blocktag_tohtml(block = {}, ctx = {}, class_name = '', tag = '', selfclose =
     endline_if_html = '\n' * ('<' in (set_html_contents_and_close or '') or '>' in (set_html_contents_and_close or ''))
     return (f'{prefix}<{tag} ' + notion_attrs * bool(block) + '/' * selfclose + f'>{endline_if_html}' + (set_html_contents_and_close + f'{endline_if_html}</{tag}>\n' if set_html_contents_and_close is not None else '') + suffix) * bool(tag)
 
-childrenlike_tohtml = lambda block, ctx, tag = '', newline = '\n': newline.join(f'<{tag}>' * bool(tag) + block_tohtml(subblock, ctx, begin = not(i > 0 and subblock.get('type') == subblocks[i - 1].get('type')), end = not(i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type'))) + f'</{tag}>' * bool(tag) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
+def childrenlike_tohtml(block, ctx, tag = '', newline = '\n'):
+    subblocks = sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], [])
+    return newline.join(f'<{tag}>' * bool(tag) + block_tohtml(subblock, ctx, begin = not(i > 0 and subblock.get('type') == subblocks[i - 1].get('type')), end = not(i + 1 < len(subblocks) and subblock.get('type') == subblocks[i + 1].get('type'))) + f'</{tag}>' * bool(tag) for i, subblock in enumerate(subblocks)) + newline
 
 def richtext_tohtml(block, ctx = {}, title_mode = False, caption = False, rich_text = False):
     # https://www.notion.so/help/customize-and-style-your-content#markdown
@@ -330,16 +332,18 @@ child_database_tohtml = lambda block, ctx, tag = 'figure', class_name = 'notion-
 link_preview_tohtml = lambda block, ctx, tag = 'a', class_name = 'notion-link_preview-block': linklike_tohtml(block, ctx, tag = tag, class_name = class_name, line_break = True)
 
 quote_tohtml = lambda block, ctx, tag = 'blockquote', class_name = 'notion-quote-block': textlike_tohtml(block, ctx, tag = tag, class_name = class_name)
-callout_tohtml = lambda block, ctx, tag = 'p', class_name = 'notion-callout-block': blocktag_tohtml(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = ('<div>{icon}</div><div>\n'.format(icon = ('{}'.format if icon_is_emoji(get_callout_icon(block)) else icon_image_tohtml)(get_callout_icon(block)) + textlike_tohtml(block, ctx, tag = tag)) + '</div>\n'
+def callout_tohtml(block, ctx, tag = 'p', class_name = 'notion-callout-block'):
+    return blocktag_tohtml(block, ctx, tag = 'div', class_name = class_name + ' notion-color-{color}'.format(color = block['callout'].get('color', '')), set_html_contents_and_close = '<div>{icon}</div><div>\n'.format(icon = (str if icon_is_emoji(get_callout_icon(block, ctx)) else icon_image_tohtml)(get_callout_icon(block, ctx))) + textlike_tohtml(block, ctx, tag = tag) + '</div>\n')
 
-icon_is_emoji = lambda icon: len(icon) == 1
+def icon_is_emoji(icon):
+    return len(icon) <= 3
 
 ##############################
 
 childrenlike_tomarkdown = lambda block, ctx, tag = '', newline = '\n': newline.join(tag + block_tomarkdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
 toggle_tomarkdown = lambda block, ctx, tag = '', icon = '', title_mode = False: ('<details markdown="1"><summary markdown="1">\n\n' + tag + richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike_tomarkdown(block, ctx) + '\n\n</details>') if ctx['markdown_toggle'] else (tag + '▼ ' + richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike_tomarkdown(block, ctx))
 
-icon_image_tomarkdown = lambda icon_url: '![cover]({icon_url})'
+icon_image_tomarkdown = lambda icon_url: f'![cover]({icon_url})'
 
 def textlike_tomarkdown(block, ctx, tag = '', icon = '', checked = None, title_mode = False):
     rich_text = richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode)
@@ -478,12 +482,12 @@ code_tomarkdown = lambda block, ctx: '{caption}\n```{language}\n'.format(languag
 image_tomarkdown = lambda block, ctx: '![{rich_text_alt}]({src})\n{rich_text}'.format(src = get_asset_url(block, ctx), rich_text_alt = richtext_tomarkdown(block, ctx, caption = True, title_mode = True), rich_text = richtext_tomarkdown(block, ctx, caption = True, title_mode = False))
 
 def quote_tomarkdown(block, ctx, tag = '> ', icon = ''):
-    res = (icon_image_tomarkdown(get_callout_icon(block)) + '\n')* (not icon_is_emoji(icon)) + 
+    res = (icon_image_tomarkdown(get_callout_icon(block, ctx)) + '\n') * (not icon_is_emoji(icon))
     res += ''.join('{tag}{icon}{line}\n'.format(tag = tag, line = line, icon = icon * icon_is_emoji(icon) * bool(i == 0)) for i, line in enumerate(richtext_tomarkdown(block, ctx, rich_text = True, title_mode = False).strip().splitlines()))
     res += f'{tag}\n'.join(''.join(f'{tag}{line}\n' for line in block_tomarkdown(subblock, ctx).splitlines()) for subblock in get_block_children(block))
     return res
 
-callout_tomarkdown = lambda block, ctx: quote_tomarkdown(block, ctx, icon = get_callout_icon(block))
+callout_tomarkdown = lambda block, ctx: quote_tomarkdown(block, ctx, icon = get_callout_icon(block, ctx))
 
 def video_tomarkdown(block, ctx, tag = 'p', class_name = 'notion-video-block'):
     url = get_asset_url(block, ctx)
@@ -610,7 +614,7 @@ def get_page_icon(block, ctx):
             if bool(icon_emoji or icon_url):
                 break
 
-    return icon_emoji, get_asset_url(icon_url, ctx)
+    return icon_emoji, get_asset_url(icon_url.strip(), ctx)
 
 def get_page_description(block, ctx, prefix_len = 300, ellipsis = '...'):
     plain_text = get_page_title(block, ctx) + ' | ' + get_plain_text(block)
@@ -652,7 +656,7 @@ def resolve_page_ids_no_dashes(notion_page_id, notion_slugs):
 
 def get_page_edit_url(page_id, ctx, page_slug, base_url = 'https://notion.so'):
     page_id_no_dashes = get_block_id_no_dashes(page_id)
-    return ctx['edit_url'].format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx['edit_url'] else os.path.join(base_url, page_id_no_dashes)
+    return ctx['edit_url'].format(page_id_no_dashes = page_id_no_dashes, page_id = page_id, page_slug = page_slug) if ctx['edit_url'] else os.path.join(base_url, page_id_no_dashes) if ctx['edit_url'] is None else ''
 
 def get_page_url(block, ctx, base_url = 'https://www.notion.so'):
     page_id_no_dashes = get_block_id_no_dashes(block)
@@ -709,6 +713,8 @@ def get_page_cover_url(block):
     return payload.get(payload_type, {}).get('url', '')
 
 def get_asset_url(block, ctx):
+    if not block:
+        return ''
     url = block if isinstance(block, str) else get_block_url(block)
     asset_dict = ctx['assets'].get(url, {})
     if asset_dict.get('ok'):
@@ -814,7 +820,7 @@ def get_page_images(block):
     stack = [block]
     while stack:
         top = stack.pop()
-        if top.get('type', '') == 'image'
+        if top.get('type', '') == 'image':
             res.append(top)
         stack.extend(reversed(get_block_children(top)))
     return res
@@ -824,7 +830,7 @@ def get_page_time_published(block, ctx, strftime = '', key = 'unix_seconds_gener
 
 def get_page_image_url(block, ctx):
     src_cover = get_page_cover_url(block)
-    image_blocks = get_page_images(block, ctx)
+    image_blocks = get_page_images(block)
 
     src = src_cover if src_cover else get_block_url(image_blocks[0]) if image_blocks else ''
     if src:
@@ -836,28 +842,28 @@ def get_page_image_url(block, ctx):
     return ''
 
 def get_callout_icon(block, ctx):
-    return get_asset_url(block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), ''), ctx)
+    return get_asset_url(block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), ''), ctx).strip()
 
 def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', translate = {ord('"') : ' ', ord("'") : ' ', ord('#') : ' ', ord('<') : ' ', ord('>') : ' ', ord('#') : ' '}, default_page_image_size = 400):
     page_info = {}
-    for page_id, page in notion_pages_flat.items():
-        page_emoji, page_icon_url = get_page_icon(block, ctx)
-        page_title = get_page_title(block, ctx)
+    for page_id, page_block in notion_pages_flat.items():
+        page_emoji, page_icon_url = get_page_icon(page_block, ctx)
+        page_title = get_page_title(page_block, ctx)
 
         page_info[page_id] = dict(
             site_name                     = ctx['site_info_name']               or '',
             site_locale                   = ctx['site_info_locale']             or '',
             site_title                    = ctx['site_info_title'] or page_title,
             site_icon_url                 = page_icon_url,
-            site_image_url                = ctx['site_info_image_url']          or get_page_image_url(page, ctx),
-            site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(page, ctx),
-            site_description              = ctx['site_info_description']        or get_page_description(page, ctx),
-            site_published_time_xmlschema = ctx['site_info_time_published']     or get_page_time_published(page, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded'),
+            site_image_url                = ctx['site_info_image_url']          or get_page_image_url(page_block, ctx),
+            site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(page_block, ctx),
+            site_description              = ctx['site_info_description']        or get_page_description(page_block, ctx),
+            site_published_time_xmlschema = ctx['site_info_time_published']     or get_page_time_published(page_block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded'),
             site_image_height             = ctx['site_info_image_height']       or str(default_page_image_size),
             site_image_width              = ctx['site_info_image_width']        or str(default_page_image_size),
             
-            site_twitter_card_type        = ctx['site_info_twitter_card_type']  or '',
-            site_twitter_atusername       = ('@' + (ctx['site_info_twitter'] or '').removeprefix('https://twitter.com/').split('/')[0]) * bool(ctx['site_info_twitter'])
+            site_twitter_atusername       = ('@' + (ctx['site_info_twitter'] or '').removeprefix('https://twitter.com/').split('/')[0]) * bool(ctx['site_info_twitter']),
+            site_twitter_card_type        = (ctx['site_info_twitter_card_type'] or 'summary') * bool(ctx['site_info_twitter']),
             site_twitter                  = ctx['site_info_twitter'] or '',
             site_author_name              = ctx['site_info_author_name'] or '',
             site_author_email             = ctx['site_info_author_email'] or '',
@@ -1109,15 +1115,15 @@ def extractall(output_path, ctx, theme, page_ids = [], notion_pages = {}, notion
             
         assets_urls = discover_assets([page_block], [], download_assets_types = ctx['download_assets_types'])
         notion_assets_for_block = download_and_extract_assets(assets_urls, ctx, assets_dir = ctx['assets_dir'] or os.path.join(page_dir, page_slug + '_files'), notion_assets = notion_assets)
-        meta_tags = ctx['page_info'][page_id]
+        meta = ctx['page_info'][page_id]
 
         dump_path = os.path.join(page_dir, 'index.html' if index_html else page_slug + ext)
     
         if ext == '.html':
-            notionstr = theme.sitepages_tohtml([page_id], ctx = dict(ctx, assets = notion_assets_for_block, meta_tags = meta_tags), notion_pages = notion_pages_flat, render_block = block_tohtml, snippets = snippets)
+            notionstr = theme.sitepages_tohtml([page_id], ctx = dict(ctx, assets = notion_assets_for_block, meta = meta), notion_pages = notion_pages_flat, render_block = block_tohtml, snippets = snippets)
 
         if ext == '.md':
-            notionstr = theme.sitepages_tomarkdown([page_id], ctx = dict(ctx, assets = notion_assets_for_block, meta_tags = meta_tags), notion_pages = notion_pages_flat, render_block = block_tomarkdown, snippets = snippets)
+            notionstr = theme.sitepages_tomarkdown([page_id], ctx = dict(ctx, assets = notion_assets_for_block, meta = meta), notion_pages = notion_pages_flat, render_block = block_tomarkdown, snippets = snippets)
 
         if ext == '.json':
             notionjson = dict(
@@ -1211,6 +1217,7 @@ def notion2static(
     site_info_author_name,
     site_info_author_email,
     site_info_github,
+    site_info_twitter,
     site_info_facebook,
     site_info_instagram,
     site_info_linkedin,
@@ -1254,8 +1261,8 @@ def notion2static(
     ctx['child_pages_by_parent_id'] = child_pages_by_parent_id
     ctx['id2block'] = get_block_index(ctx)
     ctx['page_parent_paths'] = get_page_parent_paths(notion_pages_flat, ctx)
-    ctx['page_info'] = get_page_info(ctx['pages'], ctx)
     ctx['assets'] = notionjson.get('assets', {}) or download_and_extract_assets(discover_assets(notion_pages.values(), [], exclude_datauri = False, download_assets_types = ctx['download_assets_types']), ctx, notion_assets = {})
+    ctx['page_info'] = get_page_info(ctx['pages'], ctx)
     
     try:
         theme = importlib.import_module(os.path.splitext(theme_py)[0])
