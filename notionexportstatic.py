@@ -1,9 +1,5 @@
 # TODO: markdown: check numbered_list + heading1 - maybe need to lift up heading_1 out of numbered_list # notion4ever: This is needed, because notion thinks, that if the page contains numbered list, header 1 will be the child block for it, which is strange.
 # TODO: if no page_ids passed -> use slugs and make sure that child pages are not downloaded twice
-# TODO: check get_page_info: site_info_title, subscribe
-# TODO: get_callout_icon, get_page_icon: resolve asset
-# TODO: image detection for summary image
-# TODO: reorder functions
 
 import os
 import re
@@ -167,8 +163,6 @@ def linklike_tohtml(block, ctx, tag = 'a', class_name = '', full_url_as_caption 
 
 icon_image_tohtml = lambda icon_url: f'<img src="{icon_url}"></img>'
 
-icon_image_tomarkdown = lambda icon_url: '![cover]({icon_url})'
-
 def page_tohtml(block, ctx, tag = 'article', class_name = 'notion-page-block', strftime = '%Y/%m/%d %H:%M:%S', prefix = '', suffix = '', class_name_page_title = '', class_name_page_content = '', class_name_header = '', class_name_page = ''):
     datetime_published = get_page_time_published(block, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded') 
     src_cover = get_asset_url(get_page_cover_url(block), ctx)
@@ -220,7 +214,7 @@ def table_of_contents_tohtml(block, ctx, tag = 'ul', class_name = 'notion-table_
         return '<ul class="notion-table_of_contents-site-page-list">\n' + table_of_contents_page_tree(root_page_ids) + '\n</ul>\n'
     
     page_block = get_page_current(block, ctx)
-    headings = get_page_headings(page_block, ctx)
+    headings = get_page_headings(page_block)
     color = block['table_of_contents'].get('color', '')
     inc_heading_type = dict(heading_0 = 'heading_1', heading_1 = 'heading_2', heading_2 = 'heading_3', heading_3 = 'heading_3').get
     nominal_heading_type, effective_heading_type = 'heading_0', 'heading_0'
@@ -341,6 +335,8 @@ icon_is_emoji = lambda icon: len(icon) == 1
 childrenlike_tomarkdown = lambda block, ctx, tag = '', newline = '\n': newline.join(tag + block_tomarkdown(subblock, ctx) for i, subblock in enumerate(sum([block.get(key, []) or block.get(block.get('type'), {}).get(key, []) for key in ('children', 'blocks')], []))) + newline
 toggle_tomarkdown = lambda block, ctx, tag = '', icon = '', title_mode = False: ('<details markdown="1"><summary markdown="1">\n\n' + tag + richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n\n</summary>\n\n' + childrenlike_tomarkdown(block, ctx) + '\n\n</details>') if ctx['markdown_toggle'] else (tag + '▼ ' + richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode) + icon + '\n' + childrenlike_tomarkdown(block, ctx))
 
+icon_image_tomarkdown = lambda icon_url: '![cover]({icon_url})'
+
 def textlike_tomarkdown(block, ctx, tag = '', icon = '', checked = None, title_mode = False):
     rich_text = richtext_tomarkdown(block, ctx, rich_text = True, title_mode = title_mode)
     color_unused = block.get(get_block_type(block), {}).get('color', '')
@@ -394,7 +390,7 @@ def table_of_contents_tomarkdown(block, ctx, tag = '* '):
         return ctx['markdown_toc_page']
 
     page_block = get_page_current(block, ctx)
-    headings = get_page_headings(page_block, ctx)
+    headings = get_page_headings(page_block)
     color_unused = block['table_of_contents'].get('color', '')
     inc_heading_type = dict(heading_0 = 'heading_1', heading_1 = 'heading_2', heading_2 = 'heading_3', heading_3 = 'heading_3').get
     nominal_heading_type, effective_heading_type = 'heading_0', 'heading_0'
@@ -610,7 +606,7 @@ def get_page_icon(block, ctx):
             if bool(icon_emoji or icon_url):
                 break
 
-    return icon_emoji, icon_url
+    return icon_emoji, get_asset_url(icon_url, ctx)
 
 def get_page_description(block, ctx, prefix_len = 300, ellipsis = '...'):
     plain_text = get_page_title(block, ctx) + ' | ' + get_plain_text(block)
@@ -797,47 +793,71 @@ def get_page_relative_link(page_url_base, page_url_target):
 
     return href
 
-def get_page_headings(block, ctx):
-    headings = []
+def get_page_headings(block):
+    res = []
     stack = [block]
     while stack:
         top = stack.pop()
         is_heading = top.get('type', '') in ['heading_1', 'heading_2', 'heading_3']
         if is_heading:
-            headings.append(top)
+            res.append(top)
         if not is_heading or top.get(top.get('type'), {}).get('is_toggleable') is not True:
             stack.extend(reversed(get_block_children(top)))
-    return headings
+    return res
+
+def get_page_images(block):
+    res = []
+    stack = [block]
+    while stack:
+        top = stack.pop()
+        if top.get('type', '') == 'image'
+            res.append(top)
+        stack.extend(reversed(get_block_children(top)))
+    return res
 
 def get_page_time_published(block, ctx, strftime = '', key = 'unix_seconds_generated'):
     return datetime.datetime.utcfromtimestamp(ctx.get(key, 0)).strftime(strftime) if key in ctx else ''
 
-def get_page_image(block, ctx):
-    # {% if page.cover %} {{page.cover}} {% else %} {{site['pages'][site['root_page_id']]['cover']}} {% endif %} 
-    return dict(image_url = '', image_height = '', image_width = '', image_alt = '')
+def get_page_image_url(block, ctx):
+    src_cover = get_page_cover_url(block)
+    image_blocks = get_page_images(block, ctx)
 
-get_callout_icon = lambda block: block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), '')
+    src = src_cover if src_cover else get_block_url(image_blocks[0]) if image_blocks else ''
+    if src:
+        return get_asset_url(src, ctx)
+    
+    if ctx['page_ids'][0] != block['id']:
+        return get_page_image_url(ctx['pages'][ctx['page_ids'][0]], ctx)
 
-def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', translate = {ord('"') : ' ', ord("'") : ' ', ord('#') : ' ', ord('<') : ' ', ord('>') : ' ', ord('#') : ' '}):
+    return ''
+
+def get_callout_icon(block, ctx):
+    return get_asset_url(block['callout'].get('icon', {}).get(block['callout'].get('icon', {}).get('type'), ''), ctx)
+
+
+
+def get_page_info(notion_pages_flat, ctx, strftime = '%Y-%m-%dT%H:%M:%S+00:00', translate = {ord('"') : ' ', ord("'") : ' ', ord('#') : ' ', ord('<') : ' ', ord('>') : ' ', ord('#') : ' '}, default_page_image_size = 400):
     page_info = {}
     for page_id, page in notion_pages_flat.items():
-        image_info = get_page_image(page, ctx)
+        page_emoji, page_icon_url = get_page_icon(block, ctx)
+        page_title = get_page_title(block, ctx)
+
+        
         page_info[page_id] = dict(
-            site_name                     = ctx['site_info_name']               or '', # {{ site['pages'][site['root_page_id']]['title'] }}
-            site_title                    = '',
+            site_name                     = ctx['site_info_name']               or '',
+            site_title                    = page_title,
+            site_icon_url                 = page_icon_url,
             site_locale                   = ctx['site_info_locale']             or '',
-            site_icon_url                 = '',
+            site_image_url                = ctx['site_info_image_url']          or get_page_image_url(page, ctx),
             site_url_absolute             = ctx['site_info_url_absolute']       or get_page_url_absolute(page, ctx),
             site_description              = ctx['site_info_description']        or get_page_description(page, ctx),
             site_published_time_xmlschema = ctx['site_info_time_published']     or get_page_time_published(page, ctx, strftime = strftime, key = 'unix_seconds_generated' if ctx['timestamp_published'] else 'unix_seconds_downloaded'),
-            site_image_url                = ctx['site_info_image_url']          or image_info['image_url'],
-            site_image_height             = ctx['site_info_image_height']       or image_info['image_height'],
-            site_image_width              = ctx['site_info_image_width']        or image_info['image_width'],
-            site_image_alt                = ctx['site_info_image_alt']          or image_info['image_alt'],
+            site_image_height             = ctx['site_info_image_height']       or str(default_page_image_size),
+            site_image_width              = ctx['site_info_image_width']        or str(default_page_image_size),
             
             site_twitter_card_type        = ctx['site_info_twitter_card_type']  or '',
-            site_twitter_atusername       = ctx['site_info_twitter_atusername'] or '',
-            site_twitter                  = ('https://twitter.com/' + (ctx['site_info_twitter_atusername'] or '').lstrip('@')) * bool(ctx['site_info_twitter_atusername']),
+            site_twitter_atusername       = ('@' + (ctx['site_info_twitter'] or '').removeprefix('https://twitter.com/').split('/')[0]) * bool(ctx['site_info_twitter'])
+            site_twitter                  = ctx['site_info_twitter'] or '',
             site_author_name              = ctx['site_info_author_name'] or '',
             site_author_email             = ctx['site_info_author_email'] or '',
             site_github                   = ctx['site_info_github'] or '',
@@ -1185,10 +1205,8 @@ def notion2static(
     site_info_image_url,
     site_info_image_height,
     site_info_image_width,
-    site_info_image_alt,
 
     site_info_twitter_card_type,
-    site_info_twitter_atusername,
     site_info_author_name,
     site_info_author_email,
     site_info_github,
@@ -1392,11 +1410,10 @@ if __name__ == '__main__':
     parser.add_argument('--site-info-image-url')
     parser.add_argument('--site-info-image-height')
     parser.add_argument('--site-info-image-width')
-    parser.add_argument('--site-info-image-alt')
     parser.add_argument('--site-info-author-name')
     parser.add_argument('--site-info-author-email')
     parser.add_argument('--site-info-twitter-card-type')
-    parser.add_argument('--site-info-twitter-atusername')
+    parser.add_argument('--site-info-twitter')
     parser.add_argument('--site-info-github')
     parser.add_argument('--site-info-facebook')
     parser.add_argument('--site-info-instagram')

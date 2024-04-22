@@ -1,3 +1,5 @@
+# TODO: escape page info
+
 def sitepages_tohtml(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     snippets = snippets_default | snippets
     page_id_first = page_ids[0]
@@ -44,7 +46,6 @@ def sitepages_tohtml(page_ids = [], ctx = {}, notion_pages = {}, render_block = 
                     site_image_url                =  ctx['meta']['site_image_url'],
                     site_image_height             =  ctx['meta']['site_image_height'],
                     site_image_width              =  ctx['meta']['site_image_width'],
-                    site_image_alt                =  ctx['meta']['site_image_alt'],
                     site_published_time_xmlschema =  ctx['meta']['site_published_time_xmlschema'],
                     site_name                     =  ctx['meta']['site_name'],
                     site_locale                   =  ctx['meta']['site_locale'],
@@ -114,19 +115,12 @@ html_code_highlightjs-->
 
 footer_html = '''
 <footer class="site-footer h-card">
-  <data class="u-url" href="relative_url_to_root"></data>
+  <!-- <data class="u-url" href="relative_url_to_root"></data> -->
 
   <div class="wrapper">
 
     <div class="footer-col-wrapper">
       <div class="footer-col">
-        <p class="feed-subscribe">
-          <a href="absolute_url_feed.xml">
-            <svg class="svg-icon orange" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="1.414" viewBox="0 0 16 16">
-                <path d="M12.8 16C12.8 8.978 7.022 3.2 0 3.2V0c8.777 0 16 7.223 16 16h-3.2zM2.194 11.61c1.21 0 2.195.985 2.195 2.196 0 1.21-.99 2.194-2.2 2.194C.98 16 0 15.017 0 13.806c0-1.21.983-2.195 2.194-2.195zM10.606 16h-3.11c0-4.113-3.383-7.497-7.496-7.497v-3.11c5.818 0 10.606 4.79 10.606 10.607z"/>
-            </svg><span>Subscribe</span>
-          </a>
-        </p>
         <ul class="contact-list">
             <li class="p-name">{{ site_author_name }}</li>
             <li><a class="u-email" href="mailto:{{ site_author_email }}">{{ site_author_email }}</a></li>
@@ -228,7 +222,7 @@ page_html =  '''
         <meta property="og:image"               content="{{ site_image_url }}">
         <meta property="og:image:height"        content="{{ site_image_height }}" />
         <meta property="og:image:width"         content="{{ site_image_width }}" />
-        <meta property="og:image:alt"           content="{{ site_image_alt }}" />
+        <meta property="og:image:alt"           content="{{ site_description }}" />
         <meta property="og:type"                content="article" />
         
         <style>
