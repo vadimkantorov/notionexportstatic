@@ -1,5 +1,3 @@
-# TODO: escape page info
-
 def sitepages_tohtml(page_ids = [], ctx = {}, notion_pages = {}, render_block = (lambda page, ctx, **kwargs: ''), snippets = {}):
     snippets = snippets_default | snippets
     page_id_first = page_ids[0]
