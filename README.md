@@ -192,12 +192,5 @@ python ./notionexportstatic/notionexportstatic.py -i $NOTION_CHILD_PAGE_ID.json 
 - https://katex.org/docs/browser
 - https://github.com/MerkulovDaniil/notion4ever
 
-# Notes
-For markdown2html conversion in Python:
-```python
-# pip install markdown   markdown-captions markdown-checklist pymdown-extensions mdx_truly_sane_lists
-html_content = markdown.markdown(md_content, extensions = ["meta", "tables", "mdx_truly_sane_lists", "markdown_captions", "pymdownx.tilde", "pymdownx.tasklist", "pymdownx.superfences"], extension_configs = {'mdx_truly_sane_lists': { 'nested_indent': 4, 'truly_sane': True, }, "pymdownx.tasklist":{"clickable_checkbox": True, } })
-```
-
 # License
 MIT
