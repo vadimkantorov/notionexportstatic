@@ -33,7 +33,7 @@ git clone https://github.com/vadimkantorov/notionexportstatic
 python ./notionexportstatic/notionexportstatic.py --help
 
 # extract all snippets used by a theme
-python ./notionexportstatic/minima.py --snippets-dir ./_snippets
+python ./notionexportstatic/notionexportstatic.py --extract-snippets --snippets-dir ./_snippets --theme-py minima.py
 
 # download all child pages recursively starting from a root page id, downloading images, pdfs and files by default; you can also just use the NOTION_TOKEN environment variable for passing the token (useful for passing it in as GitHub Actions secret)
 python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_ROOT_PAGE_ID -o ./everything.json --extract-mode=single.json
