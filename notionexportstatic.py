@@ -469,7 +469,7 @@ def table_of_contents_tomarkdown(block, ctx, tag = '* '):
         return table_of_contents_page_tree(root_page_ids, depth = 0) + '\n---\n'
     
     if block.get('site_table_of_contents_flat_page_ids'):
-        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '\n'.join('{tag}{link_to_page}\n{child_pages}'.format(link_to_page = link_to_page_tomarkdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids)
+        table_of_contents_page_tree = lambda page_ids: '' if not page_ids else '\n'.join('{tag}{link_to_page}\n{child_pages}'.format(tag = tag, link_to_page = link_to_page_tomarkdown(dict(type = 'link_to_page', link_to_page = dict(type = 'page_id', page_id = page_id)), ctx, line_break = False), child_pages = table_of_contents_page_tree([ get_block_id(page) for page in ctx['child_pages_by_parent_id'].get(page_id, []) ]) ) for page_id in page_ids)
         page_ids = block.get('site_table_of_contents_flat_page_ids', [])
         child_page_ids = set(get_block_id(child_page) for child_pages in ctx['child_pages_by_parent_id'].values() for child_page in child_pages)
         root_page_ids = [page_id for page_id in page_ids if page_id not in child_page_ids]
