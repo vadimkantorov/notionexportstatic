@@ -9,6 +9,10 @@ on:
         description: 'comma separated notion page ids'
         required: false
         default: '183af621072445438c48af7dd4f21f5c'
+      renderfromnotion:
+        description: 'download and render from notion a ./singlenotion.html'
+        type: boolean
+        required: true
       downloadfromnotion:
         description: 'download from notion and refresh-commit ./everything.json'
         type: boolean
@@ -29,6 +33,13 @@ jobs:
 
       - name: Clone notionexportstatic
         run: curl -O https://raw.githubusercontent.com/vadimkantorov/notionexportstatic/master/notionexportstatic.py
+      
+      - name: Optionally render ./singlenotion.html
+        if: github.event.inputs.downloadfromnotion == 'true'
+        run: mkdir ./html/ && python notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./html/singlenotion.html --extract-mode single.html 
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
       
       - name: Optionally refresh ./everything.json
         if: github.event.inputs.downloadfromnotion == 'true'
