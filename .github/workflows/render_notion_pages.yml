@@ -36,7 +36,7 @@ jobs:
         run: curl -O https://raw.githubusercontent.com/vadimkantorov/notionexportstatic/master/notionexportstatic.py
       
       - name: Optionally render ./singlenotion.html
-        if: github.event.inputs.downloadfromnotion == 'true'
+        if: github.event.inputs.renderfromnotion == 'true'
         run: mkdir ./html/ && python notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./html/singlenotion.html --extract-mode single.html 
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
