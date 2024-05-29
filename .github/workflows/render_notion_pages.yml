@@ -12,7 +12,8 @@ on:
       renderfromnotion:
         description: 'download and render from notion a ./singlenotion.html'
         type: boolean
-        required: true
+        required: false
+        default: true
       downloadfromnotion:
         description: 'download from notion and refresh-commit ./everything.json'
         type: boolean
