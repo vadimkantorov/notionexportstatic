@@ -28,11 +28,11 @@ jobs:
           ref: gh-pages
 
       - name: Clone notionexportstatic
-        run: git clone --branch master https://github.com/vadimkantorov/notionexportstatic
+        run: curl -O https://raw.githubusercontent.com/vadimkantorov/notionexportstatic/master/notionexportstatic.py
       
       - name: Optionally refresh ./everything.json
         if: github.event.inputs.downloadfromnotion == 'true'
-        run: python ./notionexportstatic/notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
+        run: python notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./everything.json --extract-mode single.json
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
@@ -41,9 +41,9 @@ jobs:
         run: |
           mkdir -p ./html/ ./markdown/
           # generate single Markdown from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/single.md --extract-mode single.md
+          python notionexportstatic.py -i everything.json -o ./markdown/single.md --extract-mode single.md
           # generate single HTML and PDF from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/single.html --extract-mode single.html
+          python notionexportstatic.py -i everything.json -o ./html/single.html --extract-mode single.html
           # html2pdf conversion
           chrome --headless --print-to-pdf=./everything.pdf ./html/single.html
           
@@ -51,9 +51,9 @@ jobs:
         run: |
           mkdir -p ./html/ ./markdown/
           # generate flat HTML from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./html/ --extract-mode flat/index.html
+          python notionexportstatic.py -i everything.json -o ./html/ --extract-mode flat/index.html
           # generate flat Markdown from a pre-downloaded ./everything.json
-          python ./notionexportstatic/notionexportstatic.py -i everything.json -o ./markdown/ --extract-mode flat.md  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
+          python notionexportstatic.py -i everything.json -o ./markdown/ --extract-mode flat.md  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
 
       - name: Push HTML and Markdown
         run: |
