@@ -10,7 +10,7 @@ on:
         required: false
         default: '183af621072445438c48af7dd4f21f5c'
       downloadfromnotion:
-        description: 'download from notion or use a pre-downloadeded and pre-committed ./everything.json'
+        description: 'download from notion and refresh-commit ./everything.json'
         type: boolean
         required: false
 
