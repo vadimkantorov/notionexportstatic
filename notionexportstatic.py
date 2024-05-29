@@ -620,7 +620,7 @@ def pdf_tomarkdown(block, ctx, tag = '📄'):
 def bookmark_tomarkdown(block, ctx, tag = '🔖'):
     return linklike_tomarkdown(block, ctx, tag = tag, line_break = True)
 
-def link_preview_tomarkdownblock, ctx, tag = '🌐'):
+def link_preview_tomarkdown(block, ctx, tag = '🌐'):
     return linklike_tomarkdown(block, ctx, tag = tag, line_break = True)
 
 def embed_tomarkdown(block, ctx):
