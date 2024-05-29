@@ -18,6 +18,10 @@ on:
         description: 'download from notion and refresh-commit ./everything.json'
         type: boolean
         required: false
+      renderpdf:
+        description: 'render ./everything.pdf from ./html/single.html'
+        type: boolean
+        required: false
 
 jobs:
   render_notion_pages:
@@ -37,7 +41,7 @@ jobs:
       
       - name: Optionally render ./singlenotion.html
         if: github.event.inputs.renderfromnotion == 'true'
-        run: mkdir ./html/ && python notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./html/singlenotion.html --extract-mode single.html 
+        run: mkdir -p ./html/ && python notionexportstatic.py --notion-token $NOTION_TOKEN --notion-page-id $NOTION_PAGE_ID -o ./html/singlenotion.html --extract-mode single.html 
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_PAGE_ID: ${{ github.event.inputs.commaseparatednotionpageids }}
@@ -51,21 +55,17 @@ jobs:
       
       - name: Generate single HTML and PDF and Markdown
         run: |
-          mkdir -p ./html/ ./markdown/
-          # generate single Markdown from a pre-downloaded ./everything.json
-          python notionexportstatic.py -i everything.json -o ./markdown/single.md --extract-mode single.md
-          # generate single HTML and PDF from a pre-downloaded ./everything.json
-          python notionexportstatic.py -i everything.json -o ./html/single.html --extract-mode single.html
-          # html2pdf conversion
-          chrome --headless --print-to-pdf=./everything.pdf ./html/single.html
+          mkdir -p ./markdown/ && python notionexportstatic.py -i everything.json --extract-mode single.md   -o ./markdown/single.md
+          mkdir -p ./html/     && python notionexportstatic.py -i everything.json --extract-mode single.html -o ./html/single.html
+      
+      - name: Optionally render PDF
+        if: github.event.inputs.renderpdf == 'true'
+        run: chrome --headless --print-to-pdf=./everything.pdf ./html/single.html
           
       - name: Generate flat HTML and Markdown from a pre-downloaded JSON
         run: |
-          mkdir -p ./html/ ./markdown/
-          # generate flat HTML from a pre-downloaded ./everything.json
-          python notionexportstatic.py -i everything.json -o ./html/ --extract-mode flat/index.html
-          # generate flat Markdown from a pre-downloaded ./everything.json
-          python notionexportstatic.py -i everything.json -o ./markdown/ --extract-mode flat.md  --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
+          mkdir -p ./html/     && python notionexportstatic.py -i everything.json --extract-mode flat/index.html -o ./html/ 
+          mkdir -p ./markdown/ && python notionexportstatic.py -i everything.json --extract-mode flat.md         -o ./markdown/ --extract-assets  --sitemap-xml ./markdown/sitemap.xml --base-url https://vadimkantorov.github.io/notionexportstatic/markdown/ --base-url-removesuffix=.md
 
       - name: Push HTML and Markdown
         run: |
